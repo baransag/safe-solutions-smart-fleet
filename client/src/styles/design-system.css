@@ -8,24 +8,28 @@
 
 :root {
   /* ─── Color Palette ─── */
-  --color-primary-dark: #3B2621;
-  --color-primary-orange: #E6762D;
+  --color-primary-dark: #021C4F;
+  --color-primary-orange: #C50337;
+  --color-navy-deep: #021C4F;
+  --color-crimson-red: #C50337;
+  --gradient-emerald-depth: linear-gradient(135deg, #021C4F 0%, #C50337 100%);
+  --gradient-emerald-reverse: linear-gradient(135deg, #C50337 0%, #021C4F 100%);
   --color-warm-cream: #F3E8C8;
   --color-soft-peach: #EFC0A5;
   --color-premium-gray: #B9B1B1;
-  --color-deep-teal: #0F6E77;
+  --color-deep-teal: #021C4F;
 
   /* Extended Palette */
-  --color-primary-dark-rgb: 59, 38, 33;
-  --color-primary-orange-rgb: 230, 118, 45;
-  --color-deep-teal-rgb: 15, 110, 119;
+  --color-primary-dark-rgb: 2, 28, 79;
+  --color-primary-orange-rgb: 197, 3, 55;
+  --color-deep-teal-rgb: 2, 28, 79;
   --color-warm-cream-rgb: 243, 232, 200;
 
-  --color-orange-light: #F09A5E;
-  --color-orange-hover: #D46821;
-  --color-teal-light: #149BA6;
-  --color-teal-hover: #0A5259;
-  --color-brown-light: #5C3D34;
+  --color-orange-light: #E03E65;
+  --color-orange-hover: #A0022B;
+  --color-teal-light: #1A3E8A;
+  --color-teal-hover: #011336;
+  --color-brown-light: #021C4F;
 
   /* Semantic Colors */
   --color-success: #10B981;

@@ -5,10 +5,16 @@ import './HeroSection.css';
 
 const DEFAULT_SLIDES = [
   { id: 1, image_url: '/assets/images/hero-1.jpeg', title: 'Smart Fleet Operations', description: 'Real-time vehicle tracking & intelligent allocation' },
-  { id: 2, image_url: '/assets/images/hero-2.jpeg', title: 'Automated Verification', description: 'QR code check-in & speedometer validation' },
-  { id: 3, image_url: '/assets/images/hero-3.jpeg', title: 'Fuel & Maintenance Logs', description: 'Expense tracking and automated maintenance alerts' },
-  { id: 4, image_url: '/assets/images/hero-4.jpeg', title: 'Rider Performance & Attendance', description: 'GPS verified check-in & daily route intelligence' },
-  { id: 5, image_url: '/assets/images/hero-5.jpeg', title: 'Enterprise Security', description: 'Tamper-resistant audit trails & fleet control' },
+  { id: 2, image_url: '/assets/images/Husnain.jpeg', title: 'M.husnain farooq — Controller', description: 'Enterprise Fleet & Management Controller' },
+  { id: 3, image_url: '/assets/images/hero-2.jpeg', title: 'Automated Verification', description: 'QR code check-in & speedometer validation' },
+  { id: 4, image_url: '/assets/images/Samaira.jpeg', title: 'Samaira Mubashar — Account & Finance', description: 'Finance & Operations Management' },
+  { id: 5, image_url: '/assets/images/hero-3.jpeg', title: 'Fuel & Maintenance Logs', description: 'Expense tracking and automated maintenance alerts' },
+  { id: 6, image_url: '/assets/images/Shahzaib.jpeg', title: 'ENGR SHAHZAIB AHMAD — Marketing', description: 'Company Bike Rider & Executive' },
+  { id: 7, image_url: '/assets/images/Shahbaz.jpeg', title: 'Shahbaz Ahmed — Application Supervisor', description: 'Operations & Fleet Verification' },
+  { id: 8, image_url: '/assets/images/hero-4.jpeg', title: 'Rider Performance & Attendance', description: 'GPS verified check-in & daily route intelligence' },
+  { id: 9, image_url: '/assets/images/Rehan.jpeg', title: 'Rehan Ali — Application Supervisor', description: 'Operations Supervisor & Rider' },
+  { id: 10, image_url: '/assets/images/Adnan-Tahir.jpeg', title: 'Adnan Tahir — ASM', description: 'Sales & Field Fleet Manager' },
+  { id: 11, image_url: '/assets/images/hero-5.jpeg', title: 'Enterprise Security', description: 'Tamper-resistant audit trails & fleet control' }
 ];
 
 export default function HeroSection() {

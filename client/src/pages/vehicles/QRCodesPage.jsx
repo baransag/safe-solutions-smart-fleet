@@ -33,12 +33,25 @@ export default function QRCodesPage() {
     }
   }
 
+  function getQRUrl(vehicle) {
+    if (vehicle.qr_code && vehicle.qr_code.startsWith('data:')) {
+      return vehicle.qr_code;
+    }
+    const qrData = JSON.stringify({
+      system: 'SAFE_SOLUTIONS',
+      vehicleId: vehicle.vehicle_id || `VH-00${vehicle.id}`,
+      name: `${vehicle.name || 'Company Bike'} - ${vehicle.assigned_employee_name || 'Rider'}`,
+      numberPlate: vehicle.number_plate
+    });
+    return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrData)}`;
+  }
+
   function printSticker(vehicle) {
+    const qrImage = getQRUrl(vehicle);
     setSelectedVehicle(vehicle);
     setTimeout(() => {
-      const printContent = printRef.current;
-      if (!printContent) return;
       const win = window.open('', '_blank');
+      if (!win) return;
       win.document.write(`
         <!DOCTYPE html>
         <html>
@@ -46,12 +59,12 @@ export default function QRCodesPage() {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: 'Inter', Arial, sans-serif; display: flex; justify-content: center; padding: 20px; }
-          .sticker { width: 300px; border: 2px solid #3B2621; border-radius: 12px; padding: 20px; text-align: center; }
-          .sticker-header { font-size: 14px; font-weight: 800; color: #3B2621; letter-spacing: 0.05em; margin-bottom: 4px; }
+          .sticker { width: 300px; border: 2px solid #021C4F; border-radius: 12px; padding: 20px; text-align: center; }
+          .sticker-header { font-size: 14px; font-weight: 800; color: #021C4F; letter-spacing: 0.05em; margin-bottom: 4px; }
           .sticker-sub { font-size: 9px; color: #6B5B54; margin-bottom: 16px; }
-          .qr-img { width: 200px; height: 200px; margin: 0 auto 16px; }
-          .vehicle-id { font-size: 16px; font-weight: 800; color: #3B2621; }
-          .vehicle-plate { font-size: 20px; font-weight: 800; color: #E6762D; margin: 4px 0 8px; letter-spacing: 0.1em; }
+          .qr-img { width: 200px; height: 200px; margin: 0 auto 16px; display: block; }
+          .vehicle-id { font-size: 16px; font-weight: 800; color: #021C4F; }
+          .vehicle-plate { font-size: 20px; font-weight: 800; color: #C50337; margin: 4px 0 8px; letter-spacing: 0.1em; }
           .vehicle-name { font-size: 11px; color: #6B5B54; }
           .sticker-footer { margin-top: 12px; padding-top: 8px; border-top: 1px solid #ddd; font-size: 8px; color: #999; }
           @media print { body { padding: 0; } }
@@ -60,7 +73,7 @@ export default function QRCodesPage() {
           <div class="sticker">
             <div class="sticker-header">SAFE SOLUTIONS</div>
             <div class="sticker-sub">Smart Fleet Management System</div>
-            <img class="qr-img" src="${vehicle.qr_code}" alt="QR" />
+            <img class="qr-img" src="${qrImage}" alt="QR Code" />
             <div class="vehicle-id">${vehicle.vehicle_id}</div>
             <div class="vehicle-plate">${vehicle.number_plate}</div>
             <div class="vehicle-name">${vehicle.name}</div>
@@ -87,20 +100,14 @@ export default function QRCodesPage() {
       <div className="grid grid-3" style={{ gap: 'var(--space-5)' }}>
         {vehicles.map(v => (
           <div key={v.id} className="card-elevated" style={{ textAlign: 'center' }}>
-            {v.qr_code ? (
-              <img
-                src={v.qr_code}
-                alt={`QR: ${v.vehicle_id}`}
-                style={{ width: '160px', height: '160px', margin: '0 auto var(--space-4)', borderRadius: 'var(--radius-md)' }}
-              />
-            ) : (
-              <div style={{ width: 160, height: 160, margin: '0 auto var(--space-4)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <QrCode size={40} style={{ color: 'var(--text-tertiary)' }} />
-              </div>
-            )}
+            <img
+              src={getQRUrl(v)}
+              alt={`QR: ${v.vehicle_id}`}
+              style={{ width: '160px', height: '160px', margin: '0 auto var(--space-4)', borderRadius: 'var(--radius-md)', display: 'block' }}
+            />
 
             <h4 style={{ fontWeight: 700, marginBottom: 2 }}>{v.vehicle_id}</h4>
-            <p style={{ color: 'var(--color-deep-teal)', fontWeight: 700, fontSize: 'var(--text-lg)', fontFamily: 'var(--font-mono)' }}>{v.number_plate}</p>
+            <p style={{ color: 'var(--color-crimson-red)', fontWeight: 700, fontSize: 'var(--text-lg)', fontFamily: 'var(--font-mono)' }}>{v.number_plate}</p>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-4)' }}>{v.name}</p>
 
             <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center' }}>
