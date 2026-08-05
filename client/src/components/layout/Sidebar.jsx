@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, Car, Users, ClipboardCheck, Fuel, QrCode,
   BarChart3, AlertTriangle, Bell, Settings, LogOut, Wrench,
-  Route, CalendarCheck, FileText, Shield
+  Route, CalendarCheck, FileText, Shield, ShieldCheck
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -29,8 +29,9 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/check-out', icon: Route, label: 'Vehicle Check-out' },
     { to: '/fuel', icon: Fuel, label: 'Fuel Management' },
 
-    { section: 'Attendance' },
+    { section: 'Attendance & Approvals' },
     { to: '/attendance', icon: CalendarCheck, label: 'Attendance' },
+    { to: '/approvals', icon: ShieldCheck, label: 'Approval Center', badge: 'PENDING' },
 
     { section: 'Reports & Analytics', adminOnly: true },
     { to: '/analytics', icon: BarChart3, label: 'Analytics', adminOnly: true },

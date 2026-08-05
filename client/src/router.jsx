@@ -13,6 +13,7 @@ import AttendancePage from './pages/attendance/AttendancePage';
 import AlertsPage from './pages/vehicles/AlertsPage';
 import ServicesPage from './pages/vehicles/ServicesPage';
 import AnalyticsPage from './pages/vehicles/AnalyticsPage';
+import ApprovalCenterPage from './pages/approvals/ApprovalCenterPage';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -73,8 +74,9 @@ export default function AppRouter() {
           <Route path="/check-out" element={<CheckOutPage />} />
           <Route path="/fuel" element={<FuelPage />} />
 
-          {/* Attendance */}
+          {/* Attendance & Approvals */}
           <Route path="/attendance" element={<AttendancePage />} />
+          <Route path="/approvals" element={<ApprovalCenterPage />} />
 
           {/* Reports & Analytics (admin) */}
           <Route path="/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
