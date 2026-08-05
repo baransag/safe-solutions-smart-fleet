@@ -125,10 +125,25 @@ class ApiService {
     }
 
     if (endpoint.startsWith('/vehicle-assignments/my')) {
+      const userStr = localStorage.getItem('user');
+      let currentUser = null;
+      try { currentUser = userStr ? JSON.parse(userStr) : null; } catch {}
+      const assigned = MOCK_VEHICLES.find(v => 
+        (v.emp_id && currentUser?.employee_id && v.emp_id === currentUser.employee_id) ||
+        (v.assigned_employee_name && currentUser?.name && v.assigned_employee_name.toLowerCase().includes(currentUser.name.toLowerCase()))
+      );
+
       return {
-        assignment: {
-          id: 1, vehicle_id: 1, v_id: 'VH-001', vehicle_name: 'Company Bike', number_plate: 'AGN-1227-21', vehicle_type: 'bike', current_meter: 12450.0, employee_name: 'Staff'
-        }
+        assignment: assigned ? {
+          id: assigned.id,
+          vehicle_id: assigned.id,
+          v_id: assigned.vehicle_id,
+          vehicle_name: assigned.name,
+          number_plate: assigned.number_plate,
+          vehicle_type: assigned.type,
+          current_meter: assigned.current_meter,
+          employee_name: currentUser?.name || assigned.assigned_employee_name
+        } : null
       };
     }
 
@@ -145,8 +160,24 @@ class ApiService {
     }
 
     if (endpoint.startsWith('/dashboard/employee')) {
+      const userStr = localStorage.getItem('user');
+      let currentUser = null;
+      try { currentUser = userStr ? JSON.parse(userStr) : null; } catch {}
+      const assigned = MOCK_VEHICLES.find(v => 
+        (v.emp_id && currentUser?.employee_id && v.emp_id === currentUser.employee_id) ||
+        (v.assigned_employee_name && currentUser?.name && v.assigned_employee_name.toLowerCase().includes(currentUser.name.toLowerCase()))
+      ) || MOCK_VEHICLES[7]; // Default to M. Zahid's vehicle if matching M. Zahid
+
       return {
-        assignment: { id: 1, vehicle_id: 1, v_id: 'VH-001', vehicle_name: 'Company Bike', number_plate: 'AGN-1227-21', vehicle_type: 'bike', current_meter: 12450.0 },
+        assignment: assigned ? {
+          id: assigned.id,
+          vehicle_id: assigned.id,
+          v_id: assigned.vehicle_id,
+          vehicle_name: assigned.name,
+          number_plate: assigned.number_plate,
+          vehicle_type: assigned.type,
+          current_meter: assigned.current_meter
+        } : null,
         todayCheckin: null, recentActivity: [], fuelHistory: []
       };
     }
