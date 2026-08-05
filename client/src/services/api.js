@@ -194,6 +194,116 @@ class ApiService {
       return { records: [] };
     }
 
+    if (endpoint.startsWith('/employee-qr-codes') && options.method === 'POST' && endpoint.includes('generate')) {
+      return {
+        qrCode: {
+          id: Date.now(),
+          qr_id: `QR-OFFICE-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+          qr_token: `OFFICE_TOK_${Math.random().toString(36).substring(2, 20)}`,
+          name: 'Head Office Faisalabad',
+          type: 'office',
+          project_name: 'SAFE SOLUTIONS HQ',
+          category: 'Head Office',
+          lat: 31.4504,
+          lng: 73.1350,
+          allowed_radius_meters: 200,
+          status: 'active',
+          qr_image_data: null,
+          created_at: new Date().toISOString()
+        }
+      };
+    }
+
+    if (endpoint.startsWith('/employee-qr-codes') && !options.method) {
+      return {
+        qrCodes: [
+          { id: 1, qr_id: 'QR-OFFICE-001', name: 'Head Office Faisalabad', type: 'office', project_name: 'SAFE SOLUTIONS HQ', category: 'Head Office', lat: 31.4504, lng: 73.1350, allowed_radius_meters: 200, status: 'active', creator_name: 'M. Husnain Farooq', created_at: new Date().toISOString() },
+          { id: 2, qr_id: 'QR-OFFICE-002', name: 'Lahore Branch Office', type: 'office', project_name: 'Gulberg Tech Center', category: 'Branch Office', lat: 31.5204, lng: 74.3587, allowed_radius_meters: 250, status: 'active', creator_name: 'M. Husnain Farooq', created_at: new Date().toISOString() },
+          { id: 3, qr_id: 'QR-SITE-101', name: 'Client Plant #4 Site', type: 'site', project_name: 'Industrial Zone Waterproofing Project', category: 'Construction Site', lat: 31.4200, lng: 73.0800, allowed_radius_meters: 300, status: 'active', creator_name: 'M. Husnain Farooq', created_at: new Date().toISOString() },
+          { id: 4, qr_id: 'QR-SITE-102', name: 'Multan Expansion Site', type: 'site', project_name: 'Warehouse Insulation & Application', category: 'Temporary Project Site', lat: 30.1575, lng: 71.5249, allowed_radius_meters: 350, status: 'active', creator_name: 'M. Husnain Farooq', created_at: new Date().toISOString() }
+        ]
+      };
+    }
+
+    if (endpoint.startsWith('/employee-qr-codes') && options.method === 'POST' && endpoint.includes('verify')) {
+      return {
+        valid: true,
+        qr_code: {
+          id: 1,
+          qr_id: 'QR-OFFICE-001',
+          name: 'Head Office Faisalabad',
+          type: 'office',
+          project_name: 'SAFE SOLUTIONS HQ',
+          allowed_radius_meters: 200,
+          distance_meters: 18.5,
+          gps_status: 'Inside Office',
+          is_within_radius: true
+        }
+      };
+    }
+
+    if (endpoint.startsWith('/employee-qr-codes') && (options.method === 'PATCH' || options.method === 'DELETE' || (options.method === 'POST' && endpoint.includes('regenerate')))) {
+      return { success: true, qrCode: { status: 'active' }, message: 'Updated successfully' };
+    }
+
+    if (endpoint.startsWith('/attendance/office') || endpoint.startsWith('/attendance/site')) {
+      const type = endpoint.includes('/office') ? 'office' : 'site';
+      const record = {
+        id: Date.now(),
+        employee_id: 1,
+        check_in_time: new Date().toISOString(),
+        check_in_lat: 31.4504,
+        check_in_lng: 73.1350,
+        attendance_type: type,
+        location_name: type === 'office' ? 'Head Office Faisalabad' : 'Client Plant #4 Site',
+        project_name: type === 'site' ? 'Industrial Zone Waterproofing Project' : 'SAFE SOLUTIONS HQ',
+        approval_status: 'pending',
+        gps_status: type === 'office' ? 'Inside Office' : 'Inside Site',
+        distance_meters: 18.5,
+        qr_id_scanned: 'QR-OFFICE-001',
+        is_late: false
+      };
+      const existing = JSON.parse(localStorage.getItem('mock_attendance') || '[]');
+      existing.push(record);
+      localStorage.setItem('mock_attendance', JSON.stringify(existing));
+      return { attendance: record };
+    }
+
+    if (endpoint.startsWith('/attendance/pending')) {
+      return { requests: [] };
+    }
+
+    if (endpoint.includes('/attendance/') && (options.method === 'PATCH')) {
+      return { attendance: { approval_status: endpoint.includes('approve') ? 'approved' : 'rejected' } };
+    }
+
+    if (endpoint.startsWith('/attendance/reports')) {
+      const att = JSON.parse(localStorage.getItem('mock_attendance') || '[]');
+      return {
+        summary: {
+          total_present: att.length,
+          office_present: att.filter(r => r.attendance_type === 'office').length,
+          site_present: att.filter(r => r.attendance_type === 'site').length,
+          pending_approval: att.filter(r => r.approval_status === 'pending').length,
+          late_employees: att.filter(r => r.is_late).length,
+          total_employees: 12
+        },
+        records: att
+      };
+    }
+
+    if (endpoint.startsWith('/attendance/today')) {
+      const att = JSON.parse(localStorage.getItem('mock_attendance') || '[]');
+      const today = new Date().toISOString().split('T')[0];
+      const todayRec = att.find(r => r.check_in_time && r.check_in_time.startsWith(today));
+      return { attendance: todayRec || null };
+    }
+
+    if (endpoint.startsWith('/attendance/history')) {
+      const att = JSON.parse(localStorage.getItem('mock_attendance') || '[]');
+      return { records: att };
+    }
+
     if (endpoint.startsWith('/alerts')) {
       return { alerts: [] };
     }

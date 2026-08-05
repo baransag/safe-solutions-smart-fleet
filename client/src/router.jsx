@@ -10,6 +10,8 @@ import CheckInPage from './pages/vehicles/CheckInPage';
 import CheckOutPage from './pages/vehicles/CheckOutPage';
 import FuelPage from './pages/vehicles/FuelPage';
 import AttendancePage from './pages/attendance/AttendancePage';
+import EmployeeQRCodesPage from './pages/attendance/EmployeeQRCodesPage';
+import ReportsPage from './pages/attendance/ReportsPage';
 import AlertsPage from './pages/vehicles/AlertsPage';
 import ServicesPage from './pages/vehicles/ServicesPage';
 import AnalyticsPage from './pages/vehicles/AnalyticsPage';
@@ -74,14 +76,16 @@ export default function AppRouter() {
           <Route path="/check-out" element={<CheckOutPage />} />
           <Route path="/fuel" element={<FuelPage />} />
 
-          {/* Attendance & Approvals */}
+          {/* Employee Attendance, QR Management & Approvals */}
           <Route path="/attendance" element={<AttendancePage />} />
+          <Route path="/employee-qr-codes" element={<AdminRoute><EmployeeQRCodesPage /></AdminRoute>} />
           <Route path="/approvals" element={<ApprovalCenterPage />} />
 
           {/* Reports & Analytics (admin) */}
           <Route path="/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
           <Route path="/alerts" element={<AdminRoute><AlertsPage /></AdminRoute>} />
           <Route path="/services" element={<AdminRoute><ServicesPage /></AdminRoute>} />
+          <Route path="/reports" element={<AdminRoute><ReportsPage /></AdminRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

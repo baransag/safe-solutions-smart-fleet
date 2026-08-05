@@ -31,6 +31,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
     { section: 'Attendance & Approvals' },
     { to: '/attendance', icon: CalendarCheck, label: 'Attendance' },
+    { to: '/employee-qr-codes', icon: QrCode, label: 'QR Code Management', adminOnly: true },
     { to: '/approvals', icon: ShieldCheck, label: 'Approval Center', badge: 'PENDING' },
 
     { section: 'Reports & Analytics', adminOnly: true },

@@ -5,7 +5,8 @@ import api from '../../services/api';
 import HeroSection from '../../components/vehicle/HeroSection';
 import {
   Car, ClipboardCheck, Route, Fuel, AlertTriangle, Wrench,
-  TrendingUp, Users, Clock, MapPin, CheckCircle2, XCircle
+  TrendingUp, Users, Clock, MapPin, CheckCircle2, XCircle,
+  Building2, HardHat, ShieldCheck, UserX, CalendarCheck
 } from 'lucide-react';
 import './DashboardPage.css';
 
@@ -42,6 +43,8 @@ export default function DashboardPage() {
     );
   }
 
+  const empAtt = data?.employeeAttendance || { total_attendance: 0, office_present: 0, site_present: 0, pending_approval: 0, late_employees: 0 };
+
   return (
     <div className="page dashboard-page">
       <HeroSection />
@@ -50,6 +53,52 @@ export default function DashboardPage() {
       <div className="dashboard-greeting animate-fade-in-up">
         <h2>Welcome back, {user?.name?.split(' ')[0]} 👋</h2>
         <p>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      </div>
+
+      {/* EMPLOYEE ATTENDANCE KPI METRICS SUMMARY BANNER */}
+      <div className="dashboard-section animate-fade-in-up" style={{ marginBottom: 24 }}>
+        <h3 className="section-title">Today's Employee Attendance Overview</h3>
+        <div className="stats-grid">
+          <div className="card-stat orange" onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon orange"><CalendarCheck size={22} /></div>
+            <div className="stat-content">
+              <div className="stat-value">{empAtt.total_attendance || 0}</div>
+              <div className="stat-label">Today's Attendance</div>
+            </div>
+          </div>
+
+          <div className="card-stat teal" onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon teal"><Building2 size={22} /></div>
+            <div className="stat-content">
+              <div className="stat-value">{empAtt.office_present || 0}</div>
+              <div className="stat-label">Office Present</div>
+            </div>
+          </div>
+
+          <div className="card-stat green" onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon green"><HardHat size={22} /></div>
+            <div className="stat-content">
+              <div className="stat-value">{empAtt.site_present || 0}</div>
+              <div className="stat-label">Site Present</div>
+            </div>
+          </div>
+
+          <div className="card-stat red" onClick={() => navigate('/approvals')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon red"><ShieldCheck size={22} /></div>
+            <div className="stat-content">
+              <div className="stat-value">{empAtt.pending_approval || 0}</div>
+              <div className="stat-label">Pending Approval</div>
+            </div>
+          </div>
+
+          <div className="card-stat purple" onClick={() => navigate('/reports')} style={{ cursor: 'pointer' }}>
+            <div className="stat-icon purple"><Clock size={22} /></div>
+            <div className="stat-content">
+              <div className="stat-value">{empAtt.late_employees || 0}</div>
+              <div className="stat-label">Late Employees</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Employee Dashboard */}
@@ -101,21 +150,21 @@ function EmployeeDashboard({ data, navigate }) {
       <div className="dashboard-section animate-fade-in-up delay-2">
         <h3 className="section-title">Quick Actions</h3>
         <div className="quick-actions-grid">
+          <button className="quick-action-card" onClick={() => navigate('/attendance')}>
+            <div className="qa-icon blue"><CalendarCheck size={22} /></div>
+            <span>Employee Attendance</span>
+          </button>
           <button className="quick-action-card" onClick={() => navigate('/check-in')}>
             <div className="qa-icon orange"><ClipboardCheck size={22} /></div>
-            <span>Check In</span>
+            <span>Vehicle Check In</span>
           </button>
           <button className="quick-action-card" onClick={() => navigate('/check-out')}>
             <div className="qa-icon teal"><Route size={22} /></div>
-            <span>Check Out</span>
+            <span>Vehicle Check Out</span>
           </button>
           <button className="quick-action-card" onClick={() => navigate('/fuel')}>
             <div className="qa-icon green"><Fuel size={22} /></div>
             <span>Submit Fuel</span>
-          </button>
-          <button className="quick-action-card" onClick={() => navigate('/attendance')}>
-            <div className="qa-icon blue"><Clock size={22} /></div>
-            <span>Attendance</span>
           </button>
         </div>
       </div>

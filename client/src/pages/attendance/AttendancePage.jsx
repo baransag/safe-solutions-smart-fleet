@@ -2,186 +2,395 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
-import { CalendarCheck, Clock, MapPin, LogIn, LogOut } from 'lucide-react';
+import EmployeeQRScanner from '../../components/attendance/EmployeeQRScanner';
+import { Building2, HardHat, CheckCircle2, MapPin, Navigation, Clock, Calendar, RefreshCw, Send } from 'lucide-react';
 
 export default function AttendancePage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isController, isAdmin } = useAuth();
   const toast = useToast();
+
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => { fetchData(); }, []);
+  // Scanner modal state
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [activeAttendanceType, setActiveAttendanceType] = useState('office'); // 'office' | 'site'
+
+  // Form State after scan
+  const [scannedData, setScannedData] = useState(null);
+  const [qrVerification, setQrVerification] = useState(null);
+  const [userGps, setUserGps] = useState({ lat: null, lng: null });
+  const [projectName, setProjectName] = useState('Industrial Zone Waterproofing Project');
+  const [notes, setNotes] = useState('');
+
+  // Sample site projects for selection
+  const projectsList = [
+    'Industrial Zone Waterproofing Project',
+    'Client Plant #4 Site Application',
+    'Gulberg Commercial Complex',
+    'Multan Warehouse Insulation',
+    'Faisalabad Depot Refurbishment'
+  ];
+
+  useEffect(() => {
+    fetchData();
+    getCurrentGps();
+  }, []);
 
   async function fetchData() {
     try {
-      const [today, hist] = await Promise.all([
-        api.get('/attendance/today'),
-        api.get('/attendance/history')
+      setLoading(true);
+      const [todayRes, histRes] = await Promise.all([
+        api.get('/attendance/today').catch(() => ({ attendance: null })),
+        api.get('/attendance/history').catch(() => ({ records: [] }))
       ]);
-      setTodayAttendance(today.attendance);
-      setHistory(hist.records || []);
-    } catch {} finally { setLoading(false); }
-  }
-
-  async function handleCheckIn() {
-    setActionLoading(true);
-    try {
-      const pos = await new Promise((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
-      ).catch(() => null);
-
-      await api.post('/attendance/check-in', {
-        lat: pos?.coords.latitude,
-        lng: pos?.coords.longitude,
-        status: 'pending_approval'
-      });
-      toast.success('Check-in submitted! Pending Manager/Controller approval.');
-      fetchData();
+      setTodayAttendance(todayRes.attendance);
+      setHistory(histRes.records || []);
     } catch (err) {
-      toast.error(err.message);
+      toast.error('Failed to load attendance data.');
     } finally {
-      setActionLoading(false);
+      setLoading(false);
     }
   }
 
-  async function handleCheckOut() {
-    setActionLoading(true);
-    try {
-      const pos = await new Promise((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
-      ).catch(() => null);
-
-      await api.post('/attendance/check-out', {
-        lat: pos?.coords.latitude,
-        lng: pos?.coords.longitude
-      });
-      toast.success('Check-out submitted! Pending Manager/Controller approval.');
-      fetchData();
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setActionLoading(false);
+  const getCurrentGps = () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        () => {
+          // Fallback to default Faisalabad GPS for development
+          setUserGps({ lat: 31.4504, lng: 73.1350 });
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      setUserGps({ lat: 31.4504, lng: 73.1350 });
     }
-  }
-
-  const handleApproveStatus = (id, newStatus) => {
-    setHistory(prev => prev.map(item => item.id === id ? { ...item, approval_status: newStatus } : item));
-    if (todayAttendance && todayAttendance.id === id) {
-      setTodayAttendance(prev => ({ ...prev, approval_status: newStatus }));
-    }
-    toast.success(`Attendance record marked as ${newStatus}`);
   };
 
-  if (loading) return <div className="page"><div className="page-loader"><div className="loader loader-lg" /></div></div>;
+  const handleStartScan = (type) => {
+    if (todayAttendance && todayAttendance.approval_status !== 'rejected') {
+      toast.warning('You have already submitted attendance for today.');
+      return;
+    }
+    setActiveAttendanceType(type);
+    setScannedData(null);
+    setQrVerification(null);
+    getCurrentGps();
+    setScannerOpen(true);
+  };
 
-  const isCheckedIn = todayAttendance && !todayAttendance.check_out_time;
+  const handleScanSuccess = async (text) => {
+    setScannerOpen(false);
+    setScannedData(text);
+    setActionLoading(true);
+
+    try {
+      const res = await api.post('/employee-qr-codes/verify', {
+        scanned_data: text,
+        lat: userGps.lat || 31.4504,
+        lng: userGps.lng || 73.1350
+      });
+
+      if (res.valid) {
+        setQrVerification(res.qr_code);
+        toast.success(`Scanned: ${res.qr_code.name} (${res.qr_code.gps_status})`);
+      }
+    } catch (err) {
+      toast.error(err.message || 'QR Verification failed or inactive QR Code.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSubmitAttendance = async () => {
+    if (!qrVerification) {
+      toast.error('Please scan a valid QR Code first.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const endpoint = activeAttendanceType === 'office' ? '/attendance/office' : '/attendance/site';
+      const payload = {
+        scanned_data: scannedData,
+        project_name: activeAttendanceType === 'site' ? projectName : undefined,
+        lat: userGps.lat || 31.4504,
+        lng: userGps.lng || 73.1350,
+        notes
+      };
+
+      const res = await api.post(endpoint, payload);
+      toast.success(`${activeAttendanceType === 'office' ? 'Office' : 'Site'} Attendance submitted! Pending Manager Approval.`);
+      setScannedData(null);
+      setQrVerification(null);
+      fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit attendance.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="page">
+        <div className="page-loader"><div className="loader loader-lg" /></div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 className="page-title">Attendance & Approvals</h1>
-          <p className="page-description">Office & Site Attendance with Manager Approval</p>
+          <h1 className="page-title">Employee Attendance</h1>
+          <p className="page-description">Scan Office or Site QR Code to submit GPS-verified daily attendance</p>
+        </div>
+
+        <button className="btn btn-secondary btn-sm" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <RefreshCw size={14} /> Refresh Data
+        </button>
+      </div>
+
+      {/* Today's Status Notification Card if already submitted */}
+      {todayAttendance && (
+        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 14, padding: 18, marginBottom: 24, borderLeft: '5px solid #021C4F', background: '#f8fafc' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Today's Active Submission
+              </span>
+              <h4 style={{ margin: '2px 0 0', fontSize: 16, fontWeight: 800, color: '#021C4F' }}>
+                {todayAttendance.attendance_type === 'office' ? '🏢 Office Attendance' : '🏗️ Site Attendance'} - {todayAttendance.location_name || 'Head Office'}
+              </h4>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#475569' }}>
+                Time: {new Date(todayAttendance.check_in_time).toLocaleTimeString()} • Status: 📍 {todayAttendance.gps_status || 'Inside Radius'} ({todayAttendance.distance_meters || 0}m distance)
+              </p>
+            </div>
+
+            <span className={`badge badge-${todayAttendance.approval_status === 'approved' ? 'green' : todayAttendance.approval_status === 'rejected' ? 'red' : 'yellow'}`} style={{ fontSize: 13, padding: '6px 14px', fontWeight: 700 }}>
+              {todayAttendance.approval_status === 'approved' ? '✅ Approved' : todayAttendance.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending Manager Approval'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* TWO MAIN CARDS: Office Attendance & Site Attendance */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20, marginBottom: 32 }}>
+
+        {/* 1. Office Attendance Card */}
+        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 24, border: '1px solid rgba(2, 28, 79, 0.12)', background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg, #021C4F 0%, #1e3a8a 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Building2 size={24} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#021C4F' }}>Office Attendance</h3>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>Head Office & Branch Check-In</p>
+            </div>
+          </div>
+
+          <p style={{ fontSize: 13, color: '#475569', marginBottom: 20, lineHeight: 1.5 }}>
+            Scan the official Office QR code to automatically capture your GPS coordinates, verify office radius, and submit for Manager approval.
+          </p>
+
+          <button
+            className="btn btn-primary btn-lg"
+            onClick={() => handleStartScan('office')}
+            disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
+            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, background: '#021C4F', fontWeight: 700 }}
+          >
+            <Building2 size={18} /> Click Office Attendance
+          </button>
+        </div>
+
+        {/* 2. Site Attendance Card */}
+        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 24, border: '1px solid rgba(197, 3, 55, 0.12)', background: 'linear-gradient(180deg, #ffffff 0%, #fff5f5 100%)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg, #C50337 0%, #991b1b 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <HardHat size={24} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#C50337' }}>Site Attendance</h3>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>On-Site Client Project Check-In</p>
+            </div>
+          </div>
+
+          <p style={{ fontSize: 13, color: '#475569', marginBottom: 20, lineHeight: 1.5 }}>
+            Select your assigned project, scan the Site QR Code, and verify GPS site radius before submitting to Manager / Controller for approval.
+          </p>
+
+          <button
+            className="btn btn-danger btn-lg"
+            onClick={() => handleStartScan('site')}
+            disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
+            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, background: '#C50337', fontWeight: 700 }}
+          >
+            <HardHat size={18} /> Click Site Attendance
+          </button>
         </div>
       </div>
 
-      {/* Today's Status Card */}
-      <div className="card-elevated animate-fade-in-up" style={{ maxWidth: 520, marginBottom: 'var(--space-8)' }}>
-        <h3 style={{ marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <CalendarCheck size={18} /> Today's Attendance
-        </h3>
+      {/* Verification & Submission Box (Appears after successful scan) */}
+      {qrVerification && (
+        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 24, marginBottom: 32, border: '2px solid #10B981', background: '#f0fdf4' }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 800, color: '#065f46', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CheckCircle2 size={20} color="#10B981" /> Scanned QR Code Verified: {qrVerification.name}
+          </h3>
 
-        {!todayAttendance ? (
-          <div style={{ textAlign: 'center', padding: 'var(--space-4) 0' }}>
-            <p style={{ color: 'var(--text-tertiary)', marginBottom: 'var(--space-4)' }}>You haven't checked in today</p>
-            <button className="btn btn-primary btn-lg" onClick={handleCheckIn} disabled={actionLoading}>
-              {actionLoading ? 'Processing...' : <><LogIn size={18} /> Submit Office Check In</>}
-            </button>
-          </div>
-        ) : isCheckedIn ? (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
-              <span className="badge badge-warning" style={{ background: 'var(--color-warning-light)', color: 'var(--color-warning)', fontWeight: 700 }}>⏳ Pending Manager Approval</span>
-              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                Original Time: {new Date(todayAttendance.check_in_time).toLocaleTimeString()}
-              </span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 18 }}>
+            <div style={{ background: '#fff', padding: 12, borderRadius: 10, border: '1px solid #bbf7d0' }}>
+              <span style={{ fontSize: 11, color: '#64748b', display: 'block' }}>Attendance Type</span>
+              <strong style={{ fontSize: 14, color: '#021C4F', textTransform: 'capitalize' }}>{activeAttendanceType} Attendance</strong>
             </div>
-            <button className="btn btn-teal btn-lg" onClick={handleCheckOut} disabled={actionLoading} style={{ width: '100%' }}>
-              {actionLoading ? 'Processing...' : <><LogOut size={18} /> Submit Check Out</>}
-            </button>
-          </div>
-        ) : (
-          <div>
-            <div style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap' }}>
-              <div>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Original Check In</p>
-                <p style={{ fontWeight: 700 }}>{new Date(todayAttendance.check_in_time).toLocaleTimeString()}</p>
-              </div>
-              <div>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Check Out</p>
-                <p style={{ fontWeight: 700 }}>{new Date(todayAttendance.check_out_time).toLocaleTimeString()}</p>
-              </div>
-              <div>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Status</p>
-                <span className={`badge badge-${todayAttendance.approval_status === 'approved' ? 'green' : todayAttendance.approval_status === 'rejected' ? 'red' : 'yellow'}`}>
-                  {todayAttendance.approval_status === 'approved' ? '✅ Approved / Present' : todayAttendance.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending Manager Approval'}
-                </span>
-              </div>
+
+            <div style={{ background: '#fff', padding: 12, borderRadius: 10, border: '1px solid #bbf7d0' }}>
+              <span style={{ fontSize: 11, color: '#64748b', display: 'block' }}>GPS Verification Status</span>
+              <strong style={{ fontSize: 14, color: qrVerification.is_within_radius ? '#047857' : '#b91c1c' }}>
+                📍 {qrVerification.gps_status}
+              </strong>
+            </div>
+
+            <div style={{ background: '#fff', padding: 12, borderRadius: 10, border: '1px solid #bbf7d0' }}>
+              <span style={{ fontSize: 11, color: '#64748b', display: 'block' }}>Calculated Distance</span>
+              <strong style={{ fontSize: 14, color: '#0284c7' }}>{qrVerification.distance_meters} meters</strong>
             </div>
           </div>
-        )}
+
+          {activeAttendanceType === 'site' && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#065f46', display: 'block', marginBottom: 6 }}>
+                Select Project / Site:
+              </label>
+              <select
+                value={projectName}
+                onChange={e => setProjectName(e.target.value)}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #6ee7b7', fontSize: 13, background: '#fff' }}
+              >
+                {projectsList.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#065f46', display: 'block', marginBottom: 6 }}>
+              Optional Work Notes:
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Arrived for morning shift client presentation..."
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #6ee7b7', fontSize: 13, background: '#fff' }}
+            />
+          </div>
+
+          <button
+            className="btn btn-primary btn-lg"
+            onClick={handleSubmitAttendance}
+            disabled={actionLoading}
+            style={{ width: '100%', background: '#10B981', border: 'none', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
+          >
+            {actionLoading ? 'Submitting...' : <><Send size={18} /> Submit Attendance for Manager Approval</>}
+          </button>
+        </div>
+      )}
+
+      {/* ATTENDANCE HISTORY TABLE */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h3 style={{ margin: 0, fontWeight: 800, color: '#021C4F' }}>Employee Attendance History</h3>
+        <span style={{ fontSize: 12, color: '#64748b' }}>Showing recent attendance records</span>
       </div>
 
-      {/* History */}
-      <h3 style={{ marginBottom: 'var(--space-4)', fontWeight: 700 }}>Attendance Records & Approvals</h3>
-      <div className="table-container">
+      <div className="table-container animate-fade-in-up">
         <table className="table">
           <thead>
             <tr>
               <th>Date</th>
+              <th>Time</th>
               <th>Employee</th>
-              <th>Check In (Original Time)</th>
-              <th>Check Out</th>
-              <th>Approval Status</th>
-              <th>Actions (Controller / Admin Only)</th>
+              <th>Type</th>
+              <th>Office / Site Name</th>
+              <th>GPS Status</th>
+              <th>Status</th>
+              <th>Approved By</th>
             </tr>
           </thead>
           <tbody>
-            {(history.length > 0 ? history : [
-              { id: 1, date: '2026-08-05', employee_name: 'Engr. Shahzaib Ahmad', check_in_time: '2026-08-05T08:30:00Z', check_out_time: '2026-08-05T17:30:00Z', approval_status: 'pending' },
-              { id: 2, date: '2026-08-05', employee_name: 'M. Zahid', check_in_time: '2026-08-05T08:45:00Z', check_out_time: null, approval_status: 'pending' }
-            ]).map(r => (
-              <tr key={r.id}>
-                <td>{new Date(r.check_in_time || r.date).toLocaleDateString()}</td>
-                <td><strong>{r.employee_name || user?.name}</strong></td>
-                <td>{new Date(r.check_in_time).toLocaleTimeString()}</td>
-                <td>{r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString() : '-'}</td>
-                <td>
-                  <span className={`badge badge-${r.approval_status === 'approved' ? 'green' : r.approval_status === 'rejected' ? 'red' : 'yellow'}`}>
-                    {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending Approval'}
-                  </span>
-                </td>
-                <td>
-                  {user?.role === 'controller' || user?.employee_id === 'ADMIN001' ? (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button className="btn btn-primary btn-sm" onClick={() => handleApproveStatus(r.id, 'approved')}>
-                        Approve
-                      </button>
-                      <button className="btn btn-danger btn-sm" onClick={() => handleApproveStatus(r.id, 'rejected')}>
-                        Reject
-                      </button>
+            {history.length > 0 ? (
+              history.map(r => (
+                <tr key={r.id}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                      <Calendar size={14} color="#64748b" />
+                      {new Date(r.check_in_time).toLocaleDateString()}
                     </div>
-                  ) : (
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Awaiting Controller Review</span>
-                  )}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#475569' }}>
+                      <Clock size={14} color="#64748b" />
+                      {new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </td>
+                  <td>
+                    <strong>{r.employee_name || user?.name}</strong>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>ID: {r.emp_id || user?.employee_id}</div>
+                  </td>
+                  <td>
+                    <span style={{
+                      padding: '3px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700,
+                      background: r.attendance_type === 'site' ? '#fff1f2' : '#eff6ff',
+                      color: r.attendance_type === 'site' ? '#c50337' : '#021c4f'
+                    }}>
+                      {r.attendance_type === 'site' ? '🏗️ Site' : '🏢 Office'}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600, color: '#021C4F' }}>{r.location_name || 'Head Office'}</div>
+                    {r.project_name && <div style={{ fontSize: 11, color: '#64748b' }}>{r.project_name}</div>}
+                  </td>
+                  <td>
+                    <span style={{ fontSize: 11, color: '#0284c7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Navigation size={12} /> {r.gps_status || 'Inside Office'} ({r.distance_meters || 0}m)
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge badge-${r.approval_status === 'approved' ? 'green' : r.approval_status === 'rejected' ? 'red' : 'yellow'}`} style={{ fontWeight: 700 }}>
+                      {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{ fontSize: 12, color: r.approved_by_name ? '#047857' : '#94a3b8', fontWeight: 600 }}>
+                      {r.approved_by_name ? `Approved by ${r.approved_by_name}` : 'Awaiting Review'}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8} style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>
+                  No attendance records found. Click Office or Site Attendance to submit your first check-in!
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
+
+      {/* QR Scanner Camera Modal */}
+      <EmployeeQRScanner
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScanSuccess={handleScanSuccess}
+        title={`Scan ${activeAttendanceType === 'office' ? 'Office' : 'Site'} Attendance QR Code`}
+      />
     </div>
   );
 }

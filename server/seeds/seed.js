@@ -15,7 +15,7 @@ async function seed() {
     const bossPassword = await bcrypt.hash('SS@Admin26', 12);
 
     // Truncate existing data to cleanly re-populate exact records
-    await client.query('TRUNCATE TABLE vehicle_assignments, vehicle_checkouts, vehicle_checkins, fuel_logs, vehicle_services, vehicle_alerts, vehicle_meter_logs, notifications, vehicles, employees RESTART IDENTITY CASCADE');
+    await client.query('TRUNCATE TABLE vehicle_assignments, vehicle_checkouts, vehicle_checkins, fuel_logs, vehicle_services, vehicle_alerts, vehicle_meter_logs, notifications, vehicles, attendance_records, employee_qr_codes, employees RESTART IDENTITY CASCADE');
 
     // Insert exact employee records as provided in Master List
     const employeesData = [
@@ -203,10 +203,85 @@ async function seed() {
     }
     console.log(`  ✅ ${insertedEmployees.length} employees inserted with exact details.`);
 
+    const controllerEmp = insertedEmployees.find(e => e.role === 'controller') || insertedEmployees[0];
+
+    // Seed Employee QR Codes (Office & Site QR Codes)
+    console.log('  📌 Seeding Employee Attendance QR Codes...');
+    const sampleQRs = [
+      {
+        qr_id: 'QR-OFFICE-001',
+        qr_token: 'OFFICE_TOK_HQ_9981273948',
+        name: 'Head Office Faisalabad',
+        type: 'office',
+        project_name: 'SAFE SOLUTIONS HQ',
+        category: 'Head Office',
+        lat: 31.4504,
+        lng: 73.1350,
+        radius: 200,
+        status: 'active'
+      },
+      {
+        qr_id: 'QR-OFFICE-002',
+        qr_token: 'OFFICE_TOK_BRANCH_4481239811',
+        name: 'Lahore Branch Office',
+        type: 'office',
+        project_name: 'Gulberg Tech Center',
+        category: 'Branch Office',
+        lat: 31.5204,
+        lng: 74.3587,
+        radius: 250,
+        status: 'active'
+      },
+      {
+        qr_id: 'QR-SITE-101',
+        qr_token: 'SITE_TOK_PLANT4_7718239012',
+        name: 'Client Plant #4 Site',
+        type: 'site',
+        project_name: 'Industrial Zone Waterproofing Project',
+        category: 'Construction Site',
+        lat: 31.4200,
+        lng: 73.0800,
+        radius: 300,
+        status: 'active'
+      },
+      {
+        qr_id: 'QR-SITE-102',
+        qr_token: 'SITE_TOK_DEPOT_5561230912',
+        name: 'Multan Expansion Site',
+        type: 'site',
+        project_name: 'Warehouse Insulation & Application',
+        category: 'Temporary Project Site',
+        lat: 30.1575,
+        lng: 71.5249,
+        radius: 350,
+        status: 'active'
+      }
+    ];
+
+    const insertedQRs = [];
+    for (const qr of sampleQRs) {
+      const qrDataUrl = await QRCode.toDataURL(JSON.stringify({
+        qr_id: qr.qr_id,
+        qr_token: qr.qr_token,
+        name: qr.name,
+        type: qr.type,
+        project_name: qr.project_name,
+        system: 'SAFE_SOLUTIONS_OPS'
+      }), { width: 400, margin: 2, color: { dark: '#021C4F', light: '#FFFFFF' } });
+
+      const qrRes = await client.query(
+        `INSERT INTO employee_qr_codes (qr_id, qr_token, name, type, project_name, category, lat, lng, allowed_radius_meters, qr_image_data, status, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         RETURNING id, qr_id, name`,
+        [qr.qr_id, qr.qr_token, qr.name, qr.type, qr.project_name, qr.category, qr.lat, qr.lng, qr.radius, qrDataUrl, qr.status, controllerEmp.db_id]
+      );
+      insertedQRs.push(qrRes.rows[0]);
+    }
+    console.log(`  ✅ ${insertedQRs.length} Employee QR Codes generated.`);
+
     // Insert exact vehicles and assign to respective employees
     console.log('  🏍️ Inserting exact assigned vehicles...');
     let vCount = 1;
-    const controllerEmp = insertedEmployees.find(e => e.role === 'controller');
 
     for (const emp of insertedEmployees) {
       if (emp.number_plate) {
@@ -252,6 +327,30 @@ async function seed() {
       }
     }
     console.log('  ✅ Vehicles and assignments populated.');
+
+    // Seed Sample Attendance Records
+    console.log('  🕒 Seeding Employee Attendance Records...');
+    const shahzaib = insertedEmployees.find(e => e.employee_id === 'EMP003');
+    const shahbaz = insertedEmployees.find(e => e.employee_id === 'EMP004');
+    const hqQr = insertedQRs.find(q => q.qr_id === 'QR-OFFICE-001');
+    const siteQr = insertedQRs.find(q => q.qr_id === 'QR-SITE-101');
+
+    if (shahzaib && hqQr) {
+      await client.query(
+        `INSERT INTO attendance_records (employee_id, check_in_time, check_in_lat, check_in_lng, status, attendance_type, qr_code_id, qr_id_scanned, location_name, approval_status, approved_by, approved_at, gps_status, distance_meters)
+         VALUES ($1, NOW() - INTERVAL '3 hours', 31.4504, 73.1350, 'present', 'office', $2, $3, 'Head Office Faisalabad', 'approved', $4, NOW(), 'Inside Office', 15.4)`,
+        [shahzaib.db_id, hqQr.id, hqQr.qr_id, controllerEmp.db_id]
+      );
+    }
+
+    if (shahbaz && siteQr) {
+      await client.query(
+        `INSERT INTO attendance_records (employee_id, check_in_time, check_in_lat, check_in_lng, status, attendance_type, qr_code_id, qr_id_scanned, location_name, project_name, approval_status, gps_status, distance_meters)
+         VALUES ($1, NOW() - INTERVAL '1 hour', 31.4200, 73.0800, 'present', 'site', $2, $3, 'Client Plant #4 Site', 'Industrial Zone Waterproofing Project', 'pending', 'Inside Site', 24.8)`,
+        [shahbaz.db_id, siteQr.id, siteQr.qr_id]
+      );
+    }
+    console.log('  ✅ Sample Attendance Records seeded.');
 
     // Insert Default Hero Slides referencing assets/images
     console.log('  🖼️ Setting up hero slides...');
