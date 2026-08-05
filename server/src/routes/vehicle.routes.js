@@ -48,14 +48,15 @@ router.get('/', authenticate, async (req, res, next) => {
   }
 
   const fallbackVehicles = [
-    { id: 1, vehicle_id: 'VH-001', name: 'Company Bike', number_plate: 'BBE-5688', type: 'bike', status: 'active', current_meter: 15200, assigned_employee_name: 'ENGR SHAHZAIB AHMAD' },
+    { id: 1, vehicle_id: 'VH-001', name: 'Company Bike', number_plate: 'BBE-5688', type: 'bike', status: 'active', current_meter: 15200, assigned_employee_name: 'Engr. Shahzaib Ahmad' },
     { id: 2, vehicle_id: 'VH-002', name: 'Company Bike', number_plate: 'AGN-1227-21', type: 'bike', status: 'active', current_meter: 12450, assigned_employee_name: 'Shahbaz Ahmed' },
-    { id: 3, vehicle_id: 'VH-003', name: 'Honda Cd70', number_plate: 'FDR-203-15', type: 'bike', status: 'active', current_meter: 8900, assigned_employee_name: 'Rehan Ali' },
-    { id: 4, vehicle_id: 'VH-004', name: 'Company Bike', number_plate: 'AWD - 24- 3818', type: 'bike', status: 'active', current_meter: 18400, assigned_employee_name: 'Adnan Tahir' },
-    { id: 5, vehicle_id: 'VH-005', name: 'Company Bike', number_plate: 'AHV 378.......', type: 'bike', status: 'active', current_meter: 11200, assigned_employee_name: 'ADNAN ALI' },
-    { id: 6, vehicle_id: 'VH-006', name: 'Company Bike', number_plate: 'BFF 6452 /26', type: 'bike', status: 'active', current_meter: 9600, assigned_employee_name: 'M . SOULAT RAZA' },
-    { id: 7, vehicle_id: 'VH-007', name: 'Company Bike', number_plate: 'BFF - 7907 -26', type: 'bike', status: 'active', current_meter: 14100, assigned_employee_name: 'Muneeb Ahmad' },
-    { id: 8, vehicle_id: 'VH-008', name: 'Company Bike', number_plate: 'FD-17-84', type: 'bike', status: 'active', current_meter: 10300, assigned_employee_name: 'TAJAMMUL MUSHTAQ' }
+    { id: 3, vehicle_id: 'VH-003', name: 'Honda CD70', number_plate: 'FDR-203-15', type: 'bike', status: 'active', current_meter: 8900, assigned_employee_name: 'Rehan Ali' },
+    { id: 4, vehicle_id: 'VH-004', name: 'Company Bike', number_plate: 'AWD-24-3818', type: 'bike', status: 'active', current_meter: 18400, assigned_employee_name: 'Adnan Tahir' },
+    { id: 5, vehicle_id: 'VH-005', name: 'Company Car', number_plate: 'AHV-378', type: 'car', status: 'active', current_meter: 11200, assigned_employee_name: 'Adnan Ali' },
+    { id: 6, vehicle_id: 'VH-006', name: 'Company Bike', number_plate: 'BFF-6452/26', type: 'bike', status: 'active', current_meter: 9600, assigned_employee_name: 'M. Soulat Raza' },
+    { id: 7, vehicle_id: 'VH-007', name: 'Company Bike', number_plate: 'BFF-7907-26', type: 'bike', status: 'active', current_meter: 14100, assigned_employee_name: 'Muneeb Ahmad' },
+    { id: 8, vehicle_id: 'VH-008', name: 'Company Bike', number_plate: 'FDL-6381-07', type: 'bike', status: 'active', current_meter: 7800, assigned_employee_name: 'M. Zahid' },
+    { id: 9, vehicle_id: 'VH-009', name: 'Company Car', number_plate: 'FD-17-84', type: 'car', status: 'active', current_meter: 10300, assigned_employee_name: 'Tajammul Mushtaq' }
   ];
 
   res.json({ vehicles: fallbackVehicles });

@@ -205,10 +205,17 @@ export default function CheckInPage() {
     return (
       <div className="page">
         <div className="checkin-complete-card card-elevated animate-scale-in">
-          <CheckCircle2 size={56} style={{ color: 'var(--color-success)' }} />
-          <h2>Check-in Successful!</h2>
-          <p>Your vehicle check-in has been recorded.</p>
+          <Loader2 size={56} style={{ color: 'var(--color-warning)', animation: 'spin 2s linear infinite' }} />
+          <h2>Check-in Submitted!</h2>
+          <p style={{ color: 'var(--color-crimson-red)', fontWeight: 700, fontSize: 'var(--text-lg)' }}>⏳ Pending Manager / Controller Approval</p>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: 'var(--space-2) 0 var(--space-4)' }}>
+            Your meter receipt photo and check-in details have been submitted and sent to the Manager & Controller Admin Panel for review.
+          </p>
           <div className="checkin-summary">
+            <div className="summary-row">
+              <span>Status</span>
+              <span className="badge badge-warning" style={{ background: 'var(--color-warning-light)', color: 'var(--color-warning)', fontWeight: 700 }}>⏳ Pending Manager Approval</span>
+            </div>
             <div className="summary-row">
               <span>Vehicle</span>
               <span>{scannedVehicle?.name}</span>
@@ -218,8 +225,8 @@ export default function CheckInPage() {
               <span>{scannedVehicle?.numberPlate}</span>
             </div>
             <div className="summary-row">
-              <span>Opening KM</span>
-              <span>{parseFloat(meterReading).toLocaleString()}</span>
+              <span>Odometer Reading</span>
+              <span>{parseFloat(meterReading).toLocaleString()} KM</span>
             </div>
             <div className="summary-row">
               <span>Time</span>
