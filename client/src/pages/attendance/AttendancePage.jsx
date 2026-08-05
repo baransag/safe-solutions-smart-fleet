@@ -145,7 +145,7 @@ export default function AttendancePage() {
               <th>Check In (Original Time)</th>
               <th>Check Out</th>
               <th>Approval Status</th>
-              <th>Actions (Manager / Controller)</th>
+              <th>Actions (Controller / Admin Only)</th>
             </tr>
           </thead>
           <tbody>
@@ -164,7 +164,7 @@ export default function AttendancePage() {
                   </span>
                 </td>
                 <td>
-                  {isAdmin || user?.role === 'manager' || user?.role === 'controller' ? (
+                  {user?.role === 'controller' || user?.employee_id === 'ADMIN001' ? (
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button className="btn btn-primary btn-sm" onClick={() => handleApproveStatus(r.id, 'approved')}>
                         Approve
@@ -174,7 +174,7 @@ export default function AttendancePage() {
                       </button>
                     </div>
                   ) : (
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Awaiting Review</span>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Awaiting Controller Review</span>
                   )}
                 </td>
               </tr>

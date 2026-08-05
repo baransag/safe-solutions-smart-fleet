@@ -171,11 +171,20 @@ class ApiService {
       return { logs: [] };
     }
 
+    if (endpoint.startsWith('/notifications')) {
+      const mockNotifications = [
+        { id: 1, title: '⏳ Pending Attendance Approval', message: 'M. Zahid (Helper) submitted Check-in for Company Bike FDL-6381-07 — Awaiting Controller Approval', is_read: false, created_at: new Date().toISOString() },
+        { id: 2, title: '⏳ Pending Vehicle Verification', message: 'Engr. Shahzaib Ahmad submitted Check-in for BBE-5688 — Awaiting Controller Approval', is_read: false, created_at: new Date().toISOString() },
+        { id: 3, title: '⛽ New Fuel Expense Request', message: 'Shahbaz Ahmed submitted fuel expense receipt for AGN-1227-21', is_read: false, created_at: new Date().toISOString() }
+      ];
+      return { notifications: mockNotifications, unreadCount: 3 };
+    }
+
     if (endpoint.startsWith('/vehicle-services')) {
       return { services: [] };
     }
 
-    return { success: true };
+    return { success: true, notifications: [], unreadCount: 0 };
   }
 
   async refreshToken() {
