@@ -25,8 +25,8 @@ router.post('/login', validate({
   email: { required: true },
   password: { required: true, min: 4 }
 }), async (req, res, next) => {
-  const { email, password } = req.body;
-  const cleanEmail = email.toLowerCase().trim();
+  const { email = '', password = '' } = req.body || {};
+  const cleanEmail = String(email).toLowerCase().trim();
 
   try {
     const { rows } = await query(

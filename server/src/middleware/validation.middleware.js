@@ -1,9 +1,10 @@
 function validate(schema) {
   return (req, res, next) => {
     const errors = [];
+    const body = req.body || {};
 
     for (const [field, rules] of Object.entries(schema)) {
-      const value = req.body[field];
+      const value = body[field];
 
       if (rules.required && (value === undefined || value === null || value === '')) {
         errors.push(`${field} is required`);
