@@ -221,48 +221,118 @@ export default function FuelPage() {
 
 function ReceiptCamera({ onCapture }) {
   const videoRef = useRef(null);
+  const fileInputRef = useRef(null);
   const streamRef = useRef(null);
   const [active, setActive] = useState(false);
+  const [error, setError] = useState(null);
 
   async function start() {
+    setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { exact: 'environment' } }
+      }).catch(async () => {
+        // Fallback to ideal facingMode if exact fails
+        return await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      });
+
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
       setActive(true);
-    } catch {}
+    } catch (err) {
+      console.warn('MediaDevices camera error, fallback to native camera intent:', err);
+      // Trigger native camera intent directly on mobile
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      } else {
+        setError('Camera permission denied or camera not found.');
+      }
+    }
   }
 
+  useEffect(() => {
+    if (active && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [active]);
+
   function capture() {
-    const v = videoRef.current; if (!v) return;
-    const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight;
-    c.getContext('2d').drawImage(v, 0, 0);
+    const v = videoRef.current;
+    if (!v) return;
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth || 1280;
+    c.height = v.videoHeight || 720;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+
     c.toBlob(blob => {
       const preview = c.toDataURL('image/jpeg', 0.85);
-      streamRef.current?.getTracks().forEach(t => t.stop());
-      setActive(false);
+      stopStream();
       onCapture(blob, preview);
     }, 'image/jpeg', 0.85);
   }
 
-  useEffect(() => () => streamRef.current?.getTracks().forEach(t => t.stop()), []);
-
-  if (!active) {
-    return (
-      <button type="button" className="btn btn-ghost" onClick={start} style={{ width: '100%', marginTop: 'var(--space-2)', padding: 'var(--space-6)', border: '2px dashed rgba(59,38,33,0.15)' }}>
-        <Camera size={20} /> Open Camera to Capture Receipt
-      </button>
-    );
+  function stopStream() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    setActive(false);
   }
+
+  function handleFileSelect(e) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        onCapture(file, evt.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  useEffect(() => {
+    return () => stopStream();
+  }, []);
 
   return (
     <div style={{ marginTop: 'var(--space-2)' }}>
-      <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#000' }}>
-        <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%' }} />
-      </div>
-      <button type="button" className="btn btn-primary" onClick={capture} style={{ width: '100%', marginTop: 'var(--space-2)' }}>
-        <Camera size={16} /> Capture Receipt
-      </button>
+      {/* Hidden file input strictly for native camera intent */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+      />
+
+      {!active ? (
+        <div>
+          <button
+            type="button"
+            className="btn btn-primary btn-lg"
+            onClick={start}
+            style={{ width: '100%', padding: '16px', background: '#021C4F', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
+          >
+            <Camera size={20} /> Open Camera to Capture Fuel Receipt
+          </button>
+          {error && <p style={{ fontSize: 12, color: '#dc2626', marginTop: 6, textAlign: 'center' }}>{error}</p>}
+        </div>
+      ) : (
+        <div>
+          <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', marginBottom: 12, border: '2px solid #021C4F' }}>
+            <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', maxHeight: 360, objectFit: 'cover' }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <button type="button" className="btn btn-secondary" onClick={stopStream}>
+              Cancel
+            </button>
+            <button type="button" className="btn btn-primary" onClick={capture} style={{ background: '#10B981', border: 'none', fontWeight: 700 }}>
+              <Camera size={16} /> Snap Live Receipt
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

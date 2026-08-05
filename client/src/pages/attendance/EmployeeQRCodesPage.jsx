@@ -271,24 +271,25 @@ export default function EmployeeQRCodesPage() {
 
             <form onSubmit={handleCreateQR}>
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>Attendance Type</label>
+                <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>QR Category & Lifetime</label>
                 <select
                   value={formData.type}
                   onChange={e => setFormData({ ...formData, type: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13 }}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, fontWeight: 600 }}
                 >
-                  <option value="office">Office Attendance QR</option>
-                  <option value="site">Site Attendance QR</option>
-                  <option value="temporary">Temporary Project QR</option>
+                  <option value="office">🏢 Permanent Office QR (Head Office)</option>
+                  <option value="site">🏗️ Temporary Site Project QR (Client Site)</option>
                 </select>
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>Office / Site Name</label>
+                <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>
+                  {formData.type === 'office' ? 'Office Location Name *' : 'Site / Plant Location Name *'}
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Head Office Faisalabad, Plant #4 Site..."
+                  placeholder={formData.type === 'office' ? 'e.g. Head Office Faisalabad' : 'e.g. Client Plant #4 Site'}
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13 }}
@@ -297,9 +298,10 @@ export default function EmployeeQRCodesPage() {
 
               {formData.type === 'site' && (
                 <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>Project Name</label>
+                  <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>Client Project Name *</label>
                   <input
                     type="text"
+                    required
                     placeholder="e.g. Industrial Zone Waterproofing Project..."
                     value={formData.project_name}
                     onChange={e => setFormData({ ...formData, project_name: e.target.value })}
@@ -346,9 +348,12 @@ export default function EmployeeQRCodesPage() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>Expiry Date (Optional)</label>
+                  <label style={{ fontSize: 12, fontWeight: 700, display: 'block', marginBottom: 4 }}>
+                    {formData.type === 'site' ? 'Expiry Date *' : 'Expiry Date (Optional)'}
+                  </label>
                   <input
                     type="date"
+                    required={formData.type === 'site'}
                     value={formData.expiry_date}
                     onChange={e => setFormData({ ...formData, expiry_date: e.target.value })}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13 }}

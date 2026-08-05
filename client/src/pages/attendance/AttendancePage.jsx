@@ -334,27 +334,39 @@ export default function AttendancePage() {
             </div>
           </div>
 
-          <p style={{ fontSize: 13, color: '#475569', marginBottom: 20, lineHeight: 1.5 }}>
-            Perform your official daily Vehicle Check-In before start of duty or Vehicle Check-Out upon duty completion. Scan vehicle QR code, enter opening meter reading, and submit fuel logs.
-          </p>
+          {localStorage.getItem('vehicle_attendance_status') !== 'enabled' ? (
+            <div style={{ padding: 20, background: '#fffbeb', borderRadius: 12, border: '1px solid #fcd34d', textAlignment: 'center', margin: '16px 0' }}>
+              <span className="badge badge-yellow" style={{ fontWeight: 800, marginBottom: 8, display: 'inline-block' }}>STATUS: DISABLED</span>
+              <h4 style={{ margin: '6px 0 4px', fontSize: 16, fontWeight: 800, color: '#92400e' }}>Vehicle Attendance Notice</h4>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#b45309', lineHeight: 1.5 }}>
+                "Vehicle Attendance will be activated when company operations officially begin."
+              </p>
+            </div>
+          ) : (
+            <>
+              <p style={{ fontSize: 13, color: '#475569', marginBottom: 20, lineHeight: 1.5 }}>
+                Perform your official daily Vehicle Check-In before start of duty or Vehicle Check-Out upon duty completion. Scan vehicle QR code, enter opening meter reading, and submit fuel logs.
+              </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-            <button
-              className="btn btn-lg"
-              onClick={() => navigate('/check-in')}
-              style={{ background: '#021C4F', color: '#ffffff', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
-            >
-              <ClipboardCheck size={18} /> Vehicle Check-In <ArrowRight size={16} />
-            </button>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                <button
+                  className="btn btn-lg"
+                  onClick={() => navigate('/check-in')}
+                  style={{ background: '#021C4F', color: '#ffffff', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
+                >
+                  <ClipboardCheck size={18} /> Vehicle Check-In <ArrowRight size={16} />
+                </button>
 
-            <button
-              className="btn btn-lg"
-              onClick={() => navigate('/check-out')}
-              style={{ background: '#C50337', color: '#ffffff', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
-            >
-              <Route size={18} /> Vehicle Check-Out <ArrowRight size={16} />
-            </button>
-          </div>
+                <button
+                  className="btn btn-lg"
+                  onClick={() => navigate('/check-out')}
+                  style={{ background: '#C50337', color: '#ffffff', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
+                >
+                  <Route size={18} /> Vehicle Check-Out <ArrowRight size={16} />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 

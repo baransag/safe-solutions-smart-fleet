@@ -115,11 +115,12 @@ router.post('/', authenticate, authorize('manager', 'controller'), async (req, r
 
     const { rows } = await query(
       `INSERT INTO vehicles (vehicle_id, name, number_plate, type, make, model, year, color,
-       fuel_type, tank_capacity, avg_mileage, insurance_expiry, registration_expiry, qr_code)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       fuel_type, tank_capacity, avg_mileage, insurance_expiry, registration_expiry, qr_code, current_meter)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, 0)
        RETURNING *`,
-      [vehicle_id, name, number_plate, type || 'bike', make, model, year, color,
-       fuel_type || 'petrol', tank_capacity, avg_mileage, insurance_expiry, registration_expiry, qrCode]
+      [vehicle_id, name, number_plate, type || 'bike', make || null, model || null,
+       year || null, color || null, fuel_type || 'petrol', tank_capacity || null,
+       avg_mileage || null, insurance_expiry || null, registration_expiry || null, qrCode]
     );
 
     res.status(201).json({ vehicle: rows[0] });

@@ -30,6 +30,8 @@ export default function CheckInPage() {
   const [ocrReading, setOcrReading] = useState(null);
   const [ocrConfidence, setOcrConfidence] = useState(null);
 
+  const vehicleAttendanceEnabled = localStorage.getItem('vehicle_attendance_status') === 'enabled';
+
   useEffect(() => {
     checkTodayStatus();
   }, []);
@@ -184,6 +186,30 @@ export default function CheckInPage() {
               Proceed to Check-out
             </a>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  if (!vehicleAttendanceEnabled) {
+    return (
+      <div className="page">
+        <div className="card-elevated text-center" style={{ padding: 40, maxWidth: 540, margin: '40px auto', borderRadius: 16, border: '1px solid #fde68a' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <AlertTriangle size={32} />
+          </div>
+          <span className="badge badge-warning" style={{ fontSize: 12, padding: '4px 12px', fontWeight: 800, textTransform: 'uppercase', marginBottom: 12, display: 'inline-block' }}>
+            SYSTEM STATUS: DISABLED
+          </span>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#021C4F', margin: '10px 0 8px' }}>
+            Vehicle Attendance System Notice
+          </h2>
+          <p style={{ fontSize: 15, color: '#475569', lineHeight: 1.6, marginBottom: 20, fontWeight: 600 }}>
+            "Vehicle Attendance will be activated when company operations officially begin."
+          </p>
+          <p style={{ fontSize: 12, color: '#94a3b8' }}>
+            Admin / Boss / Controller can enable this module from System Settings.
+          </p>
         </div>
       </div>
     );
