@@ -10,10 +10,22 @@ router.get('/', async (req, res, next) => {
     const { rows } = await query(
       'SELECT * FROM hero_slides WHERE is_active = true ORDER BY sort_order ASC, created_at DESC'
     );
-    res.json({ slides: rows });
+    if (rows && rows.length > 0) {
+      return res.json({ slides: rows });
+    }
   } catch (err) {
-    next(err);
+    console.warn('Hero slides fetch notice:', err.message);
   }
+
+  const fallbackSlides = [
+    { id: 1, image_url: '/assets/images/hero-1.jpeg', title: 'Smart Fleet Operations', description: 'Real-time vehicle tracking & intelligent allocation' },
+    { id: 2, image_url: '/assets/images/hero-2.jpeg', title: 'Automated Verification', description: 'QR code check-in & speedometer validation' },
+    { id: 3, image_url: '/assets/images/hero-3.jpeg', title: 'Fuel & Maintenance Logs', description: 'Expense tracking and automated maintenance alerts' },
+    { id: 4, image_url: '/assets/images/hero-4.jpeg', title: 'Rider Performance & Attendance', description: 'GPS verified check-in & daily route intelligence' },
+    { id: 5, image_url: '/assets/images/hero-5.jpeg', title: 'Enterprise Security', description: 'Tamper-resistant audit trails & fleet control' }
+  ];
+
+  res.json({ slides: fallbackSlides });
 });
 
 // POST /api/hero-slides

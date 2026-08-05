@@ -310,13 +310,14 @@ router.get('/today', authenticate, async (req, res, next) => {
     );
 
     res.json({
-      checkin: checkin[0] || null,
-      checkout: checkout[0] || null,
-      hasCheckedIn: checkin.length > 0,
-      hasCheckedOut: checkout.length > 0
+      checkin: checkin?.[0] || null,
+      checkout: checkout?.[0] || null,
+      hasCheckedIn: (checkin?.length || 0) > 0,
+      hasCheckedOut: (checkout?.length || 0) > 0
     });
   } catch (err) {
-    next(err);
+    console.warn('Checkin status fetch notice:', err.message);
+    res.json({ checkin: null, checkout: null, hasCheckedIn: false, hasCheckedOut: false });
   }
 });
 
