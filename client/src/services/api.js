@@ -3,6 +3,7 @@ const API_BASE = import.meta.env.VITE_API_URL
   : '/api';
 
 const MOCK_CLIENT_USERS = [
+  { id: 0, employee_id: 'ADMIN001', name: 'SAFE SOLUTIONS Boss', email: 'boss@safesolutions.com', role: 'controller', designation: 'Managing Director', department: 'Executive', avatar_url: '/assets/images/logo.jpeg', pass: 'SS@Admin26' },
   { id: 1, employee_id: 'EMP001', name: 'M.husnain farooq', email: 'baransag68@gmail.com', role: 'controller', designation: 'CONRTOLLER', department: 'Management', avatar_url: '/assets/images/Husnain.jpeg', pass: 'Controller@2024' },
   { id: 2, employee_id: 'EMP002', name: 'Samaira Mubashar', email: 'sm.bajwa786fsd@gmail.com', role: 'manager', designation: 'Manager Account & Finance', department: 'Finance', avatar_url: '/assets/images/Samaira.jpeg', pass: 'Safe@2024' },
   { id: 3, employee_id: 'EMP003', name: 'ENGR SHAHZAIB AHMAD', email: 'Zaiberana37@gmail.com', role: 'employee', designation: 'Marketing executive', department: 'Marketing', avatar_url: '/assets/images/Shahzaib.jpeg', pass: 'Safe@2024' },
@@ -12,7 +13,7 @@ const MOCK_CLIENT_USERS = [
   { id: 7, employee_id: 'EMP007', name: 'ADNAN ALI', email: 'mianadnanali88@gmail.com', role: 'employee', designation: 'Area sales manager', department: 'Sales', avatar_url: '/assets/images/Adnan-Ali.jpeg', pass: 'Safe@2024' },
   { id: 8, employee_id: 'EMP008', name: 'M . SOULAT RAZA', email: 'mirzasoulat112@gmail.com', role: 'employee', designation: 'Execution Officer', department: 'Operations', avatar_url: '/assets/images/Soulat.jpeg', pass: 'Safe@2024' },
   { id: 9, employee_id: 'EMP009', name: 'Muneeb Ahmad', email: 'muneeb01250@gmail.com', role: 'employee', designation: 'Store & inventory', department: 'Inventory', avatar_url: '/assets/images/Muneeb.jpeg', pass: 'Safe@2024' },
-  { id: 10, employee_id: 'EMP010', name: 'M.Zahid', email: 'muhammadzahid5324@gmail.com', role: 'employee', designation: 'helper', department: 'Support', avatar_url: '/assets/images/Zahid.jpeg', pass: 'Safe@2024' },
+  { id: 10, employee_id: 'EMP010', name: 'M.Zahid', email: 'muhammadzahid5324@gmail.com', role: 'employee', designation: 'helper', department: 'Support', avatar_url: '/assets/images/Zahid.jpeg', pass: 'Safe@2024', phone: '03079682902', number_plate: 'FDL-6381-07' },
   { id: 11, employee_id: 'EMP011', name: 'TAJAMMUL MUSHTAQ', email: 'tajammulbajwa545@gmail.com', role: 'employee', designation: 'Area sales manager', department: 'Sales', avatar_url: '/assets/images/Tajammul.jpeg', pass: 'Safe@2024' }
 ];
 
@@ -24,7 +25,8 @@ const MOCK_VEHICLES = [
   { id: 5, vehicle_id: 'VH-005', name: 'Company Bike', number_plate: 'AHV 378.......', type: 'bike', status: 'active', current_meter: 11200, assigned_employee_name: 'ADNAN ALI' },
   { id: 6, vehicle_id: 'VH-006', name: 'Company Bike', number_plate: 'BFF 6452 /26', type: 'bike', status: 'active', current_meter: 9600, assigned_employee_name: 'M . SOULAT RAZA' },
   { id: 7, vehicle_id: 'VH-007', name: 'Company Bike', number_plate: 'BFF - 7907 -26', type: 'bike', status: 'active', current_meter: 14100, assigned_employee_name: 'Muneeb Ahmad' },
-  { id: 8, vehicle_id: 'VH-008', name: 'Company Bike', number_plate: 'FD-17-84', type: 'bike', status: 'active', current_meter: 10300, assigned_employee_name: 'TAJAMMUL MUSHTAQ' }
+  { id: 8, vehicle_id: 'VH-008', name: 'Company Bike', number_plate: 'FD-17-84', type: 'bike', status: 'active', current_meter: 10300, assigned_employee_name: 'TAJAMMUL MUSHTAQ' },
+  { id: 9, vehicle_id: 'VH-009', name: 'Company Bike', number_plate: 'FDL-6381-07', type: 'bike', status: 'active', current_meter: 7800, assigned_employee_name: 'M.Zahid' }
 ];
 
 const MOCK_SLIDES = [
@@ -88,8 +90,11 @@ class ApiService {
     if (endpoint === '/auth/login' && options.method === 'POST') {
       let bodyData = {};
       try { bodyData = JSON.parse(options.body || '{}'); } catch {}
-      const cleanEmail = (bodyData.email || '').toLowerCase().trim();
-      const match = MOCK_CLIENT_USERS.find(u => u.email.toLowerCase() === cleanEmail);
+      const match = MOCK_CLIENT_USERS.find(u =>
+        u.email.toLowerCase() === cleanEmail ||
+        u.employee_id.toLowerCase() === cleanEmail ||
+        (cleanEmail === 'boss' && u.employee_id === 'ADMIN001')
+      );
       if (match && bodyData.password === match.pass) {
         const token = 'mock-jwt-token-' + match.id;
         const refreshToken = 'mock-refresh-token-' + match.id;

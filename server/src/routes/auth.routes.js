@@ -6,6 +6,7 @@ const { authenticate, generateToken, generateRefreshToken } = require('../middle
 const { validate } = require('../middleware/validation.middleware');
 
 const MOCK_USERS = [
+  { id: 0, employee_id: 'ADMIN001', name: 'SAFE SOLUTIONS Boss', email: 'boss@safesolutions.com', role: 'controller', designation: 'Managing Director', department: 'Executive', avatar_url: '/assets/images/logo.jpeg', pass: 'SS@Admin26' },
   { id: 1, employee_id: 'EMP001', name: 'M.husnain farooq', email: 'baransag68@gmail.com', role: 'controller', designation: 'CONRTOLLER', department: 'Management', avatar_url: '/assets/images/Husnain.jpeg', pass: 'Controller@2024' },
   { id: 2, employee_id: 'EMP002', name: 'Samaira Mubashar', email: 'sm.bajwa786fsd@gmail.com', role: 'manager', designation: 'Manager Account & Finance', department: 'Finance', avatar_url: '/assets/images/Samaira.jpeg', pass: 'Safe@2024' },
   { id: 3, employee_id: 'EMP003', name: 'ENGR SHAHZAIB AHMAD', email: 'Zaiberana37@gmail.com', role: 'employee', designation: 'Marketing executive', department: 'Marketing', avatar_url: '/assets/images/Shahzaib.jpeg', pass: 'Safe@2024' },
@@ -15,13 +16,13 @@ const MOCK_USERS = [
   { id: 7, employee_id: 'EMP007', name: 'ADNAN ALI', email: 'mianadnanali88@gmail.com', role: 'employee', designation: 'Area sales manager', department: 'Sales', avatar_url: '/assets/images/Adnan-Ali.jpeg', pass: 'Safe@2024' },
   { id: 8, employee_id: 'EMP008', name: 'M . SOULAT RAZA', email: 'mirzasoulat112@gmail.com', role: 'employee', designation: 'Execution Officer', department: 'Operations', avatar_url: '/assets/images/Soulat.jpeg', pass: 'Safe@2024' },
   { id: 9, employee_id: 'EMP009', name: 'Muneeb Ahmad', email: 'muneeb01250@gmail.com', role: 'employee', designation: 'Store & inventory', department: 'Inventory', avatar_url: '/assets/images/Muneeb.jpeg', pass: 'Safe@2024' },
-  { id: 10, employee_id: 'EMP010', name: 'M.Zahid', email: 'muhammadzahid5324@gmail.com', role: 'employee', designation: 'helper', department: 'Support', avatar_url: '/assets/images/Zahid.jpeg', pass: 'Safe@2024' },
+  { id: 10, employee_id: 'EMP010', name: 'M.Zahid', email: 'muhammadzahid5324@gmail.com', role: 'employee', designation: 'helper', department: 'Support', avatar_url: '/assets/images/Zahid.jpeg', pass: 'Safe@2024', phone: '03079682902', number_plate: 'FDL-6381-07' },
   { id: 11, employee_id: 'EMP011', name: 'TAJAMMUL MUSHTAQ', email: 'tajammulbajwa545@gmail.com', role: 'employee', designation: 'Area sales manager', department: 'Sales', avatar_url: '/assets/images/Tajammul.jpeg', pass: 'Safe@2024' }
 ];
 
 // POST /api/auth/login
 router.post('/login', validate({
-  email: { required: true, type: 'email' },
+  email: { required: true },
   password: { required: true, min: 4 }
 }), async (req, res, next) => {
   const { email, password } = req.body;
@@ -29,7 +30,7 @@ router.post('/login', validate({
 
   try {
     const { rows } = await query(
-      'SELECT id, employee_id, name, email, role, password_hash, designation, department, avatar_url, is_active FROM employees WHERE email = $1',
+      'SELECT id, employee_id, name, email, role, password_hash, designation, department, avatar_url, is_active FROM employees WHERE LOWER(email) = $1 OR LOWER(employee_id) = $1',
       [cleanEmail]
     );
 
@@ -51,7 +52,11 @@ router.post('/login', validate({
   }
 
   // Cloud/Fallback Auth Check
-  const fallbackUser = MOCK_USERS.find(u => u.email.toLowerCase() === cleanEmail);
+  const fallbackUser = MOCK_USERS.find(u =>
+    u.email.toLowerCase() === cleanEmail ||
+    u.employee_id.toLowerCase() === cleanEmail ||
+    (cleanEmail === 'boss' && u.employee_id === 'ADMIN001')
+  );
   if (fallbackUser && password === fallbackUser.pass) {
     const payload = { id: fallbackUser.id, employee_id: fallbackUser.employee_id, name: fallbackUser.name, email: fallbackUser.email, role: fallbackUser.role };
     return res.json({
