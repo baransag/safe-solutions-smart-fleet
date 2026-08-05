@@ -16,6 +16,7 @@ import AlertsPage from './pages/vehicles/AlertsPage';
 import ServicesPage from './pages/vehicles/ServicesPage';
 import AnalyticsPage from './pages/vehicles/AnalyticsPage';
 import ApprovalCenterPage from './pages/approvals/ApprovalCenterPage';
+import HeroManagementPage from './pages/dashboard/HeroManagementPage';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -65,6 +66,7 @@ export default function AppRouter() {
           </ProtectedRoute>
         }>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/hero-management" element={<AdminRoute><HeroManagementPage /></AdminRoute>} />
 
           {/* Vehicle Management (admin only for CRUD) */}
           <Route path="/vehicles" element={<AdminRoute><VehiclesPage /></AdminRoute>} />

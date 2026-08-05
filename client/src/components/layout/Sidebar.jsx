@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, Car, Users, ClipboardCheck, Fuel, QrCode,
   BarChart3, AlertTriangle, Bell, Settings, LogOut, Wrench,
-  Route, CalendarCheck, FileText, Shield, ShieldCheck
+  Route, CalendarCheck, FileText, Shield, ShieldCheck, Megaphone
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -18,6 +18,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const navItems = [
     { section: 'Overview' },
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/hero-management', icon: Megaphone, label: 'Hero Banners', adminOnly: true },
 
     { section: 'Fleet Management', adminOnly: false },
     { to: '/vehicles', icon: Car, label: 'Vehicles', adminOnly: true },
