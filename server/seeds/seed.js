@@ -12,18 +12,30 @@ async function seed() {
     // Hash passwords
     const defaultPassword = await bcrypt.hash('Safe@2024', 12);
     const controllerPassword = await bcrypt.hash('Controller@2024', 12);
+    const bossPassword = await bcrypt.hash('SS@Admin26', 12);
 
     // Truncate existing data to cleanly re-populate exact records
     await client.query('TRUNCATE TABLE vehicle_assignments, vehicle_checkouts, vehicle_checkins, fuel_logs, vehicle_services, vehicle_alerts, vehicle_meter_logs, notifications, vehicles, employees RESTART IDENTITY CASCADE');
 
-    // Insert exact employee records as provided
+    // Insert exact employee records as provided in Master List
     const employeesData = [
       {
+        employee_id: 'ADMIN001',
+        name: 'SAFE SOLUTIONS Boss',
+        email: 'boss@safesolutions.com',
+        phone: '',
+        designation: 'Managing Director',
+        department: 'Executive',
+        role: 'controller',
+        password_hash: bossPassword,
+        avatar_url: '/assets/images/logo.jpeg'
+      },
+      {
         employee_id: 'EMP001',
-        name: 'M.husnain farooq',
+        name: 'M. Husnain Farooq',
         email: 'baransag68@gmail.com',
         phone: '03468760963',
-        designation: 'CONRTOLLER',
+        designation: 'Controller',
         department: 'Management',
         role: 'controller',
         password_hash: controllerPassword,
@@ -34,7 +46,7 @@ async function seed() {
         name: 'Samaira Mubashar',
         email: 'sm.bajwa786fsd@gmail.com',
         phone: '03006646124',
-        designation: 'Manager Account & Finance',
+        designation: 'Manager Accounts & Finance',
         department: 'Finance',
         role: 'manager',
         password_hash: defaultPassword,
@@ -42,16 +54,17 @@ async function seed() {
       },
       {
         employee_id: 'EMP003',
-        name: 'ENGR SHAHZAIB AHMAD',
-        email: 'Zaiberana37@gmail.com',
+        name: 'Engr. Shahzaib Ahmad',
+        email: 'zaiberana37@gmail.com',
         phone: '03007684761',
-        designation: 'Marketing executive',
+        designation: 'Marketing Executive',
         department: 'Marketing',
         role: 'employee',
         password_hash: defaultPassword,
         avatar_url: '/assets/images/Shahzaib.jpeg',
         bike_name: 'Company Bike',
-        number_plate: 'BBE-5688'
+        number_plate: 'BBE-5688',
+        vehicle_type: 'bike'
       },
       {
         employee_id: 'EMP004',
@@ -63,8 +76,9 @@ async function seed() {
         role: 'employee',
         password_hash: defaultPassword,
         avatar_url: '/assets/images/Shahbaz.jpeg',
-        bike_name: 'Company Bike',
-        number_plate: 'AGN-1227-21'
+        bike_name: 'Company / Personal Bike',
+        number_plate: 'AGN-1227-21',
+        vehicle_type: 'bike'
       },
       {
         employee_id: 'EMP005',
@@ -76,8 +90,9 @@ async function seed() {
         role: 'employee',
         password_hash: defaultPassword,
         avatar_url: '/assets/images/Rehan.jpeg',
-        bike_name: 'Honda Cd70',
-        number_plate: 'FDR-203-15'
+        bike_name: 'Honda CD70',
+        number_plate: 'FDR-203-15',
+        vehicle_type: 'bike'
       },
       {
         employee_id: 'EMP006',
@@ -90,24 +105,26 @@ async function seed() {
         password_hash: defaultPassword,
         avatar_url: '/assets/images/Adnan-Tahir.jpeg',
         bike_name: 'Company Bike',
-        number_plate: 'AWD - 24- 3818'
+        number_plate: 'AWD-24-3818',
+        vehicle_type: 'bike'
       },
       {
         employee_id: 'EMP007',
-        name: 'ADNAN ALI',
+        name: 'Adnan Ali',
         email: 'mianadnanali88@gmail.com',
         phone: '03217684400',
-        designation: 'Area sales manager',
+        designation: 'Area Sales Manager',
         department: 'Sales',
         role: 'employee',
         password_hash: defaultPassword,
         avatar_url: '/assets/images/Adnan-Ali.jpeg',
-        bike_name: 'Company Bike',
-        number_plate: 'AHV 378.......'
+        bike_name: 'Company Car',
+        number_plate: 'AHV-378',
+        vehicle_type: 'car'
       },
       {
         employee_id: 'EMP008',
-        name: 'M . SOULAT RAZA',
+        name: 'M. Soulat Raza',
         email: 'mirzasoulat112@gmail.com',
         phone: '03397684700',
         designation: 'Execution Officer',
@@ -116,44 +133,50 @@ async function seed() {
         password_hash: defaultPassword,
         avatar_url: '/assets/images/Soulat.jpeg',
         bike_name: 'Company Bike',
-        number_plate: 'BFF 6452 /26'
+        number_plate: 'BFF-6452/26',
+        vehicle_type: 'bike'
       },
       {
         employee_id: 'EMP009',
         name: 'Muneeb Ahmad',
         email: 'muneeb01250@gmail.com',
         phone: '03077684400',
-        designation: 'Store & inventory',
+        designation: 'Store & Inventory',
         department: 'Inventory',
         role: 'employee',
         password_hash: defaultPassword,
         avatar_url: '/assets/images/Muneeb.jpeg',
         bike_name: 'Company Bike',
-        number_plate: 'BFF - 7907 -26'
+        number_plate: 'BFF-7907-26',
+        vehicle_type: 'bike'
       },
       {
         employee_id: 'EMP010',
-        name: 'M.Zahid',
+        name: 'M. Zahid',
         email: 'muhammadzahid5324@gmail.com',
         phone: '03079682902',
-        designation: 'helper',
+        designation: 'Helper',
         department: 'Support',
         role: 'employee',
         password_hash: defaultPassword,
-        avatar_url: '/assets/images/Zahid.jpeg'
+        avatar_url: '/assets/images/Zahid.jpeg',
+        bike_name: 'Company Bike',
+        number_plate: 'FDL-6381-07',
+        vehicle_type: 'bike'
       },
       {
         employee_id: 'EMP011',
-        name: 'TAJAMMUL MUSHTAQ',
+        name: 'Tajammul Mushtaq',
         email: 'tajammulbajwa545@gmail.com',
         phone: '03217684500',
-        designation: 'Area sales manager',
+        designation: 'Area Sales Manager',
         department: 'Sales',
         role: 'employee',
         password_hash: defaultPassword,
         avatar_url: '/assets/images/Tajammul.jpeg',
-        bike_name: 'Company Bike',
-        number_plate: 'FD-17-84'
+        bike_name: 'Company Car',
+        number_plate: 'FD-17-84',
+        vehicle_type: 'car'
       }
     ];
 
@@ -209,7 +232,7 @@ async function seed() {
             vehicleIdStr,
             `${bikeName} - ${emp.name}`,
             emp.number_plate,
-            'bike',
+            emp.vehicle_type || 'bike',
             'Honda',
             'CD70',
             2023,
