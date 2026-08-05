@@ -90,6 +90,7 @@ class ApiService {
     if (endpoint === '/auth/login' && options.method === 'POST') {
       let bodyData = {};
       try { bodyData = JSON.parse(options.body || '{}'); } catch {}
+      const cleanEmail = (bodyData.email || '').toLowerCase().trim();
       const match = MOCK_CLIENT_USERS.find(u =>
         u.email.toLowerCase() === cleanEmail ||
         u.employee_id.toLowerCase() === cleanEmail ||
