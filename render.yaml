@@ -1,0 +1,58 @@
+services:
+  # Node.js Express Backend API
+  - type: web
+    name: safe-solutions-backend
+    env: node
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: DB_HOST
+        fromDatabase:
+          name: safe-solutions-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: safe-solutions-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: safe-solutions-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: safe-solutions-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: safe-solutions-db
+          property: password
+
+  # React Single Page Application (Frontend)
+  - type: web
+    name: safe-solutions-frontend
+    env: static
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: ./client/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: safe-solutions-backend
+          property: url
+
+databases:
+  - name: safe-solutions-db
+    databaseName: safe_solutions
+    user: safe_admin
