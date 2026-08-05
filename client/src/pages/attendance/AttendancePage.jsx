@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
 import EmployeeQRScanner from '../../components/attendance/EmployeeQRScanner';
-import { Building2, HardHat, CheckCircle2, MapPin, Navigation, Clock, Calendar, RefreshCw, Send } from 'lucide-react';
+import { Building2, HardHat, CheckCircle2, MapPin, Navigation, Clock, Calendar, RefreshCw, Send, Car, Route, ClipboardCheck, ArrowRight, ShieldCheck, Filter } from 'lucide-react';
 
 export default function AttendancePage() {
   const { user, isController, isAdmin } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
+
+  // Tab State: 'office' | 'site' | 'vehicle'
+  const [activeTab, setActiveTab] = useState('office');
 
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [history, setHistory] = useState([]);
@@ -24,6 +29,9 @@ export default function AttendancePage() {
   const [userGps, setUserGps] = useState({ lat: null, lng: null });
   const [projectName, setProjectName] = useState('Industrial Zone Waterproofing Project');
   const [notes, setNotes] = useState('');
+
+  // Filters for History table
+  const [filterType, setFilterType] = useState('all'); // 'all' | 'office' | 'site'
 
   // Sample site projects for selection
   const projectsList = [
@@ -74,7 +82,7 @@ export default function AttendancePage() {
 
   const handleStartScan = (type) => {
     if (todayAttendance && todayAttendance.approval_status !== 'rejected') {
-      toast.warning('You have already submitted attendance for today.');
+      toast.warning('You have already submitted employee attendance for today.');
       return;
     }
     setActiveAttendanceType(type);
@@ -136,6 +144,11 @@ export default function AttendancePage() {
     }
   };
 
+  const filteredHistory = history.filter(r => {
+    if (filterType === 'all') return true;
+    return r.attendance_type === filterType;
+  });
+
   if (loading) {
     return (
       <div className="page">
@@ -146,20 +159,92 @@ export default function AttendancePage() {
 
   return (
     <div className="page">
+      {/* Header Banner */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 className="page-title">Employee Attendance</h1>
-          <p className="page-description">Scan Office or Site QR Code to submit GPS-verified daily attendance</p>
+          <h1 className="page-title">Attendance Center</h1>
+          <p className="page-description">Complete Unified Hub for Office Attendance, Site Attendance & Vehicle Attendance</p>
         </div>
 
         <button className="btn btn-secondary btn-sm" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <RefreshCw size={14} /> Refresh Data
+          <RefreshCw size={14} /> Refresh Status
         </button>
       </div>
 
-      {/* Today's Status Notification Card if already submitted */}
+      {/* TOP TAB SWITCHER FOR UNIFIED ATTENDANCE CENTER */}
+      <div className="card" style={{ padding: 6, marginBottom: 24, background: 'rgba(2, 28, 79, 0.04)', borderRadius: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+          <button
+            onClick={() => setActiveTab('office')}
+            style={{
+              padding: '12px 16px',
+              borderRadius: 10,
+              border: 'none',
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'center',
+              gap: 8,
+              transition: 'all 0.2s ease',
+              background: activeTab === 'office' ? '#021C4F' : 'transparent',
+              color: activeTab === 'office' ? '#ffffff' : '#021C4F',
+              boxShadow: activeTab === 'office' ? '0 4px 12px rgba(2, 28, 79, 0.25)' : 'none'
+            }}
+          >
+            <Building2 size={18} /> Office Attendance
+          </button>
+
+          <button
+            onClick={() => setActiveTab('site')}
+            style={{
+              padding: '12px 16px',
+              borderRadius: 10,
+              border: 'none',
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'center',
+              gap: 8,
+              transition: 'all 0.2s ease',
+              background: activeTab === 'site' ? '#C50337' : 'transparent',
+              color: activeTab === 'site' ? '#ffffff' : '#021C4F',
+              boxShadow: activeTab === 'site' ? '0 4px 12px rgba(197, 3, 55, 0.25)' : 'none'
+            }}
+          >
+            <HardHat size={18} /> Site Attendance
+          </button>
+
+          <button
+            onClick={() => setActiveTab('vehicle')}
+            style={{
+              padding: '12px 16px',
+              borderRadius: 10,
+              border: 'none',
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'center',
+              gap: 8,
+              transition: 'all 0.2s ease',
+              background: activeTab === 'vehicle' ? '#10B981' : 'transparent',
+              color: activeTab === 'vehicle' ? '#ffffff' : '#021C4F',
+              boxShadow: activeTab === 'vehicle' ? '0 4px 12px rgba(16, 185, 129, 0.25)' : 'none'
+            }}
+          >
+            <Car size={18} /> Vehicle Attendance
+          </button>
+        </div>
+      </div>
+
+      {/* Today's Active Submission Status Banner */}
       {todayAttendance && (
-        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 14, padding: 18, marginBottom: 24, borderLeft: '5px solid #021C4F', background: '#f8fafc' }}>
+        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 14, padding: 18, marginBottom: 24, borderLeft: '5px solid #021C4F', background: '#ffffff' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -169,7 +254,7 @@ export default function AttendancePage() {
                 {todayAttendance.attendance_type === 'office' ? '🏢 Office Attendance' : '🏗️ Site Attendance'} - {todayAttendance.location_name || 'Head Office'}
               </h4>
               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#475569' }}>
-                Time: {new Date(todayAttendance.check_in_time).toLocaleTimeString()} • Status: 📍 {todayAttendance.gps_status || 'Inside Radius'} ({todayAttendance.distance_meters || 0}m distance)
+                Time: {new Date(todayAttendance.check_in_time).toLocaleTimeString()} • GPS: 📍 {todayAttendance.gps_status || 'Inside Radius'} ({todayAttendance.distance_meters || 0}m distance)
               </p>
             </div>
 
@@ -180,23 +265,21 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {/* TWO MAIN CARDS: Office Attendance & Site Attendance */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20, marginBottom: 32 }}>
-
-        {/* 1. Office Attendance Card */}
-        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 24, border: '1px solid rgba(2, 28, 79, 0.12)', background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)' }}>
+      {/* TAB CONTENT 1: OFFICE ATTENDANCE */}
+      {activeTab === 'office' && (
+        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 24, border: '1px solid rgba(2, 28, 79, 0.12)', background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)', marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg, #021C4F 0%, #1e3a8a 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Building2 size={24} />
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #021C4F 0%, #1e3a8a 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Building2 size={26} />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#021C4F' }}>Office Attendance</h3>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>Head Office & Branch Check-In</p>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>Head Office & Branch Office Check-In</p>
             </div>
           </div>
 
           <p style={{ fontSize: 13, color: '#475569', marginBottom: 20, lineHeight: 1.5 }}>
-            Scan the official Office QR code to automatically capture your GPS coordinates, verify office radius, and submit for Manager approval.
+            Scan the official Office QR code at Head Office or Branch Office to automatically capture your GPS location, verify radius compliance, and record daily office attendance for Manager review.
           </p>
 
           <button
@@ -205,15 +288,17 @@ export default function AttendancePage() {
             disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
             style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, background: '#021C4F', fontWeight: 700 }}
           >
-            <Building2 size={18} /> Click Office Attendance
+            <Building2 size={18} /> Click Office Attendance & Scan QR
           </button>
         </div>
+      )}
 
-        {/* 2. Site Attendance Card */}
-        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 24, border: '1px solid rgba(197, 3, 55, 0.12)', background: 'linear-gradient(180deg, #ffffff 0%, #fff5f5 100%)' }}>
+      {/* TAB CONTENT 2: SITE ATTENDANCE */}
+      {activeTab === 'site' && (
+        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 24, border: '1px solid rgba(197, 3, 55, 0.12)', background: 'linear-gradient(180deg, #ffffff 0%, #fff5f5 100%)', marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg, #C50337 0%, #991b1b 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <HardHat size={24} />
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #C50337 0%, #991b1b 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <HardHat size={26} />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#C50337' }}>Site Attendance</h3>
@@ -222,7 +307,7 @@ export default function AttendancePage() {
           </div>
 
           <p style={{ fontSize: 13, color: '#475569', marginBottom: 20, lineHeight: 1.5 }}>
-            Select your assigned project, scan the Site QR Code, and verify GPS site radius before submitting to Manager / Controller for approval.
+            Select your assigned client project or construction site, scan the active Site QR Code, and verify GPS site radius before submitting to Manager / Controller for approval.
           </p>
 
           <button
@@ -231,10 +316,47 @@ export default function AttendancePage() {
             disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
             style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, background: '#C50337', fontWeight: 700 }}
           >
-            <HardHat size={18} /> Click Site Attendance
+            <HardHat size={18} /> Click Site Attendance & Scan QR
           </button>
         </div>
-      </div>
+      )}
+
+      {/* TAB CONTENT 3: VEHICLE ATTENDANCE */}
+      {activeTab === 'vehicle' && (
+        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 24, border: '1px solid rgba(16, 185, 129, 0.2)', background: 'linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%)', marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #10B981 0%, #047857 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Car size={26} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#047857' }}>Vehicle Attendance Hub</h3>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>Daily Vehicle Check-In, Odometer Meter Reading & Return Check-Out</p>
+            </div>
+          </div>
+
+          <p style={{ fontSize: 13, color: '#475569', marginBottom: 20, lineHeight: 1.5 }}>
+            Perform your official daily Vehicle Check-In before start of duty or Vehicle Check-Out upon duty completion. Scan vehicle QR code, enter opening meter reading, and submit fuel logs.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+            <button
+              className="btn btn-lg"
+              onClick={() => navigate('/check-in')}
+              style={{ background: '#021C4F', color: '#ffffff', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
+            >
+              <ClipboardCheck size={18} /> Vehicle Check-In <ArrowRight size={16} />
+            </button>
+
+            <button
+              className="btn btn-lg"
+              onClick={() => navigate('/check-out')}
+              style={{ background: '#C50337', color: '#ffffff', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
+            >
+              <Route size={18} /> Vehicle Check-Out <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Verification & Submission Box (Appears after successful scan) */}
       {qrVerification && (
@@ -304,9 +426,45 @@ export default function AttendancePage() {
       )}
 
       {/* ATTENDANCE HISTORY TABLE */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h3 style={{ margin: 0, fontWeight: 800, color: '#021C4F' }}>Employee Attendance History</h3>
-        <span style={{ fontSize: 12, color: '#64748b' }}>Showing recent attendance records</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h3 style={{ margin: 0, fontWeight: 800, color: '#021C4F' }}>Attendance History & Logs</h3>
+          <span style={{ fontSize: 12, color: '#64748b' }}>Recent GPS-verified attendance submissions</span>
+        </div>
+
+        {/* Filter buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ffffff', padding: 4, borderRadius: 10, border: '1px solid rgba(2, 28, 79, 0.1)' }}>
+          <button
+            onClick={() => setFilterType('all')}
+            style={{
+              padding: '6px 12px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              background: filterType === 'all' ? '#021C4F' : 'transparent',
+              color: filterType === 'all' ? '#ffffff' : '#475569'
+            }}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setFilterType('office')}
+            style={{
+              padding: '6px 12px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              background: filterType === 'office' ? '#021C4F' : 'transparent',
+              color: filterType === 'office' ? '#ffffff' : '#475569'
+            }}
+          >
+            🏢 Office
+          </button>
+          <button
+            onClick={() => setFilterType('site')}
+            style={{
+              padding: '6px 12px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              background: filterType === 'site' ? '#C50337' : 'transparent',
+              color: filterType === 'site' ? '#ffffff' : '#475569'
+            }}
+          >
+            🏗️ Site
+          </button>
+        </div>
       </div>
 
       <div className="table-container animate-fade-in-up">
@@ -324,8 +482,8 @@ export default function AttendancePage() {
             </tr>
           </thead>
           <tbody>
-            {history.length > 0 ? (
-              history.map(r => (
+            {filteredHistory.length > 0 ? (
+              filteredHistory.map(r => (
                 <tr key={r.id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
@@ -376,7 +534,7 @@ export default function AttendancePage() {
             ) : (
               <tr>
                 <td colSpan={8} style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>
-                  No attendance records found. Click Office or Site Attendance to submit your first check-in!
+                  No attendance records found. Click Office, Site, or Vehicle Attendance above to get started!
                 </td>
               </tr>
             )}
@@ -394,3 +552,4 @@ export default function AttendancePage() {
     </div>
   );
 }
+
