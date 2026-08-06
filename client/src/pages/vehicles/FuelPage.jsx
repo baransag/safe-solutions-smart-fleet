@@ -312,22 +312,22 @@ function ReceiptCamera({ onCapture }) {
             type="button"
             className="btn btn-primary btn-lg"
             onClick={start}
-            style={{ width: '100%', padding: '16px', background: '#021C4F', fontWeight: 700, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
+            style={{ width: '100%', padding: '16px' }}
           >
             <Camera size={20} /> Open Camera to Capture Fuel Receipt
           </button>
-          {error && <p style={{ fontSize: 12, color: '#dc2626', marginTop: 6, textAlign: 'center' }}>{error}</p>}
+          {error && <p className="form-error" style={{ marginTop: 6, textAlign: 'center' }}>{error}</p>}
         </div>
       ) : (
         <div>
-          <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', marginBottom: 12, border: '2px solid #021C4F' }}>
+          <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: '#000', marginBottom: 12 }}>
             <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', maxHeight: 360, objectFit: 'cover' }} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <button type="button" className="btn btn-secondary" onClick={stopStream}>
+            <button type="button" className="btn btn-ghost" onClick={stopStream}>
               Cancel
             </button>
-            <button type="button" className="btn btn-primary" onClick={capture} style={{ background: '#10B981', border: 'none', fontWeight: 700 }}>
+            <button type="button" className="btn btn-teal" onClick={capture}>
               <Camera size={16} /> Snap Live Receipt
             </button>
           </div>
