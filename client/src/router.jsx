@@ -17,6 +17,7 @@ import ServicesPage from './pages/vehicles/ServicesPage';
 import AnalyticsPage from './pages/vehicles/AnalyticsPage';
 import ApprovalCenterPage from './pages/approvals/ApprovalCenterPage';
 import HeroManagementPage from './pages/dashboard/HeroManagementPage';
+import SystemSettingsPage from './pages/dashboard/SystemSettingsPage';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -88,6 +89,7 @@ export default function AppRouter() {
           <Route path="/alerts" element={<AdminRoute><AlertsPage /></AdminRoute>} />
           <Route path="/services" element={<AdminRoute><ServicesPage /></AdminRoute>} />
           <Route path="/reports" element={<AdminRoute><ReportsPage /></AdminRoute>} />
+          <Route path="/settings" element={<AdminRoute><SystemSettingsPage /></AdminRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

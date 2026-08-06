@@ -196,13 +196,20 @@ CREATE TABLE IF NOT EXISTS hero_slides (
   id SERIAL PRIMARY KEY,
   title VARCHAR(200),
   description TEXT,
+  category VARCHAR(50) DEFAULT 'Holiday Notice',
   image_url VARCHAR(500) NOT NULL,
   link_url VARCHAR(500),
+  start_date DATE,
+  end_date DATE,
   is_active BOOLEAN DEFAULT true,
   sort_order INTEGER DEFAULT 0,
   uploaded_by INTEGER REFERENCES employees(id),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE hero_slides ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'Holiday Notice';
+ALTER TABLE hero_slides ADD COLUMN IF NOT EXISTS start_date DATE;
+ALTER TABLE hero_slides ADD COLUMN IF NOT EXISTS end_date DATE;
 
 CREATE INDEX idx_hero_active ON hero_slides(is_active);
 

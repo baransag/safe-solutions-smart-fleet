@@ -62,6 +62,7 @@ export function AuthProvider({ children }) {
     isManager: user?.role === 'manager',
     isController: user?.role === 'controller',
     isAdmin: user?.role === 'manager' || user?.role === 'controller',
+    isBoss: user?.employee_id === 'ADMIN001' || user?.email === 'boss@safesolutions.com',
   };
 
   return (

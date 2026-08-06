@@ -35,11 +35,12 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/employee-qr-codes', icon: QrCode, label: 'QR Code Management', adminOnly: true },
     { to: '/approvals', icon: ShieldCheck, label: 'Approval Center', badge: 'PENDING' },
 
-    { section: 'Reports & Analytics', adminOnly: true },
+    { section: 'Reports & Settings', adminOnly: true },
     { to: '/analytics', icon: BarChart3, label: 'Analytics', adminOnly: true },
     { to: '/alerts', icon: AlertTriangle, label: 'Alerts', adminOnly: true },
     { to: '/services', icon: Wrench, label: 'Vehicle Services', adminOnly: true },
     { to: '/reports', icon: FileText, label: 'Reports', adminOnly: true },
+    { to: '/settings', icon: Settings, label: 'System Settings', adminOnly: true },
   ];
 
   return (

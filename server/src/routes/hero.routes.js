@@ -32,18 +32,14 @@ router.get('/', async (req, res, next) => {
 router.post('/', authenticate, authorize('manager', 'controller'),
   uploadSlide.single('image'), async (req, res, next) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Image is required' });
-    }
-
-    const { title, description, link_url, sort_order } = req.body;
-    const imageUrl = `/uploads/slides/${req.file.filename}`;
+    const { title, description, category, link_url, sort_order, start_date, end_date } = req.body;
+    const imageUrl = req.file ? `/uploads/slides/${req.file.filename}` : '/assets/images/hero-1.jpeg';
 
     const { rows } = await query(
-      `INSERT INTO hero_slides (title, description, image_url, link_url, sort_order, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO hero_slides (title, description, category, image_url, link_url, sort_order, start_date, end_date, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [title, description, imageUrl, link_url, sort_order || 0, req.user.id]
+      [title, description, category || 'Holiday Notice', imageUrl, link_url || null, parseInt(sort_order || 0, 10), start_date || null, end_date || null, req.user.id]
     );
 
     res.status(201).json({ slide: rows[0] });
@@ -55,18 +51,21 @@ router.post('/', authenticate, authorize('manager', 'controller'),
 // PUT /api/hero-slides/:id
 router.put('/:id', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
   try {
-    const { title, description, link_url, sort_order, is_active } = req.body;
+    const { title, description, category, link_url, sort_order, start_date, end_date, is_active } = req.body;
 
     const { rows } = await query(
       `UPDATE hero_slides SET
         title = COALESCE($1, title),
         description = COALESCE($2, description),
-        link_url = COALESCE($3, link_url),
-        sort_order = COALESCE($4, sort_order),
-        is_active = COALESCE($5, is_active)
-       WHERE id = $6
+        category = COALESCE($3, category),
+        link_url = COALESCE($4, link_url),
+        sort_order = COALESCE($5, sort_order),
+        start_date = COALESCE($6, start_date),
+        end_date = COALESCE($7, end_date),
+        is_active = COALESCE($8, is_active)
+       WHERE id = $9
        RETURNING *`,
-      [title, description, link_url, sort_order, is_active, req.params.id]
+      [title, description, category, link_url, sort_order ? parseInt(sort_order, 10) : null, start_date, end_date, is_active, req.params.id]
     );
 
     if (rows.length === 0) {

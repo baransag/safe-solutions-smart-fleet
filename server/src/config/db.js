@@ -33,19 +33,7 @@ async function testConnection() {
 }
 
 async function query(text, params) {
-  try {
-    if (!process.env.DATABASE_URL && (process.env.VERCEL || process.env.NODE_ENV === 'production') && !process.env.DB_HOST_OVERRIDE) {
-      return { rows: [] };
-    }
-    const result = await Promise.race([
-      pool.query(text, params),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('DB connection timeout')), 1200))
-    ]);
-    return result;
-  } catch (err) {
-    console.warn('DB query fallback notice:', err.message);
-    return { rows: [] };
-  }
+  return await pool.query(text, params);
 }
 
 async function transaction(callback) {

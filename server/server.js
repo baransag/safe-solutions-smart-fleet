@@ -46,6 +46,7 @@ app.use('/api/hero-slides', require('./src/routes/hero.routes'));
 app.use('/api/alerts', require('./src/routes/alert.routes'));
 app.use('/api/vehicle-services', require('./src/routes/service.routes'));
 app.use('/api/employee-qr-codes', require('./src/routes/qr_management.routes'));
+app.use('/api/settings', require('./src/routes/settings.routes'));
 
 // Health check
 app.get('/api/health', (req, res) => {

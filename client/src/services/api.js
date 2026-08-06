@@ -30,11 +30,11 @@ const MOCK_VEHICLES = [
 ];
 
 const MOCK_SLIDES = [
-  { id: 1, image_url: '/assets/images/hero-1.jpeg', title: 'Smart Fleet Operations', description: 'Real-time vehicle tracking & intelligent allocation' },
-  { id: 2, image_url: '/assets/images/hero-2.jpeg', title: 'Automated Verification', description: 'QR code check-in & speedometer validation' },
-  { id: 3, image_url: '/assets/images/hero-3.jpeg', title: 'Fuel & Maintenance Logs', description: 'Expense tracking and automated maintenance alerts' },
-  { id: 4, image_url: '/assets/images/hero-4.jpeg', title: 'Rider Performance & Attendance', description: 'GPS verified check-in & daily route intelligence' },
-  { id: 5, image_url: '/assets/images/hero-5.jpeg', title: 'Enterprise Security', description: 'Tamper-resistant audit trails & fleet control' }
+  { id: 1, image_url: '/assets/images/hero-1.jpeg', title: 'Smart Fleet Operations', description: 'Real-time vehicle tracking & intelligent allocation', category: 'Company Notice' },
+  { id: 2, image_url: '/assets/images/hero-2.jpeg', title: 'Automated Verification', description: 'QR code check-in & speedometer validation', category: 'Safety Alert' },
+  { id: 3, image_url: '/assets/images/hero-3.jpeg', title: 'Fuel & Maintenance Logs', description: 'Expense tracking and automated maintenance alerts', category: 'Vehicle Maintenance Notice' },
+  { id: 4, image_url: '/assets/images/hero-4.jpeg', title: 'Rider Performance & Attendance', description: 'GPS verified check-in & daily route intelligence', category: 'Office Timing' },
+  { id: 5, image_url: '/assets/images/hero-5.jpeg', title: 'Enterprise Security', description: 'Tamper-resistant audit trails & fleet control', category: 'Friday Reminder' }
 ];
 
 class ApiService {
@@ -319,6 +319,25 @@ class ApiService {
         { id: 3, title: '⛽ New Fuel Expense Request', message: 'Shahbaz Ahmed submitted fuel expense receipt for AGN-1227-21', is_read: false, created_at: new Date().toISOString() }
       ];
       return { notifications: mockNotifications, unreadCount: 3 };
+    }
+
+    if (endpoint.startsWith('/settings')) {
+      const stored = localStorage.getItem('system_settings');
+      const settings = stored ? JSON.parse(stored) : {
+        vehicle_attendance_enabled: true,
+        employee_attendance_enabled: true,
+        office_attendance_enabled: true,
+        site_attendance_enabled: true
+      };
+      if (options.method === 'PUT') {
+        try {
+          const bodyData = JSON.parse(options.body || '{}');
+          const updated = { ...settings, ...bodyData };
+          localStorage.setItem('system_settings', JSON.stringify(updated));
+          return { settings: updated, message: 'Settings updated successfully' };
+        } catch {}
+      }
+      return { settings };
     }
 
     if (endpoint.startsWith('/vehicle-services')) {
