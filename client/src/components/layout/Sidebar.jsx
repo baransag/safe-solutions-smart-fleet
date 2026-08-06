@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { user, logout, isAdmin, isController } = useAuth();
+  const { user, logout, isAdmin, isController, isSuperAdmin } = useAuth();
   const location = useLocation();
 
   const getInitials = (name) => {
@@ -18,7 +18,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const navItems = [
     { section: 'Overview' },
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/hero-management', icon: Megaphone, label: 'Hero Banners', adminOnly: true },
+    { to: '/hero-management', icon: Megaphone, label: 'Hero Banners', superAdminOnly: true },
 
     { section: 'Fleet Management', adminOnly: false },
     { to: '/employees', icon: Users, label: 'Employee Registry', adminOnly: true },
@@ -41,8 +41,8 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/alerts', icon: AlertTriangle, label: 'Alerts', adminOnly: true },
     { to: '/services', icon: Wrench, label: 'Vehicle Services', adminOnly: true },
     { to: '/reports', icon: FileText, label: 'Reports', adminOnly: true },
-    { to: '/system-logs', icon: Shield, label: 'System Audit Logs', adminOnly: true },
-    { to: '/settings', icon: Settings, label: 'System Settings', adminOnly: true },
+    { to: '/system-logs', icon: Shield, label: 'System Audit Logs', superAdminOnly: true },
+    { to: '/settings', icon: Settings, label: 'System Settings', superAdminOnly: true },
   ];
 
   return (
@@ -79,6 +79,7 @@ export default function Sidebar({ isOpen, onClose }) {
             }
 
             if (item.adminOnly && !isAdmin) return null;
+            if (item.superAdminOnly && !isSuperAdmin) return null;
             if (item.controllerOnly && !isController) return null;
 
             const Icon = item.icon;
