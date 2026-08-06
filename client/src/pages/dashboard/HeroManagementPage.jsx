@@ -12,6 +12,7 @@ export default function HeroManagementPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editSlide, setEditSlide] = useState(null);
+  const [previewSlide, setPreviewSlide] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const [form, setForm] = useState({
@@ -29,14 +30,14 @@ export default function HeroManagementPage() {
   const [imagePreview, setImagePreview] = useState(null);
 
   const categories = [
+    'Image Banner',
+    'Video Announcement',
+    'Poster Notice',
+    'Announcement',
     'Holiday Notice',
-    'Friday Reminder',
-    'Company Meeting',
-    'Emergency Notice',
-    'Safety Alert',
-    'New Policy',
-    'Office Timing',
-    'Vehicle Maintenance Notice'
+    'Friday Message',
+    'Emergency Alert',
+    'Pinned Post'
   ];
 
   useEffect(() => {
@@ -228,12 +229,15 @@ export default function HeroManagementPage() {
                 <span>Created: {new Date(slide.created_at || Date.now()).toLocaleDateString()}</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <button className="btn btn-secondary btn-sm" onClick={() => openEditModal(slide)} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
-                  <Edit2 size={14} /> Edit
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => setPreviewSlide(slide)} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, fontSize: 11 }}>
+                  <Megaphone size={12} /> Preview
                 </button>
-                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(slide.id)} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
-                  <Trash2 size={14} /> Delete
+                <button className="btn btn-secondary btn-sm" onClick={() => openEditModal(slide)} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, fontSize: 11 }}>
+                  <Edit2 size={12} /> Edit
+                </button>
+                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(slide.id)} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, fontSize: 11 }}>
+                  <Trash2 size={12} /> Delete
                 </button>
               </div>
             </div>
@@ -332,6 +336,25 @@ export default function HeroManagementPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* LIVE PREVIEW MODAL */}
+      {previewSlide && (
+        <div className="modal-overlay" onClick={() => setPreviewSlide(null)}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: 640, padding: 0, overflow: 'hidden', borderRadius: 16 }} onClick={e => e.stopPropagation()}>
+            <div style={{ position: 'relative', height: 320, background: '#000' }}>
+              <img src={previewSlide.image_url || '/assets/images/hero-1.jpeg'} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', color: '#fff' }}>
+                <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 4, background: '#C50337', textTransform: 'uppercase' }}>{previewSlide.category || 'Announcement'}</span>
+                <h3 style={{ margin: '6px 0 4px', fontSize: 20, fontWeight: 800 }}>{previewSlide.title}</h3>
+                <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{previewSlide.description}</p>
+              </div>
+            </div>
+            <div style={{ padding: 16, display: 'flex', justifyContent: 'flex-end', background: '#f8fafc' }}>
+              <button className="btn btn-primary" onClick={() => setPreviewSlide(null)} style={{ background: '#021C4F', fontWeight: 700 }}>Close Preview</button>
+            </div>
           </div>
         </div>
       )}

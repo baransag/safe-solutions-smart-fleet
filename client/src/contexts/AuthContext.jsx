@@ -36,6 +36,13 @@ export function AuthProvider({ children }) {
     return data.user;
   }, []);
 
+  const completeLogin = useCallback((data) => {
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('refreshToken', data.refreshToken);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setUser(data.user);
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
@@ -55,6 +62,7 @@ export function AuthProvider({ children }) {
     user,
     loading,
     login,
+    completeLogin,
     logout,
     updateUser,
     isAuthenticated: !!user,

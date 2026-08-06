@@ -48,8 +48,8 @@ export default function Sidebar({ isOpen, onClose }) {
           <NavLink to="/" className="sidebar-logo">
             <div className="sidebar-logo-icon">S</div>
             <div>
-              <div style={{ lineHeight: 1.1 }}>SAFE SOLUTIONS</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 500, letterSpacing: 0 }}>Smart Fleet Management</div>
+              <div style={{ lineHeight: 1.1, fontWeight: 800, letterSpacing: '0.03em' }}>SAFE SOLUTIONS ONE</div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase' }}>Enterprise Operations Platform</div>
             </div>
           </NavLink>
         </div>

@@ -11,6 +11,7 @@ export default function ApprovalCenterPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [remarks, setRemarks] = useState({});
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [pendingFuel, setPendingFuel] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,8 +21,12 @@ export default function ApprovalCenterPage() {
   async function fetchPendingRequests() {
     try {
       setLoading(true);
-      const res = await api.get('/attendance/pending');
-      setPendingRequests(res.requests || []);
+      const [attRes, fuelRes] = await Promise.all([
+        api.get('/attendance/pending').catch(() => ({ requests: [] })),
+        api.get('/fuel?status=pending').catch(() => ({ fuelLogs: [] }))
+      ]);
+      setPendingRequests(attRes.requests || []);
+      setPendingFuel(fuelRes.fuelLogs || []);
     } catch (err) {
       toast.error('Failed to load pending requests.');
     } finally {

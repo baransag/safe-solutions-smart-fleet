@@ -1,16 +1,91 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { Shield, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Shield, Eye, EyeOff, Check } from 'lucide-react';
+import api from '../../services/api';
 import './LoginPage.css';
 
+const INTRO_IMAGES = [
+  'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&q=80&w=1000', // Construction
+  'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1000', // Engineering
+  'https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?auto=format&fit=crop&q=80&w=1000', // Waterproofing / Inspection
+  'https://images.unsplash.com/photo-1516576885502-d35d55f2e8b4?auto=format&fit=crop&q=80&w=1000'  // Fleet Machinery
+];
+
+const PREPARATION_STEPS = [
+  'Loading Company Workspace...',
+  'Preparing Fleet Intelligence...',
+  'Loading Attendance...',
+  'Loading Operations...'
+];
+
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { completeLogin } = useAuth();
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Pre-login Intro states
+  const [introActive, setIntroActive] = useState(true);
+  const [introSlide, setIntroSlide] = useState(0);
+  const [introProgress, setIntroProgress] = useState(0);
+
+  // Post-login sequence states
+  const [loginSuccessLoading, setLoginSuccessLoading] = useState(false);
+  const [successStep, setSuccessStep] = useState(0);
+  const [successData, setSuccessData] = useState(null);
+
+  // Pre-login progress timer
+  useEffect(() => {
+    if (!introActive) return;
+
+    // Cycle slides
+    const slideInterval = setInterval(() => {
+      setIntroSlide(prev => (prev + 1) % INTRO_IMAGES.length);
+    }, 1500);
+
+    // Progress bar fill (runs for 6.0 seconds)
+    const progressInterval = setInterval(() => {
+      setIntroProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          clearInterval(slideInterval);
+          setIntroActive(false);
+          return 100;
+        }
+        return prev + 0.5; // 200 steps of 30ms = 6000ms
+      });
+    }, 30);
+
+    return () => {
+      clearInterval(slideInterval);
+      clearInterval(progressInterval);
+    };
+  }, [introActive]);
+
+  // Post-login loading steps sequence (runs for 3.2 seconds)
+  useEffect(() => {
+    if (!loginSuccessLoading || !successData) return;
+
+    const interval = setInterval(() => {
+      setSuccessStep(prev => {
+        if (prev >= PREPARATION_STEPS.length - 1) {
+          clearInterval(interval);
+          // Let it load for a brief moment then sign in
+          setTimeout(() => {
+            completeLogin(successData);
+            toast.success(`Welcome back, ${successData.user.name}!`);
+          }, 600);
+          return prev + 1;
+        }
+        return prev + 1;
+      });
+    }, 800); // 4 steps * 800ms = 3.2 seconds total duration
+
+    return () => clearInterval(interval);
+  }, [loginSuccessLoading, successData, completeLogin, toast]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,14 +96,63 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const user = await login(email, password);
-      toast.success(`Welcome back, ${user.name}!`);
+      // Defer state login; verify credentials first
+      const data = await api.post('/auth/login', { email, password });
+      setSuccessData(data);
+      setLoginSuccessLoading(true);
     } catch (err) {
       toast.error(err.message || 'Login failed');
-    } finally {
       setLoading(false);
     }
   };
+
+  // Render Pre-login Intro Slideshow
+  if (introActive) {
+    return (
+      <div className="pre-login-intro">
+        <div className="intro-slides">
+          {INTRO_IMAGES.map((img, i) => (
+            <div key={i} className={`intro-slide ${i === introSlide ? 'active' : ''}`}>
+              <img src={img} alt="Intro slide" className="intro-slide-img" />
+            </div>
+          ))}
+        </div>
+        <div className="intro-overlay" />
+        <div className="intro-content">
+          <h1 className="intro-logo animate-fade-in">SAFE SOLUTIONS ONE</h1>
+          <p className="intro-subtitle">Enterprise Operations Platform</p>
+          <div className="intro-progress-bar">
+            <div className="intro-progress-fill" style={{ width: `${introProgress}%` }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render Post-login Sequenced Loading Screen
+  if (loginSuccessLoading) {
+    return (
+      <div className="post-login-loader">
+        <div className="post-loader-card animate-scale-in">
+          <div className="post-loader-spinner" />
+          <h2 className="post-loader-title">Welcome Back</h2>
+          <div className="post-loader-list">
+            {PREPARATION_STEPS.map((text, i) => {
+              const isCompleted = successStep > i;
+              const isActive = successStep === i;
+              return (
+                <div key={i} className={`post-loader-item ${isCompleted ? 'completed' : isActive ? 'active' : ''}`}>
+                  <div className="post-loader-dot" />
+                  <span>{text}</span>
+                  {isCompleted && <Check size={14} style={{ color: '#10B981', marginLeft: 'auto' }} />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-page">
@@ -46,24 +170,24 @@ export default function LoginPage() {
                 src="/assets/images/logo.jpeg"
                 alt="Safe Solutions Logo"
                 onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
-                style={{ width: 44, height: 44, objectFit: 'contain', borderRadius: 8 }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
               <div style={{ display: 'none', alignItems: 'center', justifyContent: 'center' }}>
                 <Shield size={28} />
               </div>
             </div>
-            <h1 className="login-title">SAFE SOLUTIONS</h1>
-            <p className="login-subtitle">Smart Fleet & Vehicle Management</p>
+            <h1 className="login-title">SAFE SOLUTIONS ONE</h1>
+            <p className="login-subtitle">Enterprise Operations Platform</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
-              <label className="form-label" htmlFor="email">Email Address</label>
+              <label className="form-label" htmlFor="email">Email Address or Employee ID</label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 className="form-input"
-                placeholder="you@safesolutions.pk"
+                placeholder="e.g. boss@safesolutions.com or ADMIN001"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -82,6 +206,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
+                  style={{ width: '100%' }}
                 />
                 <button
                   type="button"
@@ -101,22 +226,22 @@ export default function LoginPage() {
               type="submit"
               className="btn btn-primary btn-lg"
               disabled={loading}
-              style={{ width: '100%', marginTop: 'var(--space-2)' }}
+              style={{ width: '100%', marginTop: 'var(--space-2)', background: 'var(--color-accent)', fontWeight: 700 }}
             >
               {loading ? (
                 <>
-                  <div className="loader" style={{ width: '18px', height: '18px', borderWidth: '2px', borderTopColor: 'white' }} />
-                  Signing in...
+                  <div className="loader" style={{ width: '18px', height: '18px', borderWidth: '2px', borderTopColor: 'white', marginRight: 8 }} />
+                  Verifying Workspace...
                 </>
               ) : (
-                'Sign In'
+                'Sign In to Workspace'
               )}
             </button>
           </form>
 
           <div className="login-footer">
-            <p>Secure enterprise access</p>
-            <p>Contact your administrator for account setup</p>
+            <p>Secure Enterprise Access</p>
+            <p>SAFE SOLUTIONS ONE &copy; 2026. All rights reserved.</p>
           </div>
         </div>
       </div>

@@ -9,25 +9,27 @@
 :root {
   /* ─── Luxury SaaS Color Palette ─── */
   /* Brand */
-  --color-primary: #1B1B3A;      /* Deep Luxury Navy */
-  --color-primary-hover: #0F0F24;
+  --color-primary: #0A0A14;      /* Solid Luxury Obsidian */
+  --color-primary-hover: #121225;
   --color-accent: #9A031E;       /* Deep Wine / Burgundy */
   --color-accent-hover: #730216;
   --color-gold: #E5A93D;         /* Premium Soft Gold */
   
   /* Backgrounds */
-  --bg-app: #FDFBF7;             /* Cream / Off-White */
+  --bg-app: #F8F9FA;             /* Sleek Light Grey */
   --bg-primary: #FFFFFF;         /* Pure white for cards */
-  --bg-secondary: #F4F1EA;       /* Warm light grey for hover */
-  --bg-tertiary: #E8E5DF;        /* Borders / dividers */
-  --bg-sidebar: rgba(27, 27, 58, 0.85); /* Deep Navy Glass */
-  --bg-glass: rgba(255, 255, 255, 0.7);
-  --backdrop-blur: blur(16px);
+  --bg-secondary: #F1F3F5;       /* Warm light grey for hover */
+  --bg-tertiary: #E9ECEF;        /* Borders / dividers */
+  --bg-card: rgba(255, 255, 255, 0.75);
+  --bg-card-hover: rgba(255, 255, 255, 0.9);
+  --bg-sidebar: rgba(10, 10, 20, 0.95); /* Deep Dark Glass */
+  --bg-glass: rgba(255, 255, 255, 0.65);
+  --backdrop-blur: blur(20px);
   
   /* Text */
-  --text-primary: #1A1A24;       /* Deep rich dark grey */
-  --text-secondary: #5C5C6B;     /* Muted grey */
-  --text-tertiary: #9898A6;      /* Light grey */
+  --text-primary: #121214;       /* Deep charcoal */
+  --text-secondary: #495057;     /* Muted grey */
+  --text-tertiary: #868E96;      /* Light grey */
   --text-inverse: #FFFFFF;       /* White text */
   
   /* UI States */

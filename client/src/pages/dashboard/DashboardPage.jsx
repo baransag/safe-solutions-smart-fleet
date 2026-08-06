@@ -6,7 +6,7 @@ import HeroSection from '../../components/vehicle/HeroSection';
 import {
   Car, ClipboardCheck, Route, Fuel, AlertTriangle, Wrench,
   TrendingUp, Users, Clock, MapPin, CheckCircle2, XCircle,
-  Building2, HardHat, ShieldCheck, UserX, CalendarCheck
+  Building2, HardHat, ShieldCheck, UserX, CalendarCheck, Search
 } from 'lucide-react';
 import './DashboardPage.css';
 

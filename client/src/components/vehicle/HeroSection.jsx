@@ -5,12 +5,12 @@ import { ChevronLeft, ChevronRight, Shield, Calendar, MapPin, Car, Building2, Ha
 import './HeroSection.css';
 
 const DEFAULT_SLIDES = [
-  { id: 1, image_url: '/assets/images/hero-1.jpeg', title: 'Smart Fleet Operations', description: 'Real-time vehicle tracking & intelligent allocation', category: 'Company Announcement' },
-  { id: 2, image_url: '/assets/images/Husnain.jpeg', title: 'M. Husnain Farooq — Controller', description: 'Enterprise Fleet & Management Controller', category: 'Leadership Notice' },
-  { id: 3, image_url: '/assets/images/hero-2.jpeg', title: 'Automated Verification', description: 'QR code check-in & GPS validation', category: 'Safety Alert' },
-  { id: 4, image_url: '/assets/images/Samaira.jpeg', title: 'Samaira Mubashar — Account & Finance', description: 'Finance & Operations Management', category: 'Executive Notice' },
-  { id: 5, image_url: '/assets/images/hero-3.jpeg', title: 'Fuel & Maintenance Logs', description: 'Expense tracking and automated maintenance alerts', category: 'Maintenance' },
-  { id: 6, image_url: '/assets/images/Shahzaib.jpeg', title: 'Engr. Shahzaib Ahmad — Marketing', description: 'Operations & Technical Field Representative', category: 'Team Highlight' }
+  { id: 1, image_url: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&q=80&w=1200', title: 'Structural Construction Banners', description: 'Enterprise engineering and structural layout operations', category: 'Construction' },
+  { id: 2, image_url: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?auto=format&fit=crop&q=80&w=1200', title: 'Waterproofing Inspections', description: 'Advanced membrane testing and dampness seal validation', category: 'Waterproofing' },
+  { id: 3, image_url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1200', title: 'Precision Engineering Controls', description: 'Industrial design verification and safety compliance checks', category: 'Engineering' },
+  { id: 4, image_url: 'https://images.unsplash.com/photo-1516576885502-d35d55f2e8b4?auto=format&fit=crop&q=80&w=1200', title: 'Enterprise Logistics Fleet', description: 'Real-time vehicle health diagnostics and location intelligence', category: 'Company Vehicles' },
+  { id: 5, image_url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200', title: 'Skyscraper Infrastructures', description: 'Commercial building insulation and concrete application logistics', category: 'Industrial Projects' },
+  { id: 6, image_url: 'https://images.unsplash.com/photo-1589793907316-f9401554611e?auto=format&fit=crop&q=80&w=1200', title: 'Site Inspection Audits', description: 'Unified compliance checklist and daily worker safety briefings', category: 'Safety' }
 ];
 
 export default function HeroSection() {
@@ -103,11 +103,11 @@ export default function HeroSection() {
               </div>
 
               <div>
-                <span className="hero-badge" style={{ margin: '0 0 4px', fontSize: 10, padding: '2px 10px' }}>
-                  <Shield size={12} /> SAFE SOLUTIONS OPS
+                <span className="hero-badge" style={{ margin: '0 0 4px', fontSize: 10, padding: '2px 10px', background: 'var(--color-gold)', color: '#000' }}>
+                  <Shield size={12} /> SAFE SOLUTIONS ONE
                 </span>
                 <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#ffffff', lineHeight: 1.2 }}>
-                  {user?.name || 'Safe Solutions Employee'}
+                  {user?.name || 'Enterprise Associate'}
                 </h2>
                 <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>
                   {user?.designation || 'Team Member'} • {user?.department || 'Operations'}
