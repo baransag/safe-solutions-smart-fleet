@@ -1,3 +1,7 @@
+/* =========================================================
+   Dashboard Page - Luxury SaaS Styles
+   ========================================================= */
+
 .dashboard-page {
   padding: var(--space-8) !important;
   max-width: var(--content-max-width);
@@ -9,159 +13,273 @@
 }
 
 .dashboard-greeting h2 {
-  font-size: var(--text-2xl);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+}
+
+.dashboard-greeting p {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* ─── Top Stats Row ─── */
+.stat-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+}
+
+.stat-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-4);
+  z-index: 1;
+}
+
+.stat-card-label {
+  font-size: 14px;
   font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stat-card-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.stat-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-card-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  z-index: 1;
+}
+
+.stat-card-value {
+  font-size: 28px;
+  font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
-.dashboard-greeting p {
-  font-size: var(--text-sm);
+.stat-card-trend {
+  font-size: 11px;
+  font-weight: 700;
+}
+.stat-card-trend.pos { color: var(--color-success); }
+.stat-card-trend.neg { color: var(--color-error); }
+
+.stat-sparkline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  z-index: 0;
+  opacity: 0.8;
+}
+
+/* ─── Fleet Utilization ─── */
+.util-legend {
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.util-legend span {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.util-val {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+/* ─── Fleet Overview Cards ─── */
+.fleet-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  background: var(--bg-primary);
+}
+
+.fleet-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-badge {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.5px;
+}
+.badge-green { background: var(--bg-success-light); color: var(--color-success); }
+.badge-gold { background: rgba(229, 169, 61, 0.1); color: var(--color-gold); }
+.badge-red { background: var(--bg-error-light); color: var(--color-error); }
+.badge-info { background: var(--bg-info-light); color: var(--color-info); }
+
+.fleet-card-img {
+  margin: 16px 0;
+  text-align: center;
+}
+
+.fleet-card-info {
+  margin-bottom: 12px;
+}
+
+.fleet-card-driver {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px dashed var(--bg-tertiary);
+  border-bottom: 1px dashed var(--bg-tertiary);
+}
+
+.driver-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.fleet-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
   margin-top: 4px;
 }
 
-.dashboard-section {
-  margin-bottom: var(--space-10);
-}
-
-.section-title {
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: var(--space-4);
-}
-
-/* My Vehicle Card */
-.my-vehicle-card {
-  cursor: default;
-}
-
-.vehicle-card-content {
+/* ─── Right Sidebar Panels ─── */
+.alert-item {
   display: flex;
   align-items: center;
-  gap: var(--space-5);
+  gap: 12px;
+  padding: 8px 0;
 }
-
-.vehicle-card-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radius-lg);
-  background: var(--bg-secondary);
+.alert-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-primary);
-  flex-shrink: 0;
-  border: var(--border-subtle);
 }
+.alert-icon.blue { background: rgba(37, 99, 235, 0.1); color: var(--color-info); }
+.alert-icon.purple { background: rgba(139, 92, 246, 0.1); color: #8B5CF6; }
+.alert-icon.red { background: rgba(220, 38, 38, 0.1); color: var(--color-error); }
 
-.vehicle-card-info h4 {
-  font-size: var(--text-lg);
-  font-weight: 600;
+.alert-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
-
-.vehicle-plate {
-  font-size: var(--text-base);
+.alert-sub {
+  font-size: 11px;
   color: var(--text-secondary);
-  font-weight: 600;
-  margin-top: 2px;
-  font-family: var(--font-mono);
 }
 
-.vehicle-meter {
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-  margin-top: 4px;
-}
-
-/* Quick Actions */
-.quick-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-4);
-}
-
-.quick-action-card {
+.qa-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-6) var(--space-4);
-  background: var(--bg-primary);
-  border: var(--border-subtle);
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-secondary);
   border-radius: var(--radius-lg);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
   cursor: pointer;
   transition: all var(--transition-base);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--text-secondary);
-  box-shadow: var(--shadow-xs);
 }
-
-.quick-action-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
-  color: var(--text-primary);
-  border-color: var(--border-medium);
+.qa-btn:hover {
+  background: rgba(0,0,0,0.05);
 }
-
-.qa-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
+.qa-icon-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+.qa-icon-sm.purple { background: rgba(139, 92, 246, 0.1); color: #8B5CF6; }
+.qa-icon-sm.green { background: var(--bg-success-light); color: var(--color-success); }
+.qa-icon-sm.orange { background: rgba(245, 158, 11, 0.1); color: #F59E0B; }
+.qa-icon-sm.blue { background: rgba(37, 99, 235, 0.1); color: var(--color-info); }
 
-.qa-icon.orange { background: #FFF7ED; color: #EA580C; }
-.qa-icon.teal { background: var(--bg-info-light); color: var(--color-info); }
-.qa-icon.green { background: var(--bg-success-light); color: var(--color-success); }
-.qa-icon.blue { background: var(--bg-info-light); color: var(--color-info); }
-
-/* Today's Status */
-.today-status-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--space-6);
+/* ─── Bottom Bar ─── */
+.bottom-bar {
+  margin-top: var(--space-6);
+  padding: var(--space-4) var(--space-8);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: var(--radius-xl);
 }
 
-.today-status-item {
+.bottom-stat {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 12px;
 }
-
-.status-label {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  font-weight: 500;
+.b-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+.b-icon.gold { color: var(--color-gold); }
+.b-icon.purple { color: #8B5CF6; }
+.b-icon.orange { color: #F59E0B; }
+.b-icon.green { color: var(--color-success); }
+.b-icon.red { color: var(--color-error); }
 
-.status-value {
-  font-size: var(--text-base);
+.b-label {
+  font-size: 11px;
   font-weight: 600;
+  color: var(--text-tertiary);
+}
+.b-value {
+  font-size: 16px;
+  font-weight: 800;
   color: var(--text-primary);
 }
-
-/* Layout Utilities */
-.grid {
-  display: grid;
-  gap: var(--space-6);
+.b-value.red-text {
+  color: var(--color-error);
 }
 
+/* Utility */
+.grid { display: grid; gap: var(--space-6); }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
-
-@media (max-width: 1024px) {
-  .grid-3 { grid-template-columns: repeat(2, 1fr); }
-  .grid-2 { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 768px) {
-  .quick-actions-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .grid-3 { grid-template-columns: 1fr; }
-}
+.grid-4 { grid-template-columns: repeat(4, 1fr); }

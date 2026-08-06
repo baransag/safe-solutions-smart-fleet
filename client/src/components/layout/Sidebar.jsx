@@ -46,8 +46,11 @@ export default function Sidebar({ isOpen, onClose }) {
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <NavLink to="/" className="sidebar-logo">
-            <div className="sidebar-logo-icon">///</div>
-            SAFE SOLUTIONS
+            <div className="sidebar-logo-icon">S</div>
+            <div>
+              <div style={{ lineHeight: 1.1 }}>SAFE SOLUTIONS</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 500, letterSpacing: 0 }}>Smart Fleet Management</div>
+            </div>
           </NavLink>
         </div>
 
@@ -84,13 +87,16 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="sidebar-footer">
           <div className="sidebar-user" onClick={logout}>
             <div className="sidebar-user-avatar">
-              {user?.name?.[0]?.toUpperCase() || 'U'}
+              <img src="https://i.pravatar.cc/150?img=11" alt="User" />
             </div>
             <div className="sidebar-user-info">
               <span className="sidebar-user-name">{user?.name || 'User'}</span>
-              <span className="sidebar-user-role">{user?.role || 'Guest'}</span>
+              <span className="sidebar-user-role" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }}></div>
+                Online
+              </span>
             </div>
-            <LogOut size={16} color="var(--text-tertiary)" style={{ marginLeft: 'auto' }} />
+            <LogOut size={16} color="rgba(255,255,255,0.4)" style={{ marginLeft: 'auto' }} />
           </div>
         </div>
       </aside>

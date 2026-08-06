@@ -89,18 +89,37 @@ export default function Header({ onMenuClick }) {
 
   return (
     <header className="header">
-      <div className="header-left">
+      <div className="header-left" style={{ flex: 1, paddingRight: 'var(--space-8)' }}>
         <button className="header-icon-btn mobile-menu-btn" onClick={onMenuClick}>
           <Menu size={20} />
         </button>
-        <div>
-          <h1 className="header-title">{pageName}</h1>
+        <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
+          <Search size={16} color="var(--text-tertiary)" style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            type="text"
+            placeholder="Search anything..."
+            style={{
+              width: '100%',
+              padding: '12px 16px 12px 42px',
+              borderRadius: 'var(--radius-full)',
+              border: 'none',
+              background: 'var(--bg-primary)',
+              boxShadow: 'var(--shadow-sm)',
+              fontSize: 'var(--text-sm)',
+              color: 'var(--text-primary)',
+              outline: 'none'
+            }}
+          />
         </div>
       </div>
 
       <div className="header-right">
         <button className="header-icon-btn">
-          <Search size={20} />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        </button>
+        
+        <button className="header-icon-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
         </button>
 
         <div ref={dropdownRef} style={{ position: 'relative' }}>
@@ -110,7 +129,9 @@ export default function Header({ onMenuClick }) {
           >
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+              <span className="notification-badge" style={{ width: 14, height: 14, top: 4, right: 4, fontSize: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', background: 'var(--color-accent)' }}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
             )}
           </button>
 
@@ -125,7 +146,7 @@ export default function Header({ onMenuClick }) {
                   <button
                     onClick={markAllRead}
                     style={{
-                      background: 'none', border: 'none', color: 'var(--text-primary)',
+                      background: 'none', border: 'none', color: 'var(--color-primary)',
                       fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer'
                     }}
                   >
@@ -174,15 +195,18 @@ export default function Header({ onMenuClick }) {
           )}
         </div>
 
-        <a href="/settings" style={{ textDecoration: 'none' }}>
-          <div className="header-user-pill">
-            <div className="header-avatar" style={{ background: 'var(--color-primary)', color: 'white' }}>
-              {user?.name ? user.name.charAt(0) : 'U'}
-            </div>
-            <span className="header-user-name">{user?.name ? user.name.split(' ')[0] : 'User'}</span>
-            <span style={{ marginLeft: 4, color: 'var(--text-tertiary)', fontSize: 10 }}>▼</span>
-          </div>
-        </a>
+        <div style={{ 
+          background: 'var(--bg-primary)', 
+          padding: '8px 16px', 
+          borderRadius: 'var(--radius-full)',
+          boxShadow: 'var(--shadow-sm)',
+          fontSize: 'var(--text-sm)',
+          fontWeight: 600,
+          color: 'var(--text-primary)',
+          marginLeft: 'var(--space-2)'
+        }}>
+          {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+        </div>
       </div>
     </header>
   );
