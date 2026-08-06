@@ -45,14 +45,21 @@ export default function Sidebar({ isOpen, onClose }) {
       {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <div className="sidebar-logo">
-            <span style={{ transform: 'rotate(-45deg)' }}>///</span>
-          </div>
+          <NavLink to="/" className="sidebar-logo">
+            <div className="sidebar-logo-icon">///</div>
+            SAFE SOLUTIONS
+          </NavLink>
         </div>
 
         <nav className="sidebar-nav">
           {navItems.map((item, i) => {
-            if (item.section) return null; // Hide sections in narrow mode
+            if (item.section) {
+              return (
+                <div key={`section-${i}`} className="sidebar-section-label">
+                  {item.section}
+                </div>
+              );
+            }
 
             if (item.adminOnly && !isAdmin) return null;
             if (item.superAdminOnly && !isSuperAdmin) return null;
@@ -65,7 +72,6 @@ export default function Sidebar({ isOpen, onClose }) {
                 to={item.to}
                 className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                 onClick={() => onClose?.()}
-                title={item.label}
               >
                 <Icon className="link-icon" size={18} />
                 <span>{item.label}</span>
@@ -76,14 +82,16 @@ export default function Sidebar({ isOpen, onClose }) {
         </nav>
 
         <div className="sidebar-footer">
-          <button
-            onClick={logout}
-            className="sidebar-link"
-            style={{ color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none' }}
-            title="Logout"
-          >
-            <LogOut className="link-icon" size={18} />
-          </button>
+          <div className="sidebar-user" onClick={logout}>
+            <div className="sidebar-user-avatar">
+              {user?.name?.[0]?.toUpperCase() || 'U'}
+            </div>
+            <div className="sidebar-user-info">
+              <span className="sidebar-user-name">{user?.name || 'User'}</span>
+              <span className="sidebar-user-role">{user?.role || 'Guest'}</span>
+            </div>
+            <LogOut size={16} color="var(--text-tertiary)" style={{ marginLeft: 'auto' }} />
+          </div>
         </div>
       </aside>
     </>

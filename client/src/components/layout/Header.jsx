@@ -176,11 +176,11 @@ export default function Header({ onMenuClick }) {
 
         <a href="/settings" style={{ textDecoration: 'none' }}>
           <div className="header-user-pill">
-            <div className="header-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5ECD5', color: '#1A1D1F', fontWeight: 800 }}>
+            <div className="header-avatar" style={{ background: 'var(--color-primary)', color: 'white' }}>
               {user?.name ? user.name.charAt(0) : 'U'}
             </div>
             <span className="header-user-name">{user?.name ? user.name.split(' ')[0] : 'User'}</span>
-            <span style={{ marginLeft: 4, opacity: 0.5 }}>▼</span>
+            <span style={{ marginLeft: 4, color: 'var(--text-tertiary)', fontSize: 10 }}>▼</span>
           </div>
         </a>
       </div>
