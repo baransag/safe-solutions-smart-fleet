@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
                 <td><span className="badge badge-teal">{v.number_plate}</span></td>
                 <td style={{ textTransform: 'capitalize' }}>{v.type}</td>
                 <td><span className={`badge badge-${v.status === 'active' ? 'green' : 'yellow'}`}>{v.status}</span></td>
-                <td>{parseFloat(v.current_meter || 0).toLocaleString()} km</td>
+                <td>{v.current_meter && parseFloat(v.current_meter) > 0 ? `${parseFloat(v.current_meter).toLocaleString()} km` : '----'}</td>
                 <td>{v.assigned_employee_name || <span style={{ color: 'var(--text-tertiary)' }}>—</span>}</td>
               </tr>
             ))}

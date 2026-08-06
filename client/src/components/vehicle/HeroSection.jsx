@@ -5,12 +5,11 @@ import { ChevronLeft, ChevronRight, Shield, Calendar, MapPin, Car, Building2, Ha
 import './HeroSection.css';
 
 const DEFAULT_SLIDES = [
-  { id: 1, image_url: '/assets/images/hero-1.jpeg', title: 'SAFE SOLUTIONS COMMAND CENTER Operations', description: 'Real-time vehicle tracking & intelligent fleet allocation', category: 'Company Announcement' },
-  { id: 2, image_url: '/assets/images/Husnain.jpeg', title: 'M. Husnain Farooq — Controller', description: 'Enterprise Fleet & Management Controller', category: 'Executive Notice' },
-  { id: 3, image_url: '/assets/images/hero-2.jpeg', title: 'Automated QR & GPS Verification', description: 'Instant QR code check-in & geofence validation', category: 'Safety Alert' },
-  { id: 4, image_url: '/assets/images/Samaira.jpeg', title: 'Samaira Mubashar — Accounts & Finance', description: 'Finance & Operational Expense Oversight', category: 'Leadership Notice' },
-  { id: 5, image_url: '/assets/images/hero-3.jpeg', title: 'Fuel & Maintenance Logs', description: 'Automated AI receipt scanning and vehicle servicing alerts', category: 'Maintenance' },
-  { id: 6, image_url: '/assets/images/Shahzaib.jpeg', title: 'Engr. Shahzaib Ahmad — Marketing', description: 'Technical Operations & Field Project Management', category: 'Team Highlight' }
+  { id: 1, image_url: '/assets/images/hero-1.jpeg', title: 'Smart Fleet Operations', description: 'Real-time vehicle tracking & intelligent fleet allocation', category: 'Company Announcement' },
+  { id: 2, image_url: '/assets/images/hero-2.jpeg', title: 'Automated QR & GPS Verification', description: 'Instant QR code check-in & geofence validation', category: 'Safety Alert' },
+  { id: 3, image_url: '/assets/images/hero-3.jpeg', title: 'Fuel & Maintenance Logs', description: 'Automated AI receipt scanning and vehicle servicing alerts', category: 'Maintenance' },
+  { id: 4, image_url: '/assets/images/hero-4.jpeg', title: 'Workforce Attendance & Logistics', description: 'GPS verified check-in & daily operations routing', category: 'Company Notice' },
+  { id: 5, image_url: '/assets/images/hero-5.jpeg', title: 'Enterprise Operations Hub', description: 'Tamper-resistant audit trails & command dashboard', category: 'Friday Mubarak' }
 ];
 
 export default function HeroSection() {
@@ -78,154 +77,85 @@ export default function HeroSection() {
     return url;
   };
 
-  const todayDateStr = new Date().toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
-  });
-
   return (
     <div className="hero-section">
-      <div className="hero-grid">
-        {/* User Quick Info */}
-        <div className="hero-user-card card-glass animate-fade-in">
-          <div className="hero-user-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ position: 'relative' }}>
-                <img
-                  src={getImageUrl(user?.photo_url)}
-                  alt={user?.name || 'User'}
-                  style={{
-                    width: 52, height: 52, borderRadius: '50%', objectFit: 'cover',
-                    border: '2px solid var(--color-gold)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                  }}
-                  onError={(e) => { e.currentTarget.src = '/assets/images/logo.jpeg'; }}
+      <div className="hero-slider" style={{ width: '100%', height: '100%', borderRadius: 'inherit' }}>
+        {slides.length === 0 ? (
+          <div className="hero-slide active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
+            <div style={{ textAlign: 'center', color: '#fff', padding: 20 }}>
+              <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>SAFE SOLUTIONS COMMAND CENTER</h2>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>Enterprise Workforce & Fleet Intelligence Platform</p>
+            </div>
+          </div>
+        ) : (
+          slides.map((slide, i) => (
+            <div
+              key={slide.id || i}
+              className={`hero-slide ${i === currentSlide ? 'active' : ''}`}
+            >
+              {slide.media_type === 'video' ? (
+                <video
+                  src={getImageUrl(slide.media_url)}
+                  autoPlay
+                  loop
+                  muted
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
-                <div style={{
-                  position: 'absolute', bottom: 0, right: 0, width: 14, height: 14,
-                  borderRadius: '50%', background: '#10B981', border: '2px solid #fff'
-                }} />
-              </div>
-
-              <div>
-                <span className="hero-badge" style={{ margin: '0 0 4px', fontSize: 10, padding: '2px 10px', background: 'var(--color-gold)', color: '#000', fontWeight: 800 }}>
-                  <Shield size={12} /> SAFE SOLUTIONS COMMAND CENTER
-                </span>
-                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#ffffff', lineHeight: 1.2 }}>
-                  {user?.name || 'Enterprise Associate'}
-                </h2>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>
-                  {user?.designation || 'Team Member'} • {user?.department || 'Operations'}
-                </p>
-              </div>
-            </div>
-
-            {/* LIVE OPERATIONAL METRICS SUMMARY */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10,
-              background: 'rgba(255, 255, 255, 0.12)', backdropFilter: 'blur(10px)',
-              padding: 12, borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.2)'
-            }}>
-              <div>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', display: 'block' }}>Date</span>
-                <strong style={{ fontSize: 12, color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Calendar size={12} /> {todayDateStr}
-                </strong>
-              </div>
-
-              <div>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', display: 'block' }}>Attendance Status</span>
-                {todayAttendance ? (
-                  <strong style={{ fontSize: 11, color: '#6ee7b7', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {todayAttendance.attendance_type === 'office' ? <Building2 size={12} /> : <HardHat size={12} />}
-                    {todayAttendance.attendance_type === 'office' ? 'Office' : 'Site'} ({todayAttendance.approval_status})
-                  </strong>
-                ) : (
-                  <strong style={{ fontSize: 11, color: '#fef08a', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Clock size={12} /> Not Checked In
-                  </strong>
-                )}
-              </div>
-
-              <div>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', display: 'block' }}>Assigned Vehicle</span>
-                <strong style={{ fontSize: 11, color: '#93c5fd', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Car size={12} /> {assignedVehicle ? assignedVehicle.number_plate || assignedVehicle.vehicle_name : 'No Vehicle'}
-                </strong>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT SLIDER: ANNOUNCEMENTS & HERO BANNERS */}
-        <div className="hero-right">
-          <div className="hero-slider">
-            {slides.map((slide, i) => (
-              <div
-                key={slide.id || i}
-                className={`hero-slide ${i === currentSlide ? 'active' : ''}`}
-              >
-                {slide.media_type === 'video' ? (
-                  <video
-                    src={getImageUrl(slide.media_url)}
-                    autoPlay
-                    loop
-                    muted
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : slide.media_type === 'pdf' ? (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <FileText size={48} color="var(--color-primary-orange)" />
-                      <p style={{ marginTop: 8, color: 'var(--text-secondary)' }}>PDF Document</p>
-                      <a href={getImageUrl(slide.media_url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-primary" style={{ marginTop: 8 }}>View PDF</a>
-                    </div>
+              ) : slide.media_type === 'pdf' ? (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <FileText size={48} color="var(--color-primary-orange)" />
+                    <p style={{ marginTop: 8, color: 'var(--text-secondary)' }}>PDF Document</p>
+                    <a href={getImageUrl(slide.media_url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-primary" style={{ marginTop: 8 }}>View PDF</a>
                   </div>
-                ) : (
-                  <img
-                    src={getImageUrl(slide.media_url || slide.image_url)}
-                    alt={slide.title || 'Hero Banner'}
-                    loading="lazy"
-                  />
+                </div>
+              ) : (
+                <img
+                  src={getImageUrl(slide.media_url || slide.image_url)}
+                  alt={slide.title || 'Hero Banner'}
+                  loading="lazy"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              )}
+              <div className="slide-caption" style={{ padding: '20px 40px', background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)' }}>
+                {slide.category && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 850, padding: '3px 10px', borderRadius: 4,
+                    background: '#C50337', color: '#fff', textTransform: 'uppercase', marginBottom: 6, display: 'inline-block', letterSpacing: '0.05em'
+                  }}>
+                    {slide.category}
+                  </span>
                 )}
-                <div className="slide-caption">
-                  {slide.category && (
-                    <span style={{
-                      fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 4,
-                      background: '#C50337', color: '#fff', textTransform: 'uppercase', marginBottom: 4, display: 'inline-block'
-                    }}>
-                      {slide.category}
-                    </span>
-                  )}
-                  <h4 style={{ margin: '2px 0 0' }}>{slide.title}</h4>
-                  {slide.description && <p style={{ margin: '2px 0 0' }}>{slide.description}</p>}
-                </div>
+                <h3 style={{ margin: '4px 0 0', color: '#fff', fontSize: '20px', fontWeight: 800 }}>{slide.title}</h3>
+                {slide.description && <p style={{ margin: '4px 0 0', color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>{slide.description}</p>}
               </div>
-            ))}
+            </div>
+          ))
+        )}
 
-            {slides.length > 1 && (
-              <>
-                <button className="slider-nav slider-prev" onClick={prevSlide} aria-label="Previous Slide">
-                  <ChevronLeft size={20} />
-                </button>
-                <button className="slider-nav slider-next" onClick={nextSlide} aria-label="Next Slide">
-                  <ChevronRight size={20} />
-                </button>
-                <div className="slider-dots">
-                  {slides.map((_, i) => (
-                    <button
-                      key={i}
-                      className={`slider-dot ${i === currentSlide ? 'active' : ''}`}
-                      onClick={() => {
-                        clearInterval(intervalRef.current);
-                        setCurrentSlide(i);
-                      }}
-                      aria-label={`Go to slide ${i + 1}`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        {slides.length > 1 && (
+          <>
+            <button className="slider-nav slider-prev" onClick={prevSlide} aria-label="Previous Slide">
+              <ChevronLeft size={20} />
+            </button>
+            <button className="slider-nav slider-next" onClick={nextSlide} aria-label="Next Slide">
+              <ChevronRight size={20} />
+            </button>
+            <div className="slider-dots">
+              {slides.map((_, i) => (
+                <button
+                  key={i}
+                  className={`slider-dot ${i === currentSlide ? 'active' : ''}`}
+                  onClick={() => {
+                    clearInterval(intervalRef.current);
+                    setCurrentSlide(i);
+                  }}
+                  aria-label={`Go to slide ${i + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="hero-bg-gradient" />

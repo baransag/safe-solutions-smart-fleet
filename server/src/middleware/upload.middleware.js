@@ -6,7 +6,7 @@ const fs = require('fs');
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
 
 // Ensure upload directories exist
-const dirs = ['selfies', 'meters', 'receipts', 'vehicles', 'slides', 'avatars'];
+const dirs = ['selfies', 'meters', 'receipts', 'vehicles', 'slides', 'avatars', 'sites'];
 dirs.forEach(dir => {
   const fullPath = path.join(UPLOAD_DIR, dir);
   if (!fs.existsSync(fullPath)) {
@@ -44,6 +44,7 @@ const uploadReceipt = multer({ storage: createStorage('receipts'), fileFilter, l
 const uploadVehicle = multer({ storage: createStorage('vehicles'), fileFilter, limits: { fileSize: maxSize } });
 const uploadSlide = multer({ storage: createStorage('slides'), fileFilter, limits: { fileSize: maxSize } });
 const uploadAvatar = multer({ storage: createStorage('avatars'), fileFilter, limits: { fileSize: maxSize } });
+const uploadSite = multer({ storage: createStorage('sites'), fileFilter, limits: { fileSize: maxSize } });
 
 module.exports = {
   uploadSelfie,
@@ -52,5 +53,6 @@ module.exports = {
   uploadVehicle,
   uploadSlide,
   uploadAvatar,
+  uploadSite,
   UPLOAD_DIR
 };

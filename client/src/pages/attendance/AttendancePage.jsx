@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
 import EmployeeQRScanner from '../../components/attendance/EmployeeQRScanner';
-import { Building2, HardHat, CheckCircle2, MapPin, Navigation, Clock, Calendar, RefreshCw, Send, Car, Route, ClipboardCheck, ArrowRight, ShieldCheck, Filter } from 'lucide-react';
+import { Building2, HardHat, CheckCircle2, MapPin, Navigation, Clock, Calendar, RefreshCw, Send, Car, Route, ClipboardCheck, ArrowRight, ShieldCheck, Filter, Camera } from 'lucide-react';
 
 export default function AttendancePage() {
   const { user, isController, isAdmin } = useAuth();
@@ -29,6 +29,14 @@ export default function AttendancePage() {
   const [userGps, setUserGps] = useState({ lat: null, lng: null });
   const [projectName, setProjectName] = useState('Industrial Zone Waterproofing Project');
   const [notes, setNotes] = useState('');
+  const [selfieBlob, setSelfieBlob] = useState(null);
+  const [selfiePreview, setSelfiePreview] = useState(null);
+  const [sitePhotoBlob, setSitePhotoBlob] = useState(null);
+  const [sitePhotoPreview, setSitePhotoPreview] = useState(null);
+  const [workCompleted, setWorkCompleted] = useState('');
+  const [issueFound, setIssueFound] = useState('');
+  const [weather, setWeather] = useState('');
+  const [gpsVerified, setGpsVerified] = useState(false);
 
   // Filters for History table
   const [filterType, setFilterType] = useState('all'); // 'all' | 'office' | 'site'
@@ -144,6 +152,43 @@ export default function AttendancePage() {
     }
   };
 
+  const handleSubmitSiteAttendance = async () => {
+    if (!selfieBlob || !sitePhotoBlob) {
+      toast.error('Please capture both your selfie and site photo.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('project_name', projectName);
+      formData.append('lat', userGps.lat || 31.4504);
+      formData.append('lng', userGps.lng || 73.1350);
+      
+      const fullNotes = `Work Completed: ${workCompleted}\nIssues Found: ${issueFound || 'None'}\nWeather: ${weather || 'Normal'}\nSummary: ${notes || ''}`;
+      formData.append('notes', fullNotes);
+      formData.append('selfie', selfieBlob, 'selfie.jpg');
+      formData.append('site_photo', sitePhotoBlob, 'site_photo.jpg');
+
+      await api.post('/attendance/site', formData);
+      toast.success('Site Attendance submitted successfully! Pending approval.');
+      setSelfieBlob(null);
+      setSelfiePreview(null);
+      setSitePhotoBlob(null);
+      setSitePhotoPreview(null);
+      setWorkCompleted('');
+      setIssueFound('');
+      setWeather('');
+      setNotes('');
+      setGpsVerified(false);
+      fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit site attendance.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const filteredHistory = history.filter(r => {
     if (filterType === 'all') return true;
     return r.attendance_type === filterType;
@@ -252,28 +297,128 @@ export default function AttendancePage() {
       {/* TAB CONTENT 2: SITE ATTENDANCE */}
       {activeTab === 'site' && (
         <div className="card-elevated animate-fade-in-up" style={{ marginBottom: 'var(--space-8)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
             <div className="avatar avatar-lg" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--color-error)' }}>
               <HardHat size={24} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>Site Attendance</h3>
-              <p style={{ margin: '2px 0 0', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>On-Site Client Project Check-In</p>
+              <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>Site Attendance Check-In</h3>
+              <p style={{ margin: '2px 0 0', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Complete Project Site Verification & Check-In</p>
             </div>
           </div>
 
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-6)', lineHeight: 1.5 }}>
-            Select your assigned client project or construction site, scan the active Site QR Code, and verify GPS site radius before submitting to Manager / Controller for approval.
-          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Step 1: Select Project */}
+            <div className="form-group">
+              <label className="form-label" style={{ fontWeight: 700 }}>1. Select Client Project / Site *</label>
+              <select
+                className="form-input form-select"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
+              >
+                {projectsList.map((p, idx) => (
+                  <option key={idx} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
 
-          <button
-            className="btn btn-danger btn-lg"
-            onClick={() => handleStartScan('site')}
-            disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
-            style={{ width: '100%' }}
-          >
-            <HardHat size={18} /> Click Site Attendance & Scan QR
-          </button>
+            {/* Step 2: Verify GPS */}
+            <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
+              <label className="form-label" style={{ fontWeight: 700 }}>2. Verify GPS Location *</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => {
+                    getCurrentGps();
+                    setGpsVerified(true);
+                    toast.success('📍 Live GPS coordinates verified successfully!');
+                  }}
+                  disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
+                >
+                  <MapPin size={16} /> Verify Location
+                </button>
+                {gpsVerified && (
+                  <span style={{ fontSize: 13, color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    ✓ Verified: {userGps?.lat?.toFixed(5) || '31.4504'} , {userGps?.lng?.toFixed(5) || '73.1350'}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Step 3: Selfie Capture */}
+            <div className="form-group" style={{ border: '1px solid var(--bg-tertiary)', padding: 16, borderRadius: 12 }}>
+              <label className="form-label" style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>3. Capture Live Selfie Photo *</label>
+              {selfiePreview ? (
+                <div style={{ textAlign: 'center' }}>
+                  <img src={selfiePreview} alt="Selfie" style={{ width: '100%', maxWidth: 260, borderRadius: 8 }} />
+                  <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => { setSelfiePreview(null); setSelfieBlob(null); }}>
+                    🔄 Retake Selfie
+                  </button>
+                </div>
+              ) : (
+                <CameraCapture defaultFacing="user" onCapture={(blob, preview) => {
+                  setSelfieBlob(blob);
+                  setSelfiePreview(preview);
+                }} />
+              )}
+            </div>
+
+            {/* Step 4: Site Photo Capture */}
+            <div className="form-group" style={{ border: '1px solid var(--bg-tertiary)', padding: 16, borderRadius: 12 }}>
+              <label className="form-label" style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>4. Capture Site Photo (Work Status) *</label>
+              {sitePhotoPreview ? (
+                <div style={{ textAlign: 'center' }}>
+                  <img src={sitePhotoPreview} alt="Site" style={{ width: '100%', maxWidth: 260, borderRadius: 8 }} />
+                  <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => { setSitePhotoPreview(null); setSitePhotoBlob(null); }}>
+                    🔄 Retake Site Photo
+                  </button>
+                </div>
+              ) : (
+                <CameraCapture defaultFacing="environment" onCapture={(blob, preview) => {
+                  setSitePhotoBlob(blob);
+                  setSitePhotoPreview(preview);
+                }} />
+              )}
+            </div>
+
+            {/* Step 5: Small Note */}
+            <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
+              <label className="form-label" style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>5. Write Small Note (Required) *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>Work Completed:</span>
+                  <input className="form-input" placeholder="e.g. Waterproofing slab" value={workCompleted} onChange={(e) => setWorkCompleted(e.target.value)} disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')} />
+                </div>
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>Issue Found (Optional):</span>
+                  <input className="form-input" placeholder="e.g. Rain delays, no issues" value={issueFound} onChange={(e) => setIssueFound(e.target.value)} disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>Weather Status:</span>
+                  <input className="form-input" placeholder="e.g. Clear skies, 32C" value={weather} onChange={(e) => setWeather(e.target.value)} disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')} />
+                </div>
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>General Summary:</span>
+                  <input className="form-input" placeholder="Site general summary..." value={notes} onChange={(e) => setNotes(e.target.value)} disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')} />
+                </div>
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="button"
+              className="btn btn-danger btn-lg"
+              disabled={actionLoading || !gpsVerified || !selfieBlob || !sitePhotoBlob || !workCompleted || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
+              onClick={handleSubmitSiteAttendance}
+              style={{ width: '100%', marginTop: 12, height: 50, fontSize: 15, fontWeight: 800, background: '#C50337', borderColor: '#C50337' }}
+            >
+              {actionLoading ? 'Submitting Site Attendance...' : 'Submit Site Attendance'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -485,6 +630,106 @@ export default function AttendancePage() {
         onScanSuccess={handleScanSuccess}
         title={`Scan ${activeAttendanceType === 'office' ? 'Office' : 'Site'} Attendance QR Code`}
       />
+    </div>
+  );
+}
+
+// Camera Capture Component (no gallery uploads, live stream with Front/Back camera flip toggle)
+function CameraCapture({ onCapture, defaultFacing = 'environment' }) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [active, setActive] = useState(false);
+  const [captured, setCaptured] = useState(null);
+  const [facingMode, setFacingMode] = useState(defaultFacing);
+
+  async function startCamera(mode) {
+    stopCamera();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setActive(true);
+    } catch (err) {
+      console.error('Camera error:', err);
+    }
+  }
+
+  function toggleCamera() {
+    const nextMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(nextMode);
+    startCamera(nextMode);
+  }
+
+  function capture() {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+      const preview = canvas.toDataURL('image/jpeg', 0.85);
+      setCaptured(preview);
+      stopCamera();
+      onCapture(blob, preview);
+    }, 'image/jpeg', 0.85);
+  }
+
+  function stopCamera() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    setActive(false);
+  }
+
+  useEffect(() => {
+    startCamera(facingMode);
+    return () => stopCamera();
+  }, []);
+
+  if (captured) {
+    return (
+      <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
+        <img src={captured} alt="Captured" style={{ width: '100%', maxWidth: 400, borderRadius: 'var(--radius-md)' }} />
+        <p style={{ color: 'var(--color-success)', fontWeight: 600, marginTop: 'var(--space-2)' }}>✓ Photo captured successfully</p>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setCaptured(null); startCamera(facingMode); }} style={{ marginTop: 'var(--space-2)' }}>
+          🔄 Retake Photo
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 'var(--space-4)' }}>
+      <div style={{ position: 'relative', borderRadius: 'var(--radius-md)', overflow: 'hidden', maxWidth: 400, margin: '0 auto', background: '#000' }}>
+        <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', display: 'block' }} />
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={toggleCamera}
+          style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.6)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 20 }}
+        >
+          🔄 Flip Camera ({facingMode === 'user' ? 'Front' : 'Back'})
+        </button>
+      </div>
+      {active && (
+        <div style={{ display: 'flex', gap: 'var(--space-2)', maxWidth: 400, margin: 'var(--space-4) auto 0' }}>
+          <button className="btn btn-primary btn-lg" onClick={capture} style={{ flex: 1 }}>
+            <Camera size={18} /> Capture Photo
+          </button>
+          <button type="button" className="btn btn-outline btn-lg" onClick={toggleCamera} style={{ width: 50, padding: 0 }} title="Flip Camera">
+            🔄
+          </button>
+        </div>
+      )}
     </div>
   );
 }

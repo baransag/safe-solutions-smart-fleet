@@ -116,7 +116,7 @@ export default function FuelPage() {
         pump_name: extracted.pump_name,
         fuel_amount: extracted.total,
         liters: extracted.liters,
-        meter_reading: assignment?.current_meter ? String(parseFloat(assignment.current_meter) + 38) : '15238',
+        meter_reading: assignment?.current_meter && parseFloat(assignment.current_meter) > 0 ? String(parseFloat(assignment.current_meter) + 38) : '0',
         fuel_type: extracted.fuel_type,
         invoice_no: extracted.invoice_no,
         rate: extracted.rate,

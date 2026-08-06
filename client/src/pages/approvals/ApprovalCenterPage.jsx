@@ -193,6 +193,24 @@ export default function ApprovalCenterPage() {
                 </div>
               </div>
 
+              {/* Selfie and Site Photo display */}
+              {(req.selfie_url || req.site_photo_url) && (
+                <div style={{ display: 'grid', gridTemplateColumns: req.selfie_url && req.site_photo_url ? '1fr 1fr' : '1fr', gap: 8, marginBottom: 14 }}>
+                  {req.selfie_url && (
+                    <div>
+                      <span style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 4 }}>Selfie Photo</span>
+                      <img src={req.selfie_url.startsWith('/') ? req.selfie_url : `/${req.selfie_url}`} alt="Selfie" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    </div>
+                  )}
+                  {req.site_photo_url && (
+                    <div>
+                      <span style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 4 }}>Site Photo</span>
+                      <img src={req.site_photo_url.startsWith('/') ? req.site_photo_url : `/${req.site_photo_url}`} alt="Site Photo" style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 8 }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {req.notes && (
                 <p style={{ fontSize: 12, color: '#475569', fontStyle: 'italic', margin: '0 0 14px', background: '#fff', padding: 8, borderRadius: 6, border: '1px dashed #cbd5e1' }}>
                   💬 "{req.notes}"

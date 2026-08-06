@@ -125,7 +125,7 @@ export default function VehiclesPage() {
                     </span>
                   </td>
                   <td>{v.assigned_employee_name || <span style={{ color: 'var(--text-tertiary)' }}>Unassigned</span>}</td>
-                  <td>{parseFloat(v.current_meter || 0).toLocaleString()} km</td>
+                  <td>{v.current_meter && parseFloat(v.current_meter) > 0 ? `${parseFloat(v.current_meter).toLocaleString()} km` : '----'}</td>
                   <td>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(v)}>
                       <Edit2 size={14} />

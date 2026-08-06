@@ -115,7 +115,7 @@ export default function CheckInPage() {
       setMeterBlob(blob);
       setMeterPreview(preview);
       // AI OCR Odometer Auto-Reading Simulation
-      const baseMeter = parseFloat(assignment?.current_meter || 12450.0);
+      const baseMeter = parseFloat(assignment?.current_meter || 0.0);
       const autoOcrMeter = (baseMeter + Math.floor(Math.random() * 8 + 2)).toFixed(1);
       setMeterReading(autoOcrMeter);
       setOcrReading(autoOcrMeter);
