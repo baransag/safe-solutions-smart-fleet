@@ -98,7 +98,7 @@ export default function VehiclesPage() {
           <p className="empty-text">Add your first vehicle to get started</p>
         </div>
       ) : (
-        <div className="table-container">
+        <div className="table-container animate-fade-in-up">
           <table className="table">
             <thead>
               <tr>
@@ -116,7 +116,7 @@ export default function VehiclesPage() {
               {filtered.map(v => (
                 <tr key={v.id}>
                   <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)' }}>{v.vehicle_id}</span></td>
-                  <td><span style={{ fontWeight: 600 }}>{v.name}</span></td>
+                  <td><span style={{ fontWeight: 500 }}>{v.name}</span></td>
                   <td><span className="badge badge-teal">{v.number_plate}</span></td>
                   <td style={{ textTransform: 'capitalize' }}>{v.type}</td>
                   <td>
