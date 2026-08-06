@@ -1,18 +1,38 @@
 {
-  "name": "safe-solutions",
+  "name": "safe-solutions-one",
   "version": "1.0.0",
   "private": true,
-  "description": "SAFE SOLUTIONS — Smart Fleet & Vehicle Management System",
+  "description": "SAFE SOLUTIONS ONE — Enterprise Operations Platform",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd server && npm run dev",
     "client": "cd client && npm run dev",
-    "build": "cd client && npm run build",
+    "build": "npm run build --prefix client",
     "migrate": "cd server && npm run migrate",
     "seed": "cd server && npm run seed",
     "setup": "npm install && cd server && npm install && cd ../client && npm install"
   },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "helmet": "^7.1.0",
+    "html5-qrcode": "^2.3.8",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^1.28.0",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.13.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^6.30.4",
+    "uuid": "^10.0.0"
+  },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "@vitejs/plugin-react": "^6.0.5",
+    "concurrently": "^9.1.0",
+    "vite": "^8.2.0"
   }
 }
