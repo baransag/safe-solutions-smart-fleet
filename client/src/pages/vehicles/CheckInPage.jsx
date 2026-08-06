@@ -195,23 +195,7 @@ export default function CheckInPage() {
     );
   }
 
-  if (!vehicleAttendanceEnabled) {
-    return (
-      <div className="page">
-        <div className="card-elevated text-center" style={{ padding: 40, maxWidth: 540, margin: '40px auto', borderRadius: 16, border: '1px solid #cbd5e1' }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <AlertTriangle size={32} />
-          </div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#021C4F', margin: '10px 0 8px' }}>
-            Vehicle Attendance Module Paused
-          </h2>
-          <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.6, marginBottom: 20, fontWeight: 600 }}>
-            Vehicle Attendance is currently toggled OFF in System Settings. Contact Admin, Boss, or Controller to enable.
-          </p>
-        </div>
-      </div>
-    );
-  }
+
 
   if (!assignment) {
     return (

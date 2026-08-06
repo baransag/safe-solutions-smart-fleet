@@ -46,8 +46,8 @@ export default function HeroManagementPage() {
   async function fetchSlides() {
     try {
       setLoading(true);
-      const res = await api.get('/hero-slides');
-      setSlides(res.slides || []);
+      const res = await api.get('/hero-slides/all');
+      setSlides(res.posts || []);
     } catch (err) {
       toast.error('Failed to load hero slides.');
     } finally {
@@ -84,11 +84,10 @@ export default function HeroManagementPage() {
         const formData = new FormData();
         formData.append('title', form.title);
         formData.append('description', form.description);
-        formData.append('category', form.category);
-        formData.append('sort_order', form.priority);
+        formData.append('priority', form.priority);
         formData.append('start_date', form.start_date);
         if (form.end_date) formData.append('end_date', form.end_date);
-        if (imageFile) formData.append('image', imageFile);
+        if (imageFile) formData.append('media_file', imageFile);
 
         await api.post('/hero-slides', formData);
         toast.success('Company announcement created & published!');
@@ -100,7 +99,7 @@ export default function HeroManagementPage() {
       setImagePreview(null);
       setForm({
         title: '', description: '', category: 'Holiday Notice',
-        priority: '1', start_date: new Date().toISOString().split('T')[0],
+        priority: 'normal', start_date: new Date().toISOString().split('T')[0],
         end_date: '', is_active: true, image_url: ''
       });
       fetchSlides();

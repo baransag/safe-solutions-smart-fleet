@@ -137,6 +137,7 @@ export default function EmployeeQRCodesPage() {
             <img src="${qr.qr_image_data}" alt="${qr.name}" />
             <p><strong>ID: ${qr.qr_id}</strong></p>
             <p style="font-size:12px;">Radius: ${qr.allowed_radius_meters}m • Category: ${qr.category}</p>
+            ${qr.type === 'site' ? `<p style="color:#c50337; font-weight:bold; font-size:18px; margin-top:10px;">OTP: ${qr.otp_secret || 'N/A'}</p>` : ''}
             <div class="footer">Scan with SAFE SOLUTIONS Employee App for Attendance</div>
           </div>
           <script>window.print(); setTimeout(() => window.close(), 1000);</script>
@@ -238,6 +239,12 @@ export default function EmployeeQRCodesPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#dc2626' }}>
                   <span>Expiry Date</span>
                   <strong>{new Date(qr.expiry_date).toLocaleDateString()}</strong>
+                </div>
+              )}
+              {qr.type === 'site' && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#d97706' }}>
+                  <span>Site OTP Secret</span>
+                  <strong style={{ letterSpacing: '2px', fontSize: 14 }}>{qr.otp_secret || 'N/A'}</strong>
                 </div>
               )}
             </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
-import { ChevronLeft, ChevronRight, Shield, Calendar, MapPin, Car, Building2, HardHat, CheckCircle2, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Shield, Calendar, MapPin, Car, Building2, HardHat, CheckCircle2, Clock, FileText } from 'lucide-react';
 import './HeroSection.css';
 
 const DEFAULT_SLIDES = [
@@ -37,9 +37,9 @@ export default function HeroSection() {
 
   async function fetchSlides() {
     try {
-      const data = await api.get('/hero-slides');
-      if (data.slides && data.slides.length > 0) {
-        setSlides(data.slides);
+      const data = await api.get('/hero-slides/active');
+      if (data.posts && data.posts.length > 0) {
+        setSlides(data.posts);
       }
     } catch {
       // Keep default slides
@@ -160,11 +160,29 @@ export default function HeroSection() {
                 key={slide.id || i}
                 className={`hero-slide ${i === currentSlide ? 'active' : ''}`}
               >
-                <img
-                  src={getImageUrl(slide.image_url)}
-                  alt={slide.title || 'Hero Banner'}
-                  loading="lazy"
-                />
+                {slide.media_type === 'video' ? (
+                  <video
+                    src={getImageUrl(slide.media_url)}
+                    autoPlay
+                    loop
+                    muted
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : slide.media_type === 'pdf' ? (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <FileText size={48} color="var(--color-primary-orange)" />
+                      <p style={{ marginTop: 8, color: 'var(--text-secondary)' }}>PDF Document</p>
+                      <a href={getImageUrl(slide.media_url)} target="_blank" rel="noreferrer" className="btn btn-sm btn-primary" style={{ marginTop: 8 }}>View PDF</a>
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={getImageUrl(slide.media_url || slide.image_url)}
+                    alt={slide.title || 'Hero Banner'}
+                    loading="lazy"
+                  />
+                )}
                 <div className="slide-caption">
                   {slide.category && (
                     <span style={{

@@ -41,7 +41,7 @@ app.use('/api/vehicle-assignments', require('./src/routes/assignment.routes'));
 app.use('/api/checkins', require('./src/routes/checkin.routes'));
 app.use('/api/fuel', require('./src/routes/fuel.routes'));
 app.use('/api/dashboard', require('./src/routes/dashboard.routes'));
-app.use('/api/notifications', require('./src/routes/notification.routes'));
+app.use('/api/notifications', require('./src/routes/notifications.routes'));
 app.use('/api/hero-slides', require('./src/routes/hero.routes'));
 app.use('/api/alerts', require('./src/routes/alert.routes'));
 app.use('/api/vehicle-services', require('./src/routes/service.routes'));
