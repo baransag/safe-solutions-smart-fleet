@@ -13,6 +13,8 @@ export default function ApprovalCenterPage() {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [pendingFuel, setPendingFuel] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [correctionModal, setCorrectionModal] = useState(null);
+  const [correctionNote, setCorrectionNote] = useState('');
 
   useEffect(() => {
     fetchPendingRequests();
@@ -53,6 +55,24 @@ export default function ApprovalCenterPage() {
       setPendingRequests(prev => prev.filter(r => r.id !== id));
     } catch (err) {
       toast.error('Failed to reject attendance.');
+    }
+  };
+
+  const submitCorrectionRequest = async () => {
+    if (!correctionModal || !correctionNote) return;
+    try {
+      if (correctionModal.type === 'attendance') {
+        await api.patch(`/attendance/${correctionModal.id}/reject`, { notes: `Correction Requested: ${correctionNote}` });
+        setPendingRequests(prev => prev.filter(r => r.id !== correctionModal.id));
+      } else {
+        await api.put(`/fuel/${correctionModal.id}/approve`, { approval_status: 'correction_requested', approval_notes: correctionNote });
+        setPendingFuel(prev => prev.filter(f => f.id !== correctionModal.id));
+      }
+      toast.info('Correction request sent back to employee.');
+      setCorrectionModal(null);
+      setCorrectionNote('');
+    } catch (err) {
+      toast.error('Failed to send correction request.');
     }
   };
 
@@ -192,20 +212,27 @@ export default function ApprovalCenterPage() {
                   }}
                 />
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
                   <button
                     onClick={() => handleApprove(req.id)}
                     className="btn btn-primary btn-sm"
-                    style={{ background: '#10B981', border: 'none', fontWeight: 700, fontSize: 12, padding: '8px 4px' }}
+                    style={{ background: '#10B981', border: 'none', fontWeight: 700, fontSize: 11, padding: '8px 4px' }}
                   >
-                    <CheckCircle2 size={16} /> Approve
+                    <CheckCircle2 size={14} /> Approve
+                  </button>
+                  <button
+                    onClick={() => setCorrectionModal({ id: req.id, type: 'attendance', name: req.name })}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontWeight: 700, fontSize: 11, padding: '8px 4px' }}
+                  >
+                    <RotateCcw size={14} /> Correct
                   </button>
                   <button
                     onClick={() => handleReject(req.id)}
                     className="btn btn-danger btn-sm"
-                    style={{ background: '#EF4444', border: 'none', fontWeight: 700, fontSize: 12, padding: '8px 4px' }}
+                    style={{ background: '#EF4444', border: 'none', fontWeight: 700, fontSize: 11, padding: '8px 4px' }}
                   >
-                    <XCircle size={16} /> Reject
+                    <XCircle size={14} /> Reject
                   </button>
                 </div>
               </div>
@@ -220,6 +247,35 @@ export default function ApprovalCenterPage() {
           </div>
         )}
       </div>
+
+      {/* REQUEST CORRECTION MODAL */}
+      {correctionModal && (
+        <div className="modal-overlay" onClick={() => setCorrectionModal(null)}>
+          <div className="modal-content animate-scale-in" style={{ maxWidth: 460, borderRadius: 16 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 800, color: '#021C4F' }}>Request Correction</h3>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748B' }}>
+              Specify the correction details for <strong>{correctionModal.name || 'Employee Request'}</strong>:
+            </p>
+
+            <textarea
+              rows={4}
+              className="form-input"
+              placeholder="e.g. Please re-upload a clearer receipt photo or verify odometer reading..."
+              value={correctionNote}
+              onChange={e => setCorrectionNote(e.target.value)}
+              style={{ width: '100%', marginBottom: 16, padding: 12 }}
+              autoFocus
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setCorrectionModal(null)}>Cancel</button>
+              <button type="button" className="btn btn-primary" onClick={submitCorrectionRequest} style={{ background: '#021C4F', fontWeight: 700 }}>
+                Send Correction Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

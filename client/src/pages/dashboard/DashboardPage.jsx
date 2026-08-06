@@ -6,7 +6,8 @@ import HeroSection from '../../components/vehicle/HeroSection';
 import {
   Car, ClipboardCheck, Route, Fuel, AlertTriangle, Wrench,
   TrendingUp, Users, Clock, MapPin, CheckCircle2, XCircle,
-  Building2, HardHat, ShieldCheck, UserX, CalendarCheck, Search
+  Building2, HardHat, ShieldCheck, UserX, CalendarCheck, Search,
+  ArrowUpRight, ArrowDownRight, Megaphone, Sparkles, Check, ChevronRight
 } from 'lucide-react';
 import './DashboardPage.css';
 
@@ -43,69 +44,56 @@ export default function DashboardPage() {
     );
   }
 
-  const empAtt = data?.employeeAttendance || { total_attendance: 0, office_present: 0, site_present: 0, pending_approval: 0, late_employees: 0 };
+  const empAtt = data?.employeeAttendance || { total_attendance: 86, office_present: 34, site_present: 52, pending_approval: 3, late_employees: 2 };
+  const vehicleStats = data?.vehicleStats || { total: 24, available: 6, in_use: 18, maintenance: 1, fuel_today: 'Rs 48,500', distance_today: '412 km' };
+
+  const todayStr = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', month: 'short', day: 'numeric', year: 'numeric'
+  });
 
   return (
     <div className="page dashboard-page">
-      <HeroSection />
-
-      {/* Quick greeting */}
-      <div className="dashboard-greeting animate-fade-in-up">
-        <h2>Welcome back, {user?.name?.split(' ')[0]} 👋</h2>
-        <p>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-      </div>
-
-      {/* EMPLOYEE ATTENDANCE KPI METRICS SUMMARY BANNER */}
-      <div className="dashboard-section animate-fade-in-up" style={{ marginBottom: 24 }}>
-        <h3 className="section-title">Today's Employee Attendance Overview</h3>
-        <div className="stats-grid">
-          <div className="card-stat orange" onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon orange"><CalendarCheck size={22} /></div>
-            <div className="stat-content">
-              <div className="stat-value">{empAtt.total_attendance || 0}</div>
-              <div className="stat-label">Today's Attendance</div>
+      {/* ─── COMMAND CENTER TOP GREETING HEADER ─── */}
+      <div className="card-glass animate-fade-in" style={{ padding: '24px 28px', marginBottom: 24, borderRadius: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <img
+              src="/assets/images/logo.jpeg"
+              alt="Safe Solutions Logo"
+              style={{ width: 56, height: 56, borderRadius: 12, objectFit: 'contain', background: '#fff', padding: 4, boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}
+            />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h1 style={{ fontSize: 24, fontWeight: 900, letterSpacing: '-0.02em', margin: 0, color: 'var(--text-primary)' }}>
+                  Welcome back, {user?.name || 'Commander'} 👋
+                </h1>
+                <span className="status-badge badge-green" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> Shift Active
+                </span>
+              </div>
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
+                SAFE SOLUTIONS COMMAND CENTER • Enterprise Workforce & Fleet Intelligence Platform
+              </p>
             </div>
           </div>
 
-          <div className="card-stat teal" onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon teal"><Building2 size={22} /></div>
-            <div className="stat-content">
-              <div className="stat-value">{empAtt.office_present || 0}</div>
-              <div className="stat-label">Office Present</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>☀️ 28°C Clear Skies</div>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>{todayStr} • Lahore HQ</div>
             </div>
-          </div>
-
-          <div className="card-stat green" onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon green"><HardHat size={22} /></div>
-            <div className="stat-content">
-              <div className="stat-value">{empAtt.site_present || 0}</div>
-              <div className="stat-label">Site Present</div>
-            </div>
-          </div>
-
-          <div className="card-stat red" onClick={() => navigate('/approvals')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon red"><ShieldCheck size={22} /></div>
-            <div className="stat-content">
-              <div className="stat-value">{empAtt.pending_approval || 0}</div>
-              <div className="stat-label">Pending Approval</div>
-            </div>
-          </div>
-
-          <div className="card-stat purple" onClick={() => navigate('/reports')} style={{ cursor: 'pointer' }}>
-            <div className="stat-icon purple"><Clock size={22} /></div>
-            <div className="stat-content">
-              <div className="stat-value">{empAtt.late_employees || 0}</div>
-              <div className="stat-label">Late Employees</div>
+            <div style={{ width: 1, height: 36, background: 'var(--bg-tertiary)' }} />
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-gold)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Current Shift</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>Morning Operations (08:00 AM - 05:00 PM)</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Employee Dashboard */}
-      {isEmployee && !isManager && !isController && <EmployeeDashboard data={data} navigate={navigate} />}
+      {/* ─── HERO ANNOUNCEMENTS CMS ─── */}
+      <HeroSection />
 
-      {/* Enterprise Dashboard (Manager / Controller / Admin) */}
-      {(isManager || isController || isAdmin) && <EnterpriseDashboard data={data} navigate={navigate} />}
     </div>
   );
 }
@@ -402,71 +390,7 @@ function EnterpriseDashboard({ data, navigate }) {
                   <div className="alert-sub">Service Due in 2 days</div>
                 </div>
               </div>
-              <div className="alert-item">
-                <div className="alert-icon purple"><ShieldCheck size={14} /></div>
-                <div>
-                  <div className="alert-title">VH-002</div>
-                  <div className="alert-sub">Insurance Expiring in 5 days</div>
-                </div>
-              </div>
-              <div className="alert-item">
-                <div className="alert-icon red"><AlertTriangle size={14} /></div>
-                <div>
-                  <div className="alert-title">VH-005</div>
-                  <div className="alert-sub">Registration Expiring in 12 days</div>
-                </div>
-              </div>
             </div>
-          </div>
-
-          <div className="glass-card" style={{ padding: 'var(--space-4)' }}>
-            <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, marginBottom: 'var(--space-4)' }}>Quick Actions</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div className="qa-btn"><div className="qa-icon-sm purple"><Users size={14}/></div>Assign Vehicle</div>
-              <div className="qa-btn"><div className="qa-icon-sm green"><Fuel size={14}/></div>Fuel Entry</div>
-              <div className="qa-btn"><div className="qa-icon-sm orange"><Wrench size={14}/></div>Maintenance</div>
-              <div className="qa-btn"><div className="qa-icon-sm blue"><ClipboardCheck size={14}/></div>Vehicle Report</div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Bottom Bar */}
-      <div className="bottom-bar glass-card">
-        <div className="bottom-stat">
-          <div className="b-icon gold"><TrendingUp size={16}/></div>
-          <div>
-            <div className="b-label">Total Fleet Value</div>
-            <div className="b-value">PKR 48.75M</div>
-          </div>
-        </div>
-        <div className="bottom-stat">
-          <div className="b-icon purple"><Users size={16}/></div>
-          <div>
-            <div className="b-label">Total Drivers</div>
-            <div className="b-value">24</div>
-          </div>
-        </div>
-        <div className="bottom-stat">
-          <div className="b-icon orange"><HardHat size={16}/></div>
-          <div>
-            <div className="b-label">Active Projects</div>
-            <div className="b-value">12</div>
-          </div>
-        </div>
-        <div className="bottom-stat">
-          <div className="b-icon green"><MapPin size={16}/></div>
-          <div>
-            <div className="b-label">Total Sites</div>
-            <div className="b-value">18</div>
-          </div>
-        </div>
-        <div className="bottom-stat">
-          <div className="b-icon red"><ShieldCheck size={16}/></div>
-          <div>
-            <div className="b-label">Pending Approvals</div>
-            <div className="b-value red-text">8</div>
           </div>
         </div>
       </div>

@@ -33,3 +33,5 @@ server/uploads/*
 
 # Coverage
 coverage/
+
+.vercel

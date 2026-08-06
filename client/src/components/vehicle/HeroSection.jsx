@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Shield, Calendar, MapPin, Car, Building2, Ha
 import './HeroSection.css';
 
 const DEFAULT_SLIDES = [
-  { id: 1, image_url: '/assets/images/hero-1.jpeg', title: 'SAFE SOLUTIONS ONE Operations', description: 'Real-time vehicle tracking & intelligent fleet allocation', category: 'Company Announcement' },
+  { id: 1, image_url: '/assets/images/hero-1.jpeg', title: 'SAFE SOLUTIONS COMMAND CENTER Operations', description: 'Real-time vehicle tracking & intelligent fleet allocation', category: 'Company Announcement' },
   { id: 2, image_url: '/assets/images/Husnain.jpeg', title: 'M. Husnain Farooq — Controller', description: 'Enterprise Fleet & Management Controller', category: 'Executive Notice' },
   { id: 3, image_url: '/assets/images/hero-2.jpeg', title: 'Automated QR & GPS Verification', description: 'Instant QR code check-in & geofence validation', category: 'Safety Alert' },
   { id: 4, image_url: '/assets/images/Samaira.jpeg', title: 'Samaira Mubashar — Accounts & Finance', description: 'Finance & Operational Expense Oversight', category: 'Leadership Notice' },
@@ -84,19 +84,18 @@ export default function HeroSection() {
 
   return (
     <div className="hero-section">
-      <div className="hero-content">
-
-        {/* LEFT CARD: EMPLOYEE PROFILE & OPERATIONAL STATUS */}
-        <div className="hero-left">
-          <div className="hero-user-profile-card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 14 }}>
+      <div className="hero-grid">
+        {/* User Quick Info */}
+        <div className="hero-user-card card-glass animate-fade-in">
+          <div className="hero-user-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ position: 'relative' }}>
                 <img
-                  src={getImageUrl(user?.avatar_url)}
-                  alt={user?.name}
+                  src={getImageUrl(user?.photo_url)}
+                  alt={user?.name || 'User'}
                   style={{
-                    width: 64, height: 64, borderRadius: '50%', objectFit: 'cover',
-                    border: '3px solid #ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.25)'
+                    width: 52, height: 52, borderRadius: '50%', objectFit: 'cover',
+                    border: '2px solid var(--color-gold)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
                   }}
                   onError={(e) => { e.currentTarget.src = '/assets/images/logo.jpeg'; }}
                 />
@@ -107,8 +106,8 @@ export default function HeroSection() {
               </div>
 
               <div>
-                <span className="hero-badge" style={{ margin: '0 0 4px', fontSize: 10, padding: '2px 10px', background: 'var(--color-gold)', color: '#000' }}>
-                  <Shield size={12} /> SAFE SOLUTIONS ONE
+                <span className="hero-badge" style={{ margin: '0 0 4px', fontSize: 10, padding: '2px 10px', background: 'var(--color-gold)', color: '#000', fontWeight: 800 }}>
+                  <Shield size={12} /> SAFE SOLUTIONS COMMAND CENTER
                 </span>
                 <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#ffffff', lineHeight: 1.2 }}>
                   {user?.name || 'Enterprise Associate'}

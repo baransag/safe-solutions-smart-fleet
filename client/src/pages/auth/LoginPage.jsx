@@ -122,8 +122,8 @@ export default function LoginPage() {
         </div>
         <div className="intro-overlay" />
         <div className="intro-content">
-          <h1 className="intro-logo animate-fade-in">SAFE SOLUTIONS ONE</h1>
-          <p className="intro-subtitle">Enterprise Operations Platform</p>
+          <h1 className="intro-logo animate-fade-in" style={{ fontSize: 26, letterSpacing: '0.04em' }}>SAFE SOLUTIONS COMMAND CENTER</h1>
+          <p className="intro-subtitle" style={{ fontSize: 12, letterSpacing: '0.1em' }}>Enterprise Workforce & Fleet Intelligence Platform</p>
           <div className="intro-progress-bar">
             <div className="intro-progress-fill" style={{ width: `${introProgress}%` }} />
           </div>
@@ -179,8 +179,8 @@ export default function LoginPage() {
                 <Shield size={28} />
               </div>
             </div>
-            <h1 className="login-title">SAFE SOLUTIONS ONE</h1>
-            <p className="login-subtitle">Enterprise Operations Platform</p>
+            <h1 className="login-title" style={{ fontSize: 20, letterSpacing: '0.03em' }}>SAFE SOLUTIONS COMMAND CENTER</h1>
+            <p className="login-subtitle">Enterprise Workforce & Fleet Intelligence Platform</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
