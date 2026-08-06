@@ -99,6 +99,10 @@ export default function Header({ onMenuClick }) {
       </div>
 
       <div className="header-right">
+        <button className="header-icon-btn">
+          <Search size={20} />
+        </button>
+
         <div ref={dropdownRef} style={{ position: 'relative' }}>
           <button
             className="header-icon-btn"
@@ -114,14 +118,14 @@ export default function Header({ onMenuClick }) {
             <div className="dropdown" style={{ width: '360px', maxHeight: '480px', overflowY: 'auto', right: 0 }}>
               <div style={{
                 padding: '12px 16px', display: 'flex', justifyContent: 'space-between',
-                alignItems: 'center', borderBottom: '1px solid rgba(59,38,33,0.06)'
+                alignItems: 'center', borderBottom: '1px solid rgba(0,0,0,0.06)'
               }}>
                 <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>Notifications</span>
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllRead}
                     style={{
-                      background: 'none', border: 'none', color: 'var(--color-deep-teal)',
+                      background: 'none', border: 'none', color: 'var(--text-primary)',
                       fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer'
                     }}
                   >
@@ -145,7 +149,7 @@ export default function Header({ onMenuClick }) {
                     onClick={() => markAsRead(n.id)}
                     style={{
                       flexDirection: 'column', alignItems: 'flex-start', gap: '4px',
-                      background: n.is_read ? 'transparent' : 'rgba(15,110,119,0.03)',
+                      background: n.is_read ? 'transparent' : 'rgba(0,0,0,0.03)',
                       padding: '10px 16px'
                     }}
                   >
@@ -170,9 +174,13 @@ export default function Header({ onMenuClick }) {
           )}
         </div>
 
-        <a href="/profile" style={{ textDecoration: 'none', color: 'inherit' }} title="My Profile">
-          <div className="avatar avatar-sm" style={{ cursor: 'pointer', background: 'var(--color-primary-soft)', color: 'var(--color-primary)', fontWeight: 700 }}>
-            {user?.name ? user.name.charAt(0) : 'U'}
+        <a href="/settings" style={{ textDecoration: 'none' }}>
+          <div className="header-user-pill">
+            <div className="header-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5ECD5', color: '#1A1D1F', fontWeight: 800 }}>
+              {user?.name ? user.name.charAt(0) : 'U'}
+            </div>
+            <span className="header-user-name">{user?.name ? user.name.split(' ')[0] : 'User'}</span>
+            <span style={{ marginLeft: 4, opacity: 0.5 }}>▼</span>
           </div>
         </a>
       </div>

@@ -218,90 +218,99 @@ function EmployeeDashboard({ data, navigate }) {
 function ManagerDashboard({ data, navigate }) {
   if (!data) return null;
 
-  const stats = [
-    { label: 'Total Vehicles', value: data.vehicles?.total_vehicles || 0, icon: Car, color: 'orange' },
-    { label: 'Checked In Today', value: data.today?.checked_in || 0, icon: ClipboardCheck, color: 'teal' },
-    { label: 'Checked Out Today', value: data.today?.checked_out || 0, icon: Route, color: 'green' },
-    { label: 'Pending Fuel', value: data.pendingFuel || 0, icon: Fuel, color: 'red' },
-  ];
-
   return (
-    <>
-      {/* Stats Grid */}
-      <div className="dashboard-section animate-fade-in-up delay-1">
-        <div className="stats-grid">
-          {stats.map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <div key={i} className={`card-stat delay-${i + 1}`} style={{ animationFillMode: 'both', animation: 'fadeInUp 0.4s ease-out' }}>
-                <div className={`stat-icon ${stat.color}`}>
-                  <Icon size={22} />
-                </div>
-                <div className="stat-content">
-                  <div className="stat-value">{stat.value}</div>
-                  <div className="stat-label">{stat.label}</div>
-                </div>
-              </div>
-            );
-          })}
+    <div className="dashboard-crypto-layout">
+      {/* Top Row */}
+      <div className="crypto-top-row">
+        {/* Left: Big Portfolio Card */}
+        <div className="crypto-big-card animate-scale-in delay-1" style={{ cursor: 'pointer' }} onClick={() => navigate('/vehicles')}>
+          <div className="crypto-big-header">
+            <span className="crypto-title">Fleet Distance (Weekly)</span>
+            <span className="crypto-badge">Active</span>
+          </div>
+          <div className="crypto-big-balance">
+            <h1>{parseFloat(data.weeklyKm?.total_km || 0).toLocaleString()} <span className="currency">km</span></h1>
+          </div>
+          <div className="crypto-big-chart-placeholder">
+             {/* Simulating the graph from the image */}
+             <svg viewBox="0 0 400 100" className="crypto-chart-svg">
+               <path d="M0,80 Q50,40 100,60 T200,30 T300,50 T400,20" fill="none" stroke="var(--text-primary)" strokeWidth="3" strokeLinecap="round" />
+             </svg>
+          </div>
+        </div>
+
+        {/* Right: 3 Asset Cards */}
+        <div className="crypto-assets-col">
+          <div className="crypto-asset-card purple animate-scale-in delay-2" onClick={() => navigate('/attendance')}>
+            <div className="asset-icon"><Building2 size={20} /></div>
+            <div className="asset-info">
+              <span className="asset-name">Office Present</span>
+              <span className="asset-qty">{data.today?.checked_in || 0}</span>
+            </div>
+          </div>
+          
+          <div className="crypto-asset-card green animate-scale-in delay-3" onClick={() => navigate('/attendance')}>
+            <div className="asset-icon"><HardHat size={20} /></div>
+            <div className="asset-info">
+              <span className="asset-name">Site Present</span>
+              <span className="asset-qty">{data.today?.checked_out || 0}</span>
+            </div>
+          </div>
+
+          <div className="crypto-asset-card yellow animate-scale-in delay-4" onClick={() => navigate('/fuel')}>
+            <div className="asset-icon"><Fuel size={20} /></div>
+            <div className="asset-info">
+              <span className="asset-name">Pending Fuel</span>
+              <span className="asset-qty">{data.pendingFuel || 0}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* KM Summary */}
-      <div className="dashboard-section animate-fade-in-up delay-2">
-        <h3 className="section-title">Distance Summary</h3>
-        <div className="grid grid-3">
-          <div className="card-elevated" style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--color-primary-orange)' }}>
-              {parseFloat(data.weeklyKm?.total_km || 0).toLocaleString()}
-            </p>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)' }}>Weekly KM</p>
+      {/* Bottom Row */}
+      <div className="crypto-bottom-row">
+        {/* Left: Alerts List */}
+        <div className="crypto-list-card animate-scale-in delay-5">
+          <div className="crypto-list-header">
+            <h3>Recent Alerts</h3>
+            <button className="btn-link" onClick={() => navigate('/alerts')}>View all</button>
           </div>
-          <div className="card-elevated" style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--color-deep-teal)' }}>
-              {parseFloat(data.monthlyKm?.total_km || 0).toLocaleString()}
-            </p>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)' }}>Monthly KM</p>
+          <div className="crypto-list-content">
+            {data.alerts?.length > 0 ? data.alerts.slice(0, 5).map(alert => (
+              <div key={alert.id} className="crypto-list-item">
+                <div className="item-left">
+                  <div className={`item-icon ${alert.severity === 'critical' ? 'bg-red' : 'bg-yellow'}`}>
+                    <AlertTriangle size={16} />
+                  </div>
+                  <div className="item-text">
+                    <strong>{alert.title}</strong>
+                    <span>{new Date(alert.created_at).toLocaleTimeString()}</span>
+                  </div>
+                </div>
+                <div className="item-right">
+                  <span className={`status-badge ${alert.severity}`}>{alert.severity}</span>
+                </div>
+              </div>
+            )) : (
+              <div className="empty-state">No active alerts</div>
+            )}
           </div>
-          <div className="card-elevated" style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--color-success)' }}>
-              {parseFloat(data.weeklyKm?.avg_km || 0).toFixed(1)}
-            </p>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 'var(--space-1)' }}>Avg KM/Day</p>
+        </div>
+
+        {/* Right: Dark Hero Card */}
+        <div className="crypto-hero-card animate-scale-in delay-6" onClick={() => navigate('/hero-management')}>
+          <div className="hero-content">
+            <h3>System Status</h3>
+            <p>All fleet operations are currently running smoothly. Keep it up!</p>
+            <button className="btn-primary-dark">View Reports →</button>
+          </div>
+          <div className="hero-image-placeholder">
+            {/* Minimalist illustration placeholder */}
+            <ShieldCheck size={80} color="var(--color-logo-bg)" style={{ opacity: 0.1 }} />
           </div>
         </div>
       </div>
-
-      {/* Alerts */}
-      {data.alerts?.length > 0 && (
-        <div className="dashboard-section animate-fade-in-up delay-3">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-            <h3 className="section-title" style={{ margin: 0 }}>Recent Alerts</h3>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/alerts')}>View All</button>
-          </div>
-          <div className="card-elevated" style={{ padding: 0, overflow: 'hidden' }}>
-            {data.alerts.slice(0, 5).map((alert, i) => (
-              <div key={alert.id} className="alert-row">
-                <AlertTriangle size={16} style={{
-                  color: alert.severity === 'critical' ? 'var(--color-error)' :
-                         alert.severity === 'high' ? 'var(--color-warning)' : 'var(--color-info)',
-                  flexShrink: 0
-                }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>{alert.title}</p>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginTop: '2px' }}>
-                    {new Date(alert.created_at).toLocaleString()}
-                  </p>
-                </div>
-                <span className={`badge badge-${alert.severity === 'critical' ? 'red' : alert.severity === 'high' ? 'yellow' : 'gray'}`}>
-                  {alert.severity}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 }
 
