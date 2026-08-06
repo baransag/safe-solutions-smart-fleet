@@ -218,9 +218,9 @@ class ApiService {
       return {
         qrCodes: [
           { id: 1, qr_id: 'QR-OFFICE-001', name: 'Head Office Faisalabad', type: 'office', project_name: 'SAFE SOLUTIONS HQ', category: 'Head Office', lat: 31.4504, lng: 73.1350, allowed_radius_meters: 200, status: 'active', creator_name: 'M. Husnain Farooq', created_at: new Date().toISOString() },
-          { id: 2, qr_id: 'QR-OFFICE-002', name: 'Lahore Branch Office', type: 'office', project_name: 'Gulberg Tech Center', category: 'Branch Office', lat: 31.5204, lng: 74.3587, allowed_radius_meters: 250, status: 'active', creator_name: 'M. Husnain Farooq', created_at: new Date().toISOString() },
+          { id: 2, qr_id: 'QR-OFFICE-002', name: 'Faisalabad Branch Office', type: 'office', project_name: 'Faisalabad West Depot', category: 'Branch Office', lat: 31.4400, lng: 73.1200, allowed_radius_meters: 250, status: 'active', creator_name: 'M. Husnain Farooq', created_at: new Date().toISOString() },
           { id: 3, qr_id: 'QR-SITE-101', name: 'Client Plant #4 Site', type: 'site', project_name: 'Industrial Zone Waterproofing Project', category: 'Construction Site', lat: 31.4200, lng: 73.0800, allowed_radius_meters: 300, status: 'active', creator_name: 'M. Husnain Farooq', created_at: new Date().toISOString() },
-          { id: 4, qr_id: 'QR-SITE-102', name: 'Multan Expansion Site', type: 'site', project_name: 'Warehouse Insulation & Application', category: 'Temporary Project Site', lat: 30.1575, lng: 71.5249, allowed_radius_meters: 350, status: 'active', creator_name: 'M. Husnain Farooq', created_at: new Date().toISOString() }
+          { id: 4, qr_id: 'QR-SITE-102', name: 'Faisalabad Expansion Site', type: 'site', project_name: 'Faisalabad Warehouse Insulation', category: 'Temporary Project Site', lat: 31.4200, lng: 73.0800, allowed_radius_meters: 350, status: 'active', creator_name: 'M. Husnain Farooq', created_at: new Date().toISOString() }
         ]
       };
     }

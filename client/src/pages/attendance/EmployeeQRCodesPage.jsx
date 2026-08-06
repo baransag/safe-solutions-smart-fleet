@@ -209,13 +209,11 @@ export default function EmployeeQRCodesPage() {
 
             {/* QR Code Image Preview */}
             <div style={{ textAlign: 'center', padding: '16px 0', background: '#f8fafc', borderRadius: 12, marginBottom: 14, border: '1px dashed #cbd5e1' }}>
-              {qr.qr_image_data ? (
-                <img src={qr.qr_image_data} alt={qr.name} style={{ width: 180, height: 180, objectFit: 'contain' }} />
-              ) : (
-                <div style={{ width: 180, height: 180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0', color: '#64748b' }}>
-                  QR Data Ready
-                </div>
-              )}
+              <img
+                src={qr.qr_image_data || `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qr.qr_token || qr.qr_id || 'OFFICE')}`}
+                alt={qr.name}
+                style={{ width: 180, height: 180, objectFit: 'contain' }}
+              />
               <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: '#021C4F', fontFamily: 'monospace' }}>
                 ID: {qr.qr_id}
               </div>

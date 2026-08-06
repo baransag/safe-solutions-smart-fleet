@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 import { Users, ArrowRight, X } from 'lucide-react';
+import { getEmployeeAvatar } from '../../utils/avatarHelper';
 
 export default function AssignmentsPage() {
   const toast = useToast();
@@ -85,14 +86,12 @@ export default function AssignmentsPage() {
         <div className="grid grid-2" style={{ gap: 'var(--space-4)' }}>
           {assignments.map(a => (
             <div key={a.id} className="card-elevated" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-              {a.avatar_url && (
-                <img
-                  src={a.avatar_url.startsWith('http') || a.avatar_url.startsWith('/assets') ? a.avatar_url : `http://localhost:5000${a.avatar_url}`}
-                  alt={a.employee_name}
-                  style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-primary-orange)', flexShrink: 0 }}
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-              )}
+              <img
+                src={getEmployeeAvatar(a.emp_id)}
+                alt={a.employee_name}
+                style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-primary-orange)', flexShrink: 0 }}
+                onError={(e) => { e.currentTarget.src = '/assets/images/logo.jpeg'; }}
+              />
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
                   <span style={{ fontWeight: 700 }}>{a.employee_name}</span>

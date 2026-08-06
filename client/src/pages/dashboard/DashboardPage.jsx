@@ -10,6 +10,7 @@ import {
   ArrowUpRight, ArrowDownRight, Megaphone, Sparkles, Check, ChevronRight
 } from 'lucide-react';
 import './DashboardPage.css';
+import { getEmployeeAvatar, getAvatarByName } from '../../utils/avatarHelper';
 
 export default function DashboardPage() {
   const { user, isEmployee, isManager, isController, isAdmin } = useAuth();
@@ -72,7 +73,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                SAFE SOLUTIONS COMMAND CENTER • Enterprise Workforce & Fleet Intelligence Platform
+                SAFE SOLUTIONS FleetOps • Enterprise Fleet, Attendance & Site Operations
               </p>
             </div>
           </div>
@@ -80,7 +81,7 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>☀️ 28°C Clear Skies</div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>{todayStr} • Lahore HQ</div>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>{todayStr} • Faisalabad, Punjab, Pakistan</div>
             </div>
             <div style={{ width: 1, height: 36, background: 'var(--bg-tertiary)' }} />
             <div>
@@ -352,7 +353,7 @@ function EnterpriseDashboard({ data, navigate }) {
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{v.name}</div>
                 </div>
                 <div className="fleet-card-driver">
-                  <img src={`https://i.pravatar.cc/150?u=${v.driver}`} alt={v.driver} className="driver-avatar" />
+                  <img src={getAvatarByName(v.driver)} alt={v.driver} className="driver-avatar" />
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{ fontSize: 11, fontWeight: 600 }}>{v.driver}</span>
                     <span style={{ fontSize: 10, color: `var(--color-${v.color})`, display: 'flex', alignItems: 'center', gap: 2 }}>

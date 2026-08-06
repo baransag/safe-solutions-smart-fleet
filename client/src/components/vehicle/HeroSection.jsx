@@ -83,8 +83,8 @@ export default function HeroSection() {
         {slides.length === 0 ? (
           <div className="hero-slide active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent' }}>
             <div style={{ textAlign: 'center', color: '#fff', padding: 20 }}>
-              <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>SAFE SOLUTIONS COMMAND CENTER</h2>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>Enterprise Workforce & Fleet Intelligence Platform</p>
+               <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>SAFE SOLUTIONS FleetOps</h2>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>Enterprise Fleet, Attendance & Site Operations</p>
             </div>
           </div>
         ) : (

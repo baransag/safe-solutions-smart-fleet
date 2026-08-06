@@ -6,6 +6,8 @@ import {
   Route, CalendarCheck, FileText, Shield, ShieldCheck, Megaphone
 } from 'lucide-react';
 
+import { getEmployeeAvatar } from '../../utils/avatarHelper';
+
 export default function Sidebar({ isOpen, onClose }) {
   const { user, logout, isAdmin, isController, isSuperAdmin } = useAuth();
   const location = useLocation();
@@ -48,8 +50,8 @@ export default function Sidebar({ isOpen, onClose }) {
           <NavLink to="/" className="sidebar-logo">
             <div className="sidebar-logo-icon">S</div>
             <div>
-              <div style={{ lineHeight: 1.1, fontWeight: 900, letterSpacing: '0.04em', fontSize: 13 }}>SAFE SOLUTIONS COMMAND CENTER</div>
-              <div style={{ fontSize: 8, color: 'var(--color-gold)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: 2 }}>Enterprise Workforce & Fleet Intelligence</div>
+               <div style={{ lineHeight: 1.1, fontWeight: 900, letterSpacing: '0.04em', fontSize: 13 }}>SAFE SOLUTIONS FleetOps</div>
+              <div style={{ fontSize: 8, color: 'var(--color-gold)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: 2 }}>Enterprise Fleet, Attendance & Site Operations</div>
             </div>
           </NavLink>
         </div>
@@ -87,7 +89,7 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="sidebar-footer">
           <div className="sidebar-user" onClick={logout}>
             <div className="sidebar-user-avatar">
-              <img src="https://i.pravatar.cc/150?img=11" alt="User" />
+              <img src={getEmployeeAvatar(user?.employee_id)} alt="User" />
             </div>
             <div className="sidebar-user-info">
               <span className="sidebar-user-name">{user?.name || 'User'}</span>

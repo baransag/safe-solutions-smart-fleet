@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
 import { CheckCircle2, XCircle, RotateCcw, ShieldCheck, MapPin, Building2, HardHat, RefreshCw } from 'lucide-react';
+import { getEmployeeAvatar } from '../../utils/avatarHelper';
 
 export default function ApprovalCenterPage() {
   const { user } = useAuth();
@@ -149,7 +150,7 @@ export default function ApprovalCenterPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                   <img
-                    src={req.avatar_url || '/assets/images/logo.jpeg'}
+                    src={getEmployeeAvatar(req.emp_code)}
                     alt={req.employee_name}
                     style={{ width: 46, height: 46, borderRadius: '50%', objectFit: 'cover', border: '2px solid #021C4F' }}
                     onError={(e) => { e.currentTarget.src = '/assets/images/logo.jpeg'; }}
