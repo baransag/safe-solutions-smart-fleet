@@ -21,6 +21,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/hero-management', icon: Megaphone, label: 'Hero Banners', adminOnly: true },
 
     { section: 'Fleet Management', adminOnly: false },
+    { to: '/employees', icon: Users, label: 'Employee Registry', adminOnly: true },
     { to: '/vehicles', icon: Car, label: 'Vehicles', adminOnly: true },
     { to: '/assignments', icon: Users, label: 'Assignments', adminOnly: true },
     { to: '/qr-codes', icon: QrCode, label: 'QR Codes', adminOnly: true },
@@ -40,6 +41,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/alerts', icon: AlertTriangle, label: 'Alerts', adminOnly: true },
     { to: '/services', icon: Wrench, label: 'Vehicle Services', adminOnly: true },
     { to: '/reports', icon: FileText, label: 'Reports', adminOnly: true },
+    { to: '/system-logs', icon: Shield, label: 'System Audit Logs', adminOnly: true },
     { to: '/settings', icon: Settings, label: 'System Settings', adminOnly: true },
   ];
 

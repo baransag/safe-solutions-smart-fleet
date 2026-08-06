@@ -61,8 +61,9 @@ export function AuthProvider({ children }) {
     isEmployee: user?.role === 'employee',
     isManager: user?.role === 'manager',
     isController: user?.role === 'controller',
-    isAdmin: user?.role === 'manager' || user?.role === 'controller',
-    isBoss: user?.employee_id === 'ADMIN001' || user?.email === 'boss@safesolutions.com',
+    isBoss: user?.role === 'boss' || user?.employee_id === 'ADMIN001' || user?.email === 'boss@safesolutions.com',
+    isSysAdmin: user?.role === 'admin',
+    isAdmin: ['admin', 'boss', 'controller', 'manager'].includes(user?.role),
   };
 
   return (

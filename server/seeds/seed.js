@@ -13,20 +13,32 @@ async function seed() {
     const defaultPassword = await bcrypt.hash('Safe@2024', 12);
     const controllerPassword = await bcrypt.hash('Controller@2024', 12);
     const bossPassword = await bcrypt.hash('SS@Admin26', 12);
+    const adminPassword = await bcrypt.hash('Admin@2024', 12);
 
     // Truncate existing data to cleanly re-populate exact records
-    await client.query('TRUNCATE TABLE vehicle_assignments, vehicle_checkouts, vehicle_checkins, fuel_logs, vehicle_services, vehicle_alerts, vehicle_meter_logs, notifications, vehicles, attendance_records, employee_qr_codes, employees RESTART IDENTITY CASCADE');
+    await client.query('TRUNCATE TABLE vehicle_assignments, vehicle_checkouts, vehicle_checkins, fuel_logs, vehicle_services, vehicle_alerts, vehicle_meter_logs, notifications, vehicles, attendance_records, employee_qr_codes, system_logs, employees RESTART IDENTITY CASCADE');
 
     // Insert exact employee records as provided in Master List
     const employeesData = [
       {
+        employee_id: 'SYSADMIN001',
+        name: 'System Admin',
+        email: 'admin@safesolutions.com',
+        phone: '03000000000',
+        designation: 'System Administrator',
+        department: 'IT',
+        role: 'admin',
+        password_hash: adminPassword,
+        avatar_url: '/assets/images/logo.jpeg'
+      },
+      {
         employee_id: 'ADMIN001',
         name: 'SAFE SOLUTIONS Boss',
         email: 'boss@safesolutions.com',
-        phone: '',
+        phone: '03001112233',
         designation: 'Managing Director',
         department: 'Executive',
-        role: 'controller',
+        role: 'boss',
         password_hash: bossPassword,
         avatar_url: '/assets/images/logo.jpeg'
       },

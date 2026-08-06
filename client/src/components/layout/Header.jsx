@@ -169,6 +169,12 @@ export default function Header({ onMenuClick }) {
             </div>
           )}
         </div>
+
+        <a href="/profile" style={{ textDecoration: 'none', color: 'inherit' }} title="My Profile">
+          <div className="avatar avatar-sm" style={{ cursor: 'pointer', background: 'var(--color-primary-soft)', color: 'var(--color-primary)', fontWeight: 700 }}>
+            {user?.name ? user.name.charAt(0) : 'U'}
+          </div>
+        </a>
       </div>
     </header>
   );

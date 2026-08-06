@@ -245,6 +245,74 @@ export default function SystemSettingsPage() {
             </span>
           </div>
         </div>
+
+        {/* Module 5: Hero Banner */}
+        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 22, border: '1px solid rgba(168, 85, 247, 0.1)', background: '#fff' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ padding: 10, borderRadius: 12, background: 'rgba(168, 85, 247, 0.1)', color: '#9333ea' }}>
+                <Settings size={24} />
+              </div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#021C4F' }}>Hero Banner Carousel</h4>
+                <span style={{ fontSize: 11, color: '#64748b' }}>Announcements, Holiday & Friday Posts</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleToggle('hero_banner_enabled')}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              {settings.hero_banner_enabled !== false ? (
+                <ToggleRight size={42} color="#10B981" />
+              ) : (
+                <ToggleLeft size={42} color="#94a3b8" />
+              )}
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Module Status</span>
+            <span className={`badge badge-${settings.hero_banner_enabled !== false ? 'green' : 'red'}`} style={{ fontWeight: 800 }}>
+              {settings.hero_banner_enabled !== false ? 'ENABLED (LIVE)' : 'DISABLED'}
+            </span>
+          </div>
+        </div>
+
+        {/* Module 6: QR Management */}
+        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 22, border: '1px solid rgba(234, 88, 12, 0.1)', background: '#fff' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ padding: 10, borderRadius: 12, background: 'rgba(234, 88, 12, 0.1)', color: '#ea580c' }}>
+                <Shield size={24} />
+              </div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#021C4F' }}>QR Code Security</h4>
+                <span style={{ fontSize: 11, color: '#64748b' }}>Office & Temporary Site QR Validation</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleToggle('qr_management_enabled')}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              {settings.qr_management_enabled !== false ? (
+                <ToggleRight size={42} color="#10B981" />
+              ) : (
+                <ToggleLeft size={42} color="#94a3b8" />
+              )}
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Module Status</span>
+            <span className={`badge badge-${settings.qr_management_enabled !== false ? 'green' : 'red'}`} style={{ fontWeight: 800 }}>
+              {settings.qr_management_enabled !== false ? 'ENABLED (LIVE)' : 'DISABLED'}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

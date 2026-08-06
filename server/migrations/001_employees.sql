@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS employees (
   password_hash VARCHAR(255) NOT NULL,
   designation VARCHAR(100),
   department VARCHAR(100),
-  role VARCHAR(20) NOT NULL DEFAULT 'employee' CHECK (role IN ('employee', 'manager', 'controller')),
+  role VARCHAR(20) NOT NULL DEFAULT 'employee' CHECK (role IN ('admin', 'boss', 'controller', 'manager', 'employee')),
   avatar_url VARCHAR(500),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -89,11 +89,11 @@ router.get('/:id', authenticate, async (req, res, next) => {
 });
 
 // POST /api/vehicles - Create vehicle
-router.post('/', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.post('/', authenticate, authorize('admin', 'boss', 'controller', 'manager'), async (req, res, next) => {
   try {
     const {
       vehicle_id, name, number_plate, type, make, model, year, color,
-      fuel_type, tank_capacity, avg_mileage, insurance_expiry, registration_expiry
+      fuel_type, tank_capacity, avg_mileage, insurance_expiry, registration_expiry, current_meter
     } = req.body;
 
     if (!vehicle_id || !name || !number_plate) {
@@ -113,14 +113,16 @@ router.post('/', authenticate, authorize('manager', 'controller'), async (req, r
       color: { dark: '#3B2621', light: '#FFFFFF' }
     });
 
+    const initialMeter = current_meter !== undefined ? parseFloat(current_meter) : 0;
+
     const { rows } = await query(
       `INSERT INTO vehicles (vehicle_id, name, number_plate, type, make, model, year, color,
        fuel_type, tank_capacity, avg_mileage, insurance_expiry, registration_expiry, qr_code, current_meter)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, 0)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        RETURNING *`,
       [vehicle_id, name, number_plate, type || 'bike', make || null, model || null,
        year || null, color || null, fuel_type || 'petrol', tank_capacity || null,
-       avg_mileage || null, insurance_expiry || null, registration_expiry || null, qrCode]
+       avg_mileage || null, insurance_expiry || null, registration_expiry || null, qrCode, initialMeter]
     );
 
     res.status(201).json({ vehicle: rows[0] });
@@ -133,7 +135,7 @@ router.post('/', authenticate, authorize('manager', 'controller'), async (req, r
 });
 
 // PUT /api/vehicles/:id
-router.put('/:id', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.put('/:id', authenticate, authorize('admin', 'boss', 'controller', 'manager'), async (req, res, next) => {
   try {
     const {
       name, number_plate, type, make, model, year, color, fuel_type,
@@ -173,7 +175,7 @@ router.put('/:id', authenticate, authorize('manager', 'controller'), async (req,
 });
 
 // POST /api/vehicles/:id/image
-router.post('/:id/image', authenticate, authorize('manager', 'controller'),
+router.post('/:id/image', authenticate, authorize('admin', 'boss', 'controller', 'manager'),
   uploadVehicle.single('image'), async (req, res, next) => {
   try {
     if (!req.file) {

@@ -64,8 +64,8 @@ router.get('/:id', authenticate, async (req, res, next) => {
   }
 });
 
-// POST /api/employees - Create employee (manager/controller only)
-router.post('/', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+// POST /api/employees - Create employee (admin/boss/manager/controller only)
+router.post('/', authenticate, authorize('admin', 'boss', 'controller', 'manager'), async (req, res, next) => {
   try {
     const { employee_id, name, email, phone, designation, department, role, password } = req.body;
 
@@ -91,7 +91,7 @@ router.post('/', authenticate, authorize('manager', 'controller'), async (req, r
 });
 
 // PUT /api/employees/:id - Update employee
-router.put('/:id', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.put('/:id', authenticate, authorize('admin', 'boss', 'controller', 'manager'), async (req, res, next) => {
   try {
     const { name, phone, designation, department, role, is_active } = req.body;
 
@@ -114,6 +114,20 @@ router.put('/:id', authenticate, authorize('manager', 'controller'), async (req,
     }
 
     res.json({ employee: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/employees/:id - Deactivate employee
+router.delete('/:id', authenticate, authorize('admin', 'boss', 'controller'), async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      `UPDATE employees SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING id, name`,
+      [req.params.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Employee not found' });
+    res.json({ message: 'Employee deactivated successfully', employee: rows[0] });
   } catch (err) {
     next(err);
   }

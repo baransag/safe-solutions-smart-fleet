@@ -6,9 +6,10 @@ const { authenticate, generateToken, generateRefreshToken } = require('../middle
 const { validate } = require('../middleware/validation.middleware');
 
 const MOCK_USERS = [
-  { id: 0, employee_id: 'ADMIN001', name: 'SAFE SOLUTIONS Boss', email: 'boss@safesolutions.com', phone: '', role: 'controller', designation: 'Managing Director', department: 'Executive', avatar_url: '/assets/images/logo.jpeg', pass: 'SS@Admin26' },
-  { id: 1, employee_id: 'EMP001', name: 'M. Husnain Farooq', email: 'baransag68@gmail.com', phone: '03468760963', role: 'controller', designation: 'Controller', department: 'Management', avatar_url: '/assets/images/Husnain.jpeg', pass: 'Controller@2024' },
-  { id: 2, employee_id: 'EMP002', name: 'Samaira Mubashar', email: 'sm.bajwa786fsd@gmail.com', phone: '03006646124', role: 'manager', designation: 'Manager Accounts & Finance', department: 'Finance', avatar_url: '/assets/images/Samaira.jpeg', pass: 'Safe@2024' },
+  { id: 0, employee_id: 'SYSADMIN001', name: 'System Admin', email: 'admin@safesolutions.com', phone: '03000000000', role: 'admin', designation: 'System Administrator', department: 'IT', avatar_url: '/assets/images/logo.jpeg', pass: 'Admin@2024' },
+  { id: 1, employee_id: 'ADMIN001', name: 'SAFE SOLUTIONS Boss', email: 'boss@safesolutions.com', phone: '03001112233', role: 'boss', designation: 'Managing Director', department: 'Executive', avatar_url: '/assets/images/logo.jpeg', pass: 'SS@Admin26' },
+  { id: 2, employee_id: 'EMP001', name: 'M. Husnain Farooq', email: 'baransag68@gmail.com', phone: '03468760963', role: 'controller', designation: 'Controller', department: 'Management', avatar_url: '/assets/images/Husnain.jpeg', pass: 'Controller@2024' },
+  { id: 3, employee_id: 'EMP002', name: 'Samaira Mubashar', email: 'sm.bajwa786fsd@gmail.com', phone: '03006646124', role: 'manager', designation: 'Manager Accounts & Finance', department: 'Finance', avatar_url: '/assets/images/Samaira.jpeg', pass: 'Safe@2024' },
   { id: 3, employee_id: 'EMP003', name: 'Engr. Shahzaib Ahmad', email: 'zaiberana37@gmail.com', phone: '03007684761', role: 'employee', designation: 'Marketing Executive', department: 'Marketing', avatar_url: '/assets/images/Shahzaib.jpeg', pass: 'Safe@2024' },
   { id: 4, employee_id: 'EMP004', name: 'Shahbaz Ahmed', email: 'shabazbutt1132@gmail.com', phone: '03237684200', role: 'employee', designation: 'Application Supervisor', department: 'Operations', avatar_url: '/assets/images/Shahbaz.jpeg', pass: 'Safe@2024' },
   { id: 5, employee_id: 'EMP005', name: 'Rehan Ali', email: 'Arehan079@gmail.com', phone: '03237674000', role: 'employee', designation: 'Application Supervisor', department: 'Operations', avatar_url: '/assets/images/Rehan.jpeg', pass: 'Safe@2024' },
