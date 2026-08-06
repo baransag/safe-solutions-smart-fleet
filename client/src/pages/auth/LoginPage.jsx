@@ -6,10 +6,13 @@ import api from '../../services/api';
 import './LoginPage.css';
 
 const INTRO_IMAGES = [
-  'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&q=80&w=1000', // Construction
-  'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1000', // Engineering
-  'https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?auto=format&fit=crop&q=80&w=1000', // Waterproofing / Inspection
-  'https://images.unsplash.com/photo-1516576885502-d35d55f2e8b4?auto=format&fit=crop&q=80&w=1000'  // Fleet Machinery
+  '/assets/images/hero-1.jpeg',
+  '/assets/images/hero-2.jpeg',
+  '/assets/images/hero-3.jpeg',
+  '/assets/images/hero-4.jpeg',
+  '/assets/images/hero-5.jpeg',
+  '/assets/images/Husnain.jpeg',
+  '/assets/images/Samaira.jpeg'
 ];
 
 const PREPARATION_STEPS = [

@@ -5,12 +5,12 @@ import { ChevronLeft, ChevronRight, Shield, Calendar, MapPin, Car, Building2, Ha
 import './HeroSection.css';
 
 const DEFAULT_SLIDES = [
-  { id: 1, image_url: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&q=80&w=1200', title: 'Structural Construction Banners', description: 'Enterprise engineering and structural layout operations', category: 'Construction' },
-  { id: 2, image_url: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?auto=format&fit=crop&q=80&w=1200', title: 'Waterproofing Inspections', description: 'Advanced membrane testing and dampness seal validation', category: 'Waterproofing' },
-  { id: 3, image_url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&q=80&w=1200', title: 'Precision Engineering Controls', description: 'Industrial design verification and safety compliance checks', category: 'Engineering' },
-  { id: 4, image_url: 'https://images.unsplash.com/photo-1516576885502-d35d55f2e8b4?auto=format&fit=crop&q=80&w=1200', title: 'Enterprise Logistics Fleet', description: 'Real-time vehicle health diagnostics and location intelligence', category: 'Company Vehicles' },
-  { id: 5, image_url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200', title: 'Skyscraper Infrastructures', description: 'Commercial building insulation and concrete application logistics', category: 'Industrial Projects' },
-  { id: 6, image_url: 'https://images.unsplash.com/photo-1589793907316-f9401554611e?auto=format&fit=crop&q=80&w=1200', title: 'Site Inspection Audits', description: 'Unified compliance checklist and daily worker safety briefings', category: 'Safety' }
+  { id: 1, image_url: '/assets/images/hero-1.jpeg', title: 'SAFE SOLUTIONS ONE Operations', description: 'Real-time vehicle tracking & intelligent fleet allocation', category: 'Company Announcement' },
+  { id: 2, image_url: '/assets/images/Husnain.jpeg', title: 'M. Husnain Farooq — Controller', description: 'Enterprise Fleet & Management Controller', category: 'Executive Notice' },
+  { id: 3, image_url: '/assets/images/hero-2.jpeg', title: 'Automated QR & GPS Verification', description: 'Instant QR code check-in & geofence validation', category: 'Safety Alert' },
+  { id: 4, image_url: '/assets/images/Samaira.jpeg', title: 'Samaira Mubashar — Accounts & Finance', description: 'Finance & Operational Expense Oversight', category: 'Leadership Notice' },
+  { id: 5, image_url: '/assets/images/hero-3.jpeg', title: 'Fuel & Maintenance Logs', description: 'Automated AI receipt scanning and vehicle servicing alerts', category: 'Maintenance' },
+  { id: 6, image_url: '/assets/images/Shahzaib.jpeg', title: 'Engr. Shahzaib Ahmad — Marketing', description: 'Technical Operations & Field Project Management', category: 'Team Highlight' }
 ];
 
 export default function HeroSection() {
@@ -71,7 +71,11 @@ export default function HeroSection() {
     if (!url) return '/assets/images/logo.jpeg';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     if (url.startsWith('/assets/')) return url;
-    return `http://localhost:5000${url}`;
+    if (url.startsWith('/uploads/')) {
+      const apiBase = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/$/, '') : '';
+      return apiBase ? `${apiBase}${url}` : url;
+    }
+    return url;
   };
 
   const todayDateStr = new Date().toLocaleDateString('en-US', {
