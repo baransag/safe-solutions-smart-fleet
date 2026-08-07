@@ -197,7 +197,7 @@ export default function LoginPage() {
       </div>
 
       <div className="login-container animate-scale-in">
-        <div className="login-card card-glass">
+        <div className="login-card">
           <div className="login-header">
             <div className="login-logo" style={{ background: '#fff', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)', width: 70, height: 70, padding: 4 }}>
               <img

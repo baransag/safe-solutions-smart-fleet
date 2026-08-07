@@ -27,7 +27,8 @@ export default function AttendancePage() {
   const [scannedData, setScannedData] = useState(null);
   const [qrVerification, setQrVerification] = useState(null);
   const [userGps, setUserGps] = useState({ lat: null, lng: null });
-  const [projectName, setProjectName] = useState('Industrial Zone Waterproofing Project');
+  const [projectName, setProjectName] = useState('');
+  const [siteLocation, setSiteLocation] = useState('Faisalabad, Pakistan');
   const [notes, setNotes] = useState('');
   const [selfieBlob, setSelfieBlob] = useState(null);
   const [selfiePreview, setSelfiePreview] = useState(null);
@@ -153,6 +154,14 @@ export default function AttendancePage() {
   };
 
   const handleSubmitSiteAttendance = async () => {
+    if (!projectName.trim()) {
+      toast.error('Please enter the Site Name.');
+      return;
+    }
+    if (!siteLocation.trim()) {
+      toast.error('Please enter the Site Location.');
+      return;
+    }
     if (!selfieBlob || !sitePhotoBlob) {
       toast.error('Please capture both your selfie and site photo.');
       return;
@@ -162,10 +171,11 @@ export default function AttendancePage() {
     try {
       const formData = new FormData();
       formData.append('project_name', projectName);
+      formData.append('location_name', siteLocation);
       formData.append('lat', userGps.lat || 31.4504);
       formData.append('lng', userGps.lng || 73.1350);
       
-      const fullNotes = `Work Completed: ${workCompleted}\nIssues Found: ${issueFound || 'None'}\nWeather: ${weather || 'Normal'}\nSummary: ${notes || ''}`;
+      const fullNotes = `Site Location: ${siteLocation}\nWork Completed: ${workCompleted}\nIssues Found: ${issueFound || 'None'}\nWeather: ${weather || 'Normal'}\nSummary: ${notes || ''}`;
       formData.append('notes', fullNotes);
       formData.append('selfie', selfieBlob, 'selfie.jpg');
       formData.append('site_photo', sitePhotoBlob, 'site_photo.jpg');
@@ -308,19 +318,32 @@ export default function AttendancePage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Step 1: Select Project */}
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 700 }}>1. Select Client Project / Site *</label>
-              <select
-                className="form-input form-select"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
-              >
-                {projectsList.map((p, idx) => (
-                  <option key={idx} value={p}>{p}</option>
-                ))}
-              </select>
+            {/* Step 1: Site Name & Site Location Inputs */}
+            <div className="form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div>
+                <label className="form-label" style={{ fontWeight: 700 }}>1a. Enter Site Name *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Al-Noor Plaza Roof Waterproofing"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <label className="form-label" style={{ fontWeight: 700 }}>1b. Enter Site Location *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Faisalabad, Pakistan"
+                  value={siteLocation}
+                  onChange={(e) => setSiteLocation(e.target.value)}
+                  disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
+                  style={{ width: '100%' }}
+                />
+              </div>
             </div>
 
             {/* Step 2: Verify GPS */}

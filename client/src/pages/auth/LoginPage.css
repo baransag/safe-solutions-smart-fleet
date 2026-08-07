@@ -69,19 +69,27 @@
 /* Glassmorphic Login Card */
 .login-container {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   position: relative;
   z-index: 10;
 }
 
 .login-card {
-  padding: var(--space-10) var(--space-8);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-xl);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  box-shadow: 0 24px 64px -16px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  padding: 48px 36px !important;
+  background: rgba(10, 10, 18, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 24px !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease !important;
+}
+
+.login-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.9), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
 }
 
 .login-header {
@@ -90,8 +98,8 @@
 }
 
 .login-logo {
-  width: 60px;
-  height: 60px;
+  width: 70px;
+  height: 70px;
   border-radius: var(--radius-md);
   background: #FFFFFF;
   display: flex;
@@ -104,19 +112,19 @@
 }
 
 .login-title {
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  color: #FFFFFF;
+  font-size: 24px !important;
+  font-weight: 900 !important;
+  color: #FFFFFF !important;
   letter-spacing: -0.02em;
   margin-bottom: var(--space-1);
 }
 
 .login-subtitle {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-  font-weight: 500;
+  font-size: 11px !important;
+  color: var(--color-gold) !important;
+  font-weight: 700 !important;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 /* Forms styling */
@@ -129,34 +137,34 @@
 .login-form .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .login-form .form-label {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.7) !important;
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
 .login-form .form-input {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-md);
-  color: #FFFFFF;
-  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  color: #FFFFFF !important;
+  padding: 13px 15px !important;
   font-size: var(--text-sm);
-  transition: all var(--transition-fast);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .login-form .form-input::placeholder {
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.25) !important;
 }
 
 .login-form .form-input:focus {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.5) !important;
+  border-color: #C50337 !important;
+  box-shadow: 0 0 0 3px rgba(197, 3, 55, 0.2) !important;
 }
 
 .login-footer {

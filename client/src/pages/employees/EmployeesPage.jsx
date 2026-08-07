@@ -5,6 +5,8 @@ import {
   Building, CheckCircle, XCircle, Edit3, Trash2, Key, RefreshCw
 } from 'lucide-react';
 
+import { getEmployeeAvatar } from '../../utils/avatarHelper';
+
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -199,9 +201,12 @@ export default function EmployeesPage() {
                   <tr key={emp.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div className="avatar avatar-md" style={{ background: 'var(--color-primary-soft)', color: 'var(--color-primary)' }}>
-                          {emp.name ? emp.name.charAt(0) : '?'}
-                        </div>
+                        <img
+                          src={getEmployeeAvatar(emp.employee_id)}
+                          alt={emp.name}
+                          style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border-color)', flexShrink: 0 }}
+                          onError={(e) => { e.currentTarget.src = '/assets/images/logo.jpeg'; }}
+                        />
                         <div>
                           <div style={{ fontWeight: 600 }}>{emp.name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{emp.employee_id}</div>

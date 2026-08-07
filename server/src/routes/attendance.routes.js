@@ -109,7 +109,7 @@ router.post('/site', authenticate, uploadSite.fields([
   { name: 'site_photo', maxCount: 1 }
 ]), async (req, res, next) => {
   try {
-    const { project_name, lat, lng, notes } = req.body;
+    const { project_name, location_name, lat, lng, notes } = req.body;
     const userId = req.user.id;
     const today = new Date().toISOString().split('T')[0];
 
@@ -138,7 +138,7 @@ router.post('/site', authenticate, uploadSite.fields([
       ) VALUES ($1, NOW(), $2, $3, 'present', 'site', $4, $5, 'pending', $6, 'GPS Verified', 0, $7, $8, $9)
       RETURNING *
     `, [
-      userId, lat || 31.4504, lng || 73.1350, project_name || 'On-Site Project',
+      userId, lat || 31.4504, lng || 73.1350, location_name || project_name || 'On-Site Project',
       project_name || 'On-Site Project', isLate, notes || null, selfieUrl, sitePhotoUrl
     ]);
 
@@ -150,10 +150,11 @@ router.post('/site', authenticate, uploadSite.fields([
         VALUES ($1, 'New Site Attendance Submitted', $2, 'info', '/approvals', $3)
       `, [
         m.id,
-        `${req.user.name} submitted Site Attendance for ${project_name || 'On-Site Project'}. Approval pending.`,
+        `${req.user.name} submitted Site Attendance for ${project_name || 'On-Site Project'} at ${location_name || 'Faisalabad'}. Approval pending.`,
         JSON.stringify({
           employee_name: req.user.name,
           project_name: project_name || 'On-Site Project',
+          location_name: location_name || 'Faisalabad, Pakistan',
           notes: notes,
           lat: lat,
           lng: lng,
