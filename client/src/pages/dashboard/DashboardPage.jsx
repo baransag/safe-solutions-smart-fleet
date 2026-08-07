@@ -92,9 +92,17 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ─── HERO ANNOUNCEMENTS CMS ─── */}
-      <HeroSection />
+      {/* Render Main Dashboard Content */}
+      {isEmployee ? (
+        <EmployeeDashboard data={data} navigate={navigate} />
+      ) : (
+        <EnterpriseDashboard data={data} navigate={navigate} />
+      )}
 
+      {/* ─── HERO ANNOUNCEMENTS CMS (MOVED TO BOTTOM) ─── */}
+      <div style={{ marginTop: 32 }}>
+        <HeroSection />
+      </div>
     </div>
   );
 }

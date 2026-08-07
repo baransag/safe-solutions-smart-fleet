@@ -48,7 +48,11 @@ export default function Sidebar({ isOpen, onClose }) {
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <NavLink to="/" className="sidebar-logo">
-            <div className="sidebar-logo-icon">S</div>
+            <img
+              src="/assets/images/logo.jpeg"
+              alt="SAFE SOLUTIONS Logo"
+              style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'contain', background: '#FFFFFF', padding: 2, boxShadow: '0 4px 14px rgba(0,0,0,0.2)' }}
+            />
             <div>
                <div style={{ lineHeight: 1.1, fontWeight: 900, letterSpacing: '0.04em', fontSize: 13 }}>SAFE SOLUTIONS FleetOps</div>
               <div style={{ fontSize: 8, color: 'var(--color-gold)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: 2 }}>Enterprise Fleet, Attendance & Site Operations</div>

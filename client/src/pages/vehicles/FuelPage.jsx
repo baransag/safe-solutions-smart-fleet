@@ -95,19 +95,34 @@ export default function FuelPage() {
     setAiScanning(true);
 
     setTimeout(() => {
+      const stations = [
+        'PSO Super Filling Station - Faisalabad',
+        'Shell Select Service Station - Canal Bank',
+        'Attock Petroleum Limited - Station #4',
+        'Total PARCO Filling Station - West Canal',
+        'Hascol Petroleum Station - FSD Hub'
+      ];
+      const selectedStation = stations[Math.floor(Math.random() * stations.length)];
+      const litersVal = (8 + Math.random() * 12).toFixed(2);
+      const rateVal = (267.50).toFixed(2);
+      const totalVal = Math.round(parseFloat(litersVal) * parseFloat(rateVal));
+      const confidenceScore = Math.floor(92 + Math.random() * 8);
+
       const extracted = {
-        pump_name: 'PSO Super Filling Station',
+        pump_name: selectedStation,
         invoice_no: `INV-${Math.floor(100000 + Math.random() * 900000)}`,
-        date: new Date().toLocaleDateString(),
+        date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         fuel_type: 'Super Petrol',
-        liters: '9.35',
-        rate: '267.50',
-        amount: '2500',
-        gst: '225',
-        total: '2500',
+        liters: litersVal,
+        rate: rateVal,
+        amount: String(totalVal),
+        gst: String(Math.round(totalVal * 0.08)),
+        total: String(totalVal),
         vehicle: assignment?.number_plate || 'VH-001 (BBE-5688)',
-        employee: user?.name || 'M. Husnain Farooq'
+        employee: user?.name || 'M. Husnain Farooq',
+        confidence: confidenceScore,
+        lowConfidenceFields: confidenceScore < 95 ? ['meter_reading'] : []
       };
 
       setAiExtractedData(extracted);
@@ -123,8 +138,8 @@ export default function FuelPage() {
         gst: extracted.gst
       }));
       setAiScanning(false);
-      toast.success('🤖 AI OCR automatically parsed fuel receipt details!');
-    }, 1800);
+      toast.success(`🤖 Fuel Receipt OCR parsed (${extracted.pump_name.split('-')[0].trim()}) - ${confidenceScore}% Confidence!`);
+    }, 1600);
   };
 
   return (
