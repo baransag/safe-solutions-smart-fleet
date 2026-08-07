@@ -164,23 +164,15 @@ export default function EmployeeQRCodesPage() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ padding: 10, background: '#021C4F', borderRadius: 12, color: '#fff' }}>
+            <div style={{ padding: 10, background: '#0A0A14', borderRadius: 12, color: '#fff' }}>
               <QrCode size={24} />
             </div>
             <div>
-              <h1 className="page-title">QR Code Management</h1>
-              <p className="page-description">Generate, assign, and manage Office & Site Attendance QR Codes</p>
+              <h1 className="page-title">Official Office QR Code</h1>
+              <p className="page-description">Permanent Head Office Attendance QR Code for Faisalabad HQ</p>
             </div>
           </div>
         </div>
-
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowGenerateModal(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#021C4F', fontWeight: 700 }}
-        >
-          <Plus size={18} /> Generate New QR Code
-        </button>
       </div>
 
       {/* QR Codes Grid */}

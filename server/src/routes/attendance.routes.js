@@ -81,10 +81,10 @@ router.post('/office', authenticate, async (req, res, next) => {
         employee_id, check_in_time, check_in_lat, check_in_lng, status,
         attendance_type, qr_code_id, qr_id_scanned, location_name, project_name,
         approval_status, is_late, gps_status, distance_meters, notes
-      ) VALUES ($1, NOW(), $2, $3, 'present', 'office', $4, $5, $6, $7, 'pending', $8, $9, $10, $11)
+      ) VALUES ($1, NOW(), $2, $3, 'present', 'office', $4, $5, $6, $7, 'approved', $8, $9, $10, $11)
       RETURNING *
     `, [
-      userId, lat, lng, qr.id, qr.qr_id, qr.name, qr.project_name || 'Head Office',
+      userId, lat, lng, qr.id, qr.qr_id, qr.name, qr.project_name || 'Head Office Faisalabad',
       isLate, gpsStatus, Math.round(dist * 10) / 10, notes || null
     ]);
 
@@ -93,8 +93,8 @@ router.post('/office', authenticate, async (req, res, next) => {
     for (const m of managers) {
       await query(`
         INSERT INTO notifications (user_id, title, message, type, link)
-        VALUES ($1, 'New Office Attendance Submitted', $2, 'info', '/approvals')
-      `, [m.id, `${req.user.name} submitted Office Attendance at ${qr.name}. Approval pending.`]);
+        VALUES ($1, 'Office Attendance Marked', $2, 'info', '/attendance')
+      `, [m.id, `${req.user.name} marked Office Attendance at ${qr.name} (Faisalabad HQ). Status: Approved.`]);
     }
 
     res.status(201).json({ attendance: rows[0] });

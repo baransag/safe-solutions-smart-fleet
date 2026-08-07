@@ -142,7 +142,7 @@ export default function AttendancePage() {
       };
 
       const res = await api.post(endpoint, payload);
-      toast.success(`${activeAttendanceType === 'office' ? 'Office' : 'Site'} Attendance submitted! Pending Manager Approval.`);
+      toast.success(activeAttendanceType === 'office' ? 'Attendance Successfully Marked' : 'Site Attendance submitted! Pending Manager Approval.');
       setScannedData(null);
       setQrVerification(null);
       fetchData();

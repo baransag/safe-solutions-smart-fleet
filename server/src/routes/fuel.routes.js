@@ -104,6 +104,15 @@ router.post('/', authenticate, uploadReceipt.single('receipt_photo'), async (req
         );
       }
 
+      // Notify Manager & Controller
+      const { rows: managers } = await client.query(`SELECT id FROM employees WHERE role IN ('manager', 'controller') AND is_active = true`);
+      for (const m of managers) {
+        await client.query(`
+          INSERT INTO notifications (user_id, title, message, type, link)
+          VALUES ($1, 'New Fuel Entry Submitted', $2, 'info', '/fuel')
+        `, [m.id, `${req.user.name} submitted fuel entry (Rs ${fuel_amount}, ${liters}L at ${pump_name || 'Pump'}). Approval pending.`]);
+      }
+
       return fuel[0];
     });
 

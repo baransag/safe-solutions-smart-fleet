@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 import { Users, ArrowRight, X } from 'lucide-react';
-import { getEmployeeAvatar } from '../../utils/avatarHelper';
 
 export default function AssignmentsPage() {
   const toast = useToast();
@@ -85,29 +84,24 @@ export default function AssignmentsPage() {
       ) : (
         <div className="grid grid-2" style={{ gap: 'var(--space-4)' }}>
           {assignments.map(a => (
-            <div key={a.id} className="card-elevated" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-              <img
-                src={getEmployeeAvatar(a.emp_id)}
-                alt={a.employee_name}
-                style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-primary-orange)', flexShrink: 0 }}
-                onError={(e) => { e.currentTarget.src = '/assets/images/logo.jpeg'; }}
-              />
+            <div key={a.id} className="card-elevated" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', padding: '18px 20px' }}>
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
-                  <span style={{ fontWeight: 700 }}>{a.employee_name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text-primary)' }}>{a.employee_name}</span>
+                  <span className="badge badge-gray" style={{ fontSize: '11px', fontWeight: 700 }}>{a.emp_id || a.employee_code || 'EMP'}</span>
                   <ArrowRight size={14} style={{ color: 'var(--text-tertiary)' }} />
-                  <span style={{ fontWeight: 600, color: 'var(--color-deep-teal)' }}>{a.vehicle_name}</span>
+                  <span style={{ fontWeight: 700, color: '#C50337' }}>{a.vehicle_name}</span>
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-                  <span className="badge badge-teal">{a.number_plate}</span>
-                  <span className="badge badge-gray">{a.emp_id}</span>
-                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-                    Since {new Date(a.assigned_at).toLocaleDateString()}
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span className="badge badge-teal" style={{ fontWeight: 700 }}>{a.number_plate}</span>
+                  <span className="badge badge-green" style={{ textTransform: 'uppercase', fontSize: '10px' }}>Active Duty</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 500 }}>
+                    Assigned: {new Date(a.assigned_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
                 </div>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => handleUnassign(a.id)} title="Unassign">
-                <X size={14} />
+              <button className="btn btn-ghost btn-sm" onClick={() => handleUnassign(a.id)} title="Unassign Vehicle">
+                <X size={16} />
               </button>
             </div>
           ))}
