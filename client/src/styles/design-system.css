@@ -7,50 +7,56 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
-  /* ─── Luxury SaaS Color Palette ─── */
-  /* Brand */
-  --color-primary: #0A0A14;      /* Solid Luxury Obsidian */
-  --color-primary-hover: #121225;
-  --color-accent: #9A031E;       /* Deep Wine / Burgundy */
-  --color-accent-hover: #730216;
-  --color-gold: #E5A93D;         /* Premium Soft Gold */
+  /* ─── Company Enterprise Color Palette ─── */
+  /* Brand Colors */
+  --color-primary-navy: #021C4F;  /* Primary Navy */
+  --color-primary-red: #C50337;   /* Primary Red */
+  --color-black: #0B0B0B;         /* Black */
+  
+  --color-primary: #021C4F;
+  --color-primary-hover: #011337;
+  --color-accent: #C50337;
+  --color-accent-hover: #9E022B;
+  --color-gold: #E5A93D;
   
   /* Backgrounds */
-  --bg-app: #F8F9FA;             /* Sleek Light Grey */
-  --bg-primary: #FFFFFF;         /* Pure white for cards */
-  --bg-secondary: #F1F3F5;       /* Warm light grey for hover */
-  --bg-tertiary: #E9ECEF;        /* Borders / dividers */
-  --bg-card: rgba(255, 255, 255, 0.75);
-  --bg-card-hover: rgba(255, 255, 255, 0.9);
-  --bg-sidebar: rgba(10, 10, 20, 0.95); /* Deep Dark Glass */
-  --bg-glass: rgba(255, 255, 255, 0.65);
-  --backdrop-blur: blur(20px);
+  --bg-app: #F7F8FC;             /* Background #F7F8FC */
+  --bg-primary: #FFFFFF;         /* Cards #FFFFFF */
+  --bg-secondary: #F3F4F6;       /* Soft light grey hover */
+  --bg-tertiary: #ECECEC;        /* Border #ECECEC */
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #FAFAFC;
+  --bg-sidebar: rgba(11, 11, 11, 0.94); /* Floating Dark Glass */
+  --bg-glass: rgba(255, 255, 255, 0.85);
+  --backdrop-blur: blur(24px);
   
   /* Text */
-  --text-primary: #121214;       /* Deep charcoal */
-  --text-secondary: #495057;     /* Muted grey */
-  --text-tertiary: #868E96;      /* Light grey */
+  --text-primary: #111827;       /* Text Primary #111827 */
+  --text-secondary: #6B7280;     /* Text Secondary #6B7280 */
+  --text-tertiary: #9CA3AF;      /* Muted grey */
   --text-inverse: #FFFFFF;       /* White text */
   
-  /* UI States */
-  --color-success: #059669;
+  /* UI State Colors */
+  --color-success: #10B981;      /* Success #10B981 */
   --bg-success-light: #ECFDF5;
-  --color-warning: #D97706;
+  --color-warning: #F59E0B;      /* Warning #F59E0B */
   --bg-warning-light: #FFFBEB;
-  --color-error: #DC2626;
+  --color-danger: #EF4444;       /* Danger #EF4444 */
+  --color-error: #EF4444;
   --bg-error-light: #FEF2F2;
-  --color-info: #2563EB;
+  --color-info: #021C4F;
   --bg-info-light: #EFF6FF;
 
   /* Borders */
-  --border-subtle: 1px solid rgba(0, 0, 0, 0.04);
-  --border-medium: 1px solid rgba(0, 0, 0, 0.08);
-  --border-strong: 1px solid rgba(0, 0, 0, 0.12);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.4);
-  --glass-border-dark: 1px solid rgba(255, 255, 255, 0.1);
+  --border-color: #ECECEC;
+  --border-subtle: 1px solid #ECECEC;
+  --border-medium: 1px solid #E5E7EB;
+  --border-strong: 1px solid #D1D5DB;
+  --glass-border: 1px solid rgba(255, 255, 255, 0.6);
+  --glass-border-dark: 1px solid rgba(255, 255, 255, 0.08);
 
-  /* ─── Typography (Strict Geometric) ─── */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* ─── Typography ─── */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
 
   --text-xs: 0.75rem;     /* 12px */

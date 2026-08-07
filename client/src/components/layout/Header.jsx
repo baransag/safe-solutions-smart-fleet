@@ -93,43 +93,45 @@ export default function Header({ onMenuClick }) {
         <button className="header-icon-btn mobile-menu-btn" onClick={onMenuClick}>
           <Menu size={20} />
         </button>
-        <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
-          <Search size={16} color="var(--text-tertiary)" style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)' }} />
+        <div style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
+          <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)' }} />
           <input
             type="text"
-            placeholder="Search anything..."
+            placeholder="Search vehicles, employees, site logs... (⌘K)"
             style={{
               width: '100%',
-              padding: '12px 16px 12px 42px',
-              borderRadius: 'var(--radius-full)',
-              border: 'none',
-              background: 'var(--bg-primary)',
-              boxShadow: 'var(--shadow-sm)',
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-primary)',
-              outline: 'none'
+              padding: '11px 18px 11px 44px',
+              borderRadius: '9999px',
+              border: '1px solid #ECECEC',
+              background: '#FFFFFF',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
+              fontSize: '13px',
+              color: '#111827',
+              outline: 'none',
+              transition: 'all 0.2s ease'
             }}
           />
         </div>
       </div>
 
       <div className="header-right">
-        <button className="header-icon-btn">
+        <button className="header-icon-btn" title="Toggle Light/Dark Theme">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
         </button>
         
-        <button className="header-icon-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+        <button className="header-icon-btn" title="Fullscreen View">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2-2h3"></path></svg>
         </button>
 
         <div ref={dropdownRef} style={{ position: 'relative' }}>
           <button
             className="header-icon-btn"
             onClick={() => setShowNotifications(!showNotifications)}
+            title="Notifications"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="notification-badge" style={{ width: 14, height: 14, top: 4, right: 4, fontSize: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', background: 'var(--color-accent)' }}>
+              <span className="notification-badge" style={{ width: 16, height: 16, top: 2, right: 2, fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', background: '#C50337', boxShadow: '0 2px 8px rgba(197, 3, 55, 0.4)' }}>
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
