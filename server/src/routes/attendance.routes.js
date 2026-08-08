@@ -186,8 +186,7 @@ router.get('/today', authenticate, async (req, res, next) => {
     );
     res.json({ attendance: rows[0] || null });
   } catch (err) {
-    console.warn('Attendance today fetch notice:', err.message);
-    res.json({ attendance: null });
+    next(err);
   }
 });
 
@@ -203,8 +202,7 @@ router.get('/pending', authenticate, authorize('manager', 'controller'), async (
     `);
     res.json({ requests: rows });
   } catch (err) {
-    console.warn('Attendance pending fetch notice:', err.message);
-    res.json({ requests: [] });
+    next(err);
   }
 });
 
@@ -303,8 +301,7 @@ router.get('/history', authenticate, async (req, res, next) => {
     const { rows } = await query(sql, params);
     res.json({ records: rows });
   } catch (err) {
-    console.warn('Attendance history fetch notice:', err.message);
-    res.json({ records: [] });
+    next(err);
   }
 });
 

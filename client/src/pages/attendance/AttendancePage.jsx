@@ -60,13 +60,13 @@ export default function AttendancePage() {
   async function fetchData() {
     try {
       const [todayRes, histRes] = await Promise.all([
-        api.get('/attendance/today').catch(() => ({ attendance: null })),
-        api.get('/attendance/history').catch(() => ({ records: [] }))
+        api.get('/attendance/today'),
+        api.get('/attendance/history')
       ]);
-      setTodayAttendance(todayRes.attendance);
-      setHistory(histRes.records || []);
+      setTodayAttendance(todayRes?.attendance || null);
+      setHistory(histRes?.records || []);
     } catch (err) {
-      // Quiet background fetch fail
+      console.error('Fetch attendance error:', err);
     } finally {
       setLoading(false);
     }

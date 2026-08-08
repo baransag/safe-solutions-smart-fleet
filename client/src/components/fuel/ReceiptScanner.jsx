@@ -237,8 +237,8 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
 
     // 1. Station Name Detection
     let pumpName = '';
-    if (textUpper.includes('SHELL') || textUpper.includes('BFS PETROLEUM')) {
-      pumpName = 'Shell - BFS Petroleum';
+    if (textUpper.includes('SHELL') || textUpper.includes('BFS PETROLEUM') || textUpper.includes('RES PETROLEUM')) {
+      pumpName = 'Shell / BFS Petroleum';
     } else if (textUpper.includes('PSO') || textUpper.includes('PAKISTAN STATE OIL')) {
       pumpName = 'PSO Filling Station';
     } else if (textUpper.includes('TOTAL') || textUpper.includes('PARCO')) {
@@ -247,76 +247,85 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
       pumpName = 'Attock Petroleum Station';
     } else if (textUpper.includes('HASCOL')) {
       pumpName = 'Hascol Station';
-    } else {
-      for (let i = 0; i < Math.min(3, lines.length); i++) {
-        const line = lines[i];
-        if (line.length >= 3 && !line.match(/\d{4,}/)) {
-          pumpName = line;
-          break;
-        }
-      }
     }
 
-    // 2. Invoice / Receipt Number
+    // 2. Invoice / Receipt Number (e.g., Receipt No: 0000041)
     let invoiceNo = '';
-    const invMatch = text.match(/(?:RECEIPT\s*NO|RECEIPT|INVOICE\s*NO|INVOICE|INV|BILL\s*NO|SLIP\s*NO)[\s:#.#]*([A-Z0-9-]{3,15})/i);
+    const invMatch = text.match(/(?:RECEIPT\s*NO|RECEIPT\s*#|RECEIPT|INVOICE\s*NO|INVOICE\s*#|INVOICE|INV\s*#|SLIP\s*NO)[\s:#.#]*([A-Z0-9-]{3,15})/i);
     if (invMatch) {
       invoiceNo = invMatch[1];
     } else {
-      const numMatch = text.match(/\b(00\d{4,8}|\d{6,10})\b/);
+      const numMatch = text.match(/\b(00\d{4,8})\b/);
       if (numMatch) invoiceNo = numMatch[1];
     }
 
     // 3. Date & Time
     let dateStr = '';
     let timeStr = '';
-    const dateMatch = text.match(/(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4})/);
+    const dateMatch = text.match(/\b(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4})\b/);
     if (dateMatch) {
       dateStr = dateMatch[1];
-    } else {
-      const today = new Date();
-      dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
     }
 
-    const timeMatch = text.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?)/i);
-    if (timeMatch) timeStr = timeMatch[1];
+    const timeMatch = text.match(/\b(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?)\b/i);
+    if (timeMatch) timeStr = timeMatch[1].trim();
 
     // 4. Fuel Type
     let fuelType = 'Super Petrol';
-    if (textUpper.includes('HI SUPER') || textUpper.includes('SUPER')) fuelType = 'Super Petrol';
+    if (textUpper.includes('HI SUPER') || textUpper.includes('HI-SUPER')) fuelType = 'Super Petrol (HI SUPER)';
+    else if (textUpper.includes('SUPER')) fuelType = 'Super Petrol';
     else if (textUpper.includes('DIESEL') || textUpper.includes('HSD')) fuelType = 'High Speed Diesel';
     else if (textUpper.includes('HOBC') || textUpper.includes('HI-OCTANE')) fuelType = 'Hi-Octane / HOBC';
 
-    // 5. Volume/Litres, Rate & Total Amount Parsing
+    // 5. Volume/Litres, Rate & Total Amount Line-by-Line Parsing
     let liters = '';
     let rate = '';
     let totalAmount = '';
 
     for (const line of lines) {
       const lUpper = line.toUpperCase();
+      // Skip lines containing phone numbers, NTN/STN tax numbers, or zip codes
+      if (lUpper.includes('TEL') || lUpper.includes('PHONE') || lUpper.includes('NTN') || lUpper.includes('STN') || lUpper.includes('FAX')) {
+        continue;
+      }
+
       const numbers = line.match(/\d+(?:\.\d+)?/g);
       if (!numbers) continue;
 
-      if (lUpper.includes('VOLUME') || lUpper.includes('LITRE') || lUpper.includes('LITRES') || lUpper.includes('QTY') || lUpper.includes('VOL') || lUpper.endsWith('L')) {
+      // Volume / Litres
+      if (lUpper.includes('VOLUME') || lUpper.includes('LITRE') || lUpper.includes('LITRES') || lUpper.includes('VOL') || lUpper.endsWith('L')) {
         const val = numbers.find(n => n.includes('.')) || numbers[0];
-        if (val && parseFloat(val) < 200) liters = val;
+        const num = parseFloat(val);
+        if (!isNaN(num) && num > 0 && num < 200) {
+          liters = val;
+        }
       }
+
+      // Rate / Litre
       if (lUpper.includes('RATE') || lUpper.includes('PRICE') || lUpper.includes('RATE/L') || lUpper.includes('RS/L')) {
         const val = numbers.find(n => parseFloat(n) > 100) || numbers[0];
-        if (val) rate = val;
+        const num = parseFloat(val);
+        if (!isNaN(num) && num > 100 && num < 600) {
+          rate = val;
+        }
       }
+
+      // Total Amount
       if (lUpper.includes('AMOUNT') || lUpper.includes('TOTAL') || lUpper.includes('NET') || lUpper.includes('SUM')) {
-        const val = numbers.find(n => parseFloat(n) > 50) || numbers[numbers.length - 1];
-        if (val) totalAmount = val;
+        const val = numbers.find(n => parseFloat(n) > 100) || numbers[numbers.length - 1];
+        const num = parseFloat(val);
+        if (!isNaN(num) && num >= 100 && num <= 100000) {
+          totalAmount = val;
+        }
       }
     }
 
-    // Mathematical consistency check (Litres * Rate = Total Amount)
+    // Mathematical consistency check: Litres * Rate ≈ Total Amount
     const lNum = parseFloat(liters);
     const rNum = parseFloat(rate);
     const aNum = parseFloat(totalAmount);
 
-    if (!isNaN(lNum) && !isNaN(rNum) && (isNaN(aNum) || Math.abs(lNum * rNum - aNum) > 10)) {
+    if (!isNaN(lNum) && !isNaN(rNum) && isNaN(aNum)) {
       totalAmount = (lNum * rNum).toFixed(2);
     } else if (!isNaN(lNum) && !isNaN(aNum) && isNaN(rNum) && lNum > 0) {
       rate = (aNum / lNum).toFixed(2);
