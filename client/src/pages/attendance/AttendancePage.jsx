@@ -43,15 +43,6 @@ export default function AttendancePage() {
   const [filterType, setFilterType] = useState('all'); // 'all' | 'office' | 'site'
   const [attendanceSuccessModal, setAttendanceSuccessModal] = useState(null);
 
-  // Sample site projects for selection
-  const projectsList = [
-    'Industrial Zone Waterproofing Project',
-    'Client Plant #4 Site Application',
-    'Gulberg Commercial Complex',
-    'Multan Warehouse Insulation',
-    'Faisalabad Depot Refurbishment'
-  ];
-
   useEffect(() => {
     fetchData();
     getCurrentGps();
