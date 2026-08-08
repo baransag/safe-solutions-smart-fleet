@@ -15,7 +15,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const navItems = [
     { section: 'Overview' },
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/hero-management', icon: Megaphone, label: 'Hero Banners', superAdminOnly: true },
+    { to: '/hero-management', icon: Megaphone, label: 'Hero Banners', controllerOnly: true },
 
     { section: 'Fleet Management', adminOnly: false },
     { to: '/employees', icon: Users, label: 'Employee Registry', adminOnly: true },

@@ -231,68 +231,117 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
 
   // RegEx Pattern Parser for Fuel Receipts (PSO, Shell, Total, Attock, Hascol)
   function parseReceiptText(text) {
+    if (!text || typeof text !== 'string') text = '';
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     const textUpper = text.toUpperCase();
 
     // 1. Station Name Detection
-    let pumpName = 'Fuel Station';
-    if (textUpper.includes('PSO') || textUpper.includes('PAKISTAN STATE OIL')) pumpName = 'PSO Service Station';
-    else if (textUpper.includes('SHELL')) pumpName = 'Shell Select Station';
-    else if (textUpper.includes('TOTAL') || textUpper.includes('PARCO')) pumpName = 'Total PARCO Station';
-    else if (textUpper.includes('ATTOCK') || textUpper.includes('APL')) pumpName = 'Attock Petroleum Station';
-    else if (textUpper.includes('HASCOL')) pumpName = 'Hascol Station';
-    else if (lines.length > 0) pumpName = lines[0].substring(0, 40);
+    let pumpName = '';
+    if (textUpper.includes('SHELL') || textUpper.includes('BFS PETROLEUM')) {
+      pumpName = 'Shell - BFS Petroleum';
+    } else if (textUpper.includes('PSO') || textUpper.includes('PAKISTAN STATE OIL')) {
+      pumpName = 'PSO Filling Station';
+    } else if (textUpper.includes('TOTAL') || textUpper.includes('PARCO')) {
+      pumpName = 'Total PARCO Station';
+    } else if (textUpper.includes('ATTOCK') || textUpper.includes('APL')) {
+      pumpName = 'Attock Petroleum Station';
+    } else if (textUpper.includes('HASCOL')) {
+      pumpName = 'Hascol Station';
+    } else {
+      for (let i = 0; i < Math.min(3, lines.length); i++) {
+        const line = lines[i];
+        if (line.length >= 3 && !line.match(/\d{4,}/)) {
+          pumpName = line;
+          break;
+        }
+      }
+    }
 
     // 2. Invoice / Receipt Number
     let invoiceNo = '';
-    const invMatch = text.match(/(?:INV|INVOICE|BILL|RECEIPT|NO|SLIP)[\s:#.#]*([A-Z0-9-]{4,15})/i);
-    if (invMatch) invoiceNo = invMatch[1];
-    else invoiceNo = '';
+    const invMatch = text.match(/(?:RECEIPT\s*NO|RECEIPT|INVOICE\s*NO|INVOICE|INV|BILL\s*NO|SLIP\s*NO)[\s:#.#]*([A-Z0-9-]{3,15})/i);
+    if (invMatch) {
+      invoiceNo = invMatch[1];
+    } else {
+      const numMatch = text.match(/\b(00\d{4,8}|\d{6,10})\b/);
+      if (numMatch) invoiceNo = numMatch[1];
+    }
 
     // 3. Date & Time
-    let dateStr = new Date().toLocaleDateString('en-GB');
-    let timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const dateMatch = text.match(/(\d{2}[\/\.-]\d{2}[\/\.-]\d{2,4})/);
-    if (dateMatch) dateStr = dateMatch[1];
+    let dateStr = '';
+    let timeStr = '';
+    const dateMatch = text.match(/(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4})/);
+    if (dateMatch) {
+      dateStr = dateMatch[1];
+    } else {
+      const today = new Date();
+      dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
+    }
 
     const timeMatch = text.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?)/i);
     if (timeMatch) timeStr = timeMatch[1];
 
     // 4. Fuel Type
     let fuelType = 'Super Petrol';
-    if (textUpper.includes('DIESEL') || textUpper.includes('HSD')) fuelType = 'High Speed Diesel';
+    if (textUpper.includes('HI SUPER') || textUpper.includes('SUPER')) fuelType = 'Super Petrol';
+    else if (textUpper.includes('DIESEL') || textUpper.includes('HSD')) fuelType = 'High Speed Diesel';
     else if (textUpper.includes('HOBC') || textUpper.includes('HI-OCTANE')) fuelType = 'Hi-Octane / HOBC';
 
-    // 5. Amount & Litres & Rate
+    // 5. Volume/Litres, Rate & Total Amount Parsing
     let liters = '';
-    let rate = '300.00';
+    let rate = '';
     let totalAmount = '';
 
-    const litersMatch = text.match(/(?:LITERS|LITRES|VOL|QTY|LTS|L)[\s:#=]*([\d\.]+)/i);
-    if (litersMatch) liters = litersMatch[1];
+    for (const line of lines) {
+      const lUpper = line.toUpperCase();
+      const numbers = line.match(/\d+(?:\.\d+)?/g);
+      if (!numbers) continue;
 
-    const rateMatch = text.match(/(?:RATE|PRICE|PRIC\/L|RATE\/L)[\s:#=]*([\d\.]+)/i);
-    if (rateMatch) rate = rateMatch[1];
+      if (lUpper.includes('VOLUME') || lUpper.includes('LITRE') || lUpper.includes('LITRES') || lUpper.includes('QTY') || lUpper.includes('VOL') || lUpper.endsWith('L')) {
+        const val = numbers.find(n => n.includes('.')) || numbers[0];
+        if (val && parseFloat(val) < 200) liters = val;
+      }
+      if (lUpper.includes('RATE') || lUpper.includes('PRICE') || lUpper.includes('RATE/L') || lUpper.includes('RS/L')) {
+        const val = numbers.find(n => parseFloat(n) > 100) || numbers[0];
+        if (val) rate = val;
+      }
+      if (lUpper.includes('AMOUNT') || lUpper.includes('TOTAL') || lUpper.includes('NET') || lUpper.includes('SUM')) {
+        const val = numbers.find(n => parseFloat(n) > 50) || numbers[numbers.length - 1];
+        if (val) totalAmount = val;
+      }
+    }
 
-    const amountMatch = text.match(/(?:TOTAL|NET|AMOUNT|TOTAL RS|RS)[\s:#=]*([\d,]+(?:\.\d{2})?)/i);
-    if (amountMatch) totalAmount = amountMatch[1].replace(/,/g, '');
+    // Mathematical consistency check (Litres * Rate = Total Amount)
+    const lNum = parseFloat(liters);
+    const rNum = parseFloat(rate);
+    const aNum = parseFloat(totalAmount);
+
+    if (!isNaN(lNum) && !isNaN(rNum) && (isNaN(aNum) || Math.abs(lNum * rNum - aNum) > 10)) {
+      totalAmount = (lNum * rNum).toFixed(2);
+    } else if (!isNaN(lNum) && !isNaN(aNum) && isNaN(rNum) && lNum > 0) {
+      rate = (aNum / lNum).toFixed(2);
+    } else if (!isNaN(rNum) && !isNaN(aNum) && isNaN(lNum) && rNum > 0) {
+      liters = (aNum / rNum).toFixed(2);
+    }
 
     const lowConfidenceFields = [];
     if (!liters) lowConfidenceFields.push('liters');
+    if (!rate) lowConfidenceFields.push('rate');
     if (!totalAmount) lowConfidenceFields.push('fuel_amount');
-    if (!pumpName || pumpName === 'Fuel Station') lowConfidenceFields.push('pump_name');
+    if (!invoiceNo) lowConfidenceFields.push('invoice_no');
+    if (!pumpName) lowConfidenceFields.push('pump_name');
 
     return {
       fields: {
-        pump_name: pumpName,
-        invoice_no: invoiceNo,
-        date: dateStr,
-        time: timeStr,
-        fuel_type: fuelType,
-        liters: liters || '10.0',
-        rate: rate || '300.00',
-        fuel_amount: totalAmount || String(parseFloat(liters || 10) * parseFloat(rate || 300)),
-        vehicle: assignedVehicleName || 'Assigned Company Bike'
+        pump_name: pumpName || '',
+        invoice_no: invoiceNo || '',
+        date: dateStr || '',
+        time: timeStr || '',
+        fuel_type: fuelType || 'Super Petrol',
+        liters: liters || '',
+        rate: rate || '',
+        fuel_amount: totalAmount || '',
+        vehicle: assignedVehicleName || 'Assigned Company Vehicle'
       },
       lowConfidenceFields
     };
@@ -369,52 +418,108 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
         </div>
       )}
 
-      {/* STEP 4: DISPLAY SCANNED RECEIPT IMAGE (CAMSCANNER STYLE) */}
+      {/* STEP 4: DISPLAY BOTH ORIGINAL & PROCESSED RECEIPT IMAGES (CAMSCANNER DUAL VIEW) */}
       {processedImagePreview && !isProcessing && (
         <div className="animate-fade-in-up" style={{ border: '2px solid #021C4F', borderRadius: 16, background: '#fff', overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.08)' }}>
           {/* Header Banner */}
           <div style={{ background: '#021C4F', color: '#fff', padding: '12px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: 14 }}>
-              <Sparkles size={18} color="#E5A93D" /> PROCESSED RECEIPT (CamScanner Document Enhanced)
+              <Sparkles size={18} color="#E5A93D" /> CAMSCANNER DUAL RECEIPT PREVIEW & OCR
             </div>
             <button type="button" onClick={resetScanner} className="btn btn-ghost btn-sm" style={{ color: '#fff', padding: 4 }}>
               <RefreshCw size={14} /> Retake Photo
             </button>
           </div>
 
-          {/* Processed Receipt Image Frame */}
-          <div style={{ background: '#0f172a', padding: 20, textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>
-            <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
+          {/* DUAL IMAGE GRID: ORIGINAL VS SCANNED */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#0f172a', padding: 16, borderBottom: '1px solid #e2e8f0' }}>
+            {/* 1. ORIGINAL RECEIPT */}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                📷 ORIGINAL RECEIPT
+              </div>
+              {rawImagePreview && (
+                <img
+                  src={rawImagePreview}
+                  alt="Original Camera Photo"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: 280,
+                    borderRadius: 8,
+                    border: '2px solid #334155',
+                    objectFit: 'contain'
+                  }}
+                />
+              )}
+            </div>
+
+            {/* 2. SCANNED RECEIPT */}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#10B981', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                ✨ SCANNED RECEIPT (CAMSCANNER ENHANCED)
+              </div>
               <img
                 src={processedImagePreview}
                 alt="Scanned Fuel Receipt"
                 style={{
                   maxWidth: '100%',
-                  maxHeight: 360,
-                  borderRadius: 10,
-                  border: '3px solid #fff',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                  maxHeight: 280,
+                  borderRadius: 8,
+                  border: '2px solid #10B981',
+                  boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)',
                   objectFit: 'contain'
                 }}
               />
-              <span style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.75)', color: '#10B981', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>
-                ✓ CamScanner Enhanced
-              </span>
             </div>
           </div>
 
           {/* Extracted Structured Field Banner */}
           {extractedData && (
             <div style={{ padding: 16, background: '#f8fafc' }}>
-              {lowConfidenceFields.length > 0 && (
+              {lowConfidenceFields.length > 0 ? (
                 <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B', color: '#92400E', padding: 10, borderRadius: 8, fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <AlertTriangle size={16} /> Notice: Low confidence in highlighted fields below. Please review and correct if needed.
+                  <AlertTriangle size={16} /> Notice: Low OCR confidence in highlighted fields below. Please verify and correct before submitting.
+                </div>
+              ) : (
+                <div style={{ background: '#ECFDF5', border: '1px solid #10B981', color: '#065F46', padding: 10, borderRadius: 8, fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <CheckCircle2 size={16} /> OCR Success: All structured fields verified & mathematically consistent.
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: '#021C4F' }}>🤖 Extracted Receipt Information:</span>
-                <span style={{ fontSize: 11, color: '#10B981', fontWeight: 800 }}>✓ Form Fields Populated Below</span>
+              {/* OCR DETAILS SUMMARY MATRIX */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, background: '#fff', padding: 12, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                <div>
+                  <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>Station:</span>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#021C4F' }}>{extractedData.pump_name || 'Blank (Manual Input)'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>Invoice / Receipt #:</span>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#021C4F' }}>{extractedData.invoice_no || 'Blank'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>Date:</span>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#021C4F' }}>{extractedData.date || 'Today'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>Time:</span>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#021C4F' }}>{extractedData.time || 'Current'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>Fuel Type:</span>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#021C4F' }}>{extractedData.fuel_type}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>Volume (Litres):</span>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#10B981' }}>{extractedData.liters ? `${extractedData.liters} L` : 'Blank'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>Rate / Litre:</span>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#021C4F' }}>{extractedData.rate ? `Rs ${extractedData.rate}` : 'Blank'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>Total Amount:</span>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: '#C50337' }}>{extractedData.fuel_amount ? `Rs ${extractedData.fuel_amount}` : 'Blank'}</div>
+                </div>
               </div>
             </div>
           )}

@@ -41,8 +41,8 @@ function ProtectedRoute({ children }) {
 }
 
 function AdminRoute({ children }) {
-  const { isAdmin } = useAuth();
-  if (!isAdmin) return <Navigate to="/dashboard" replace />;
+  const { isAdmin, isController, isManager } = useAuth();
+  if (!isAdmin && !isController && !isManager) return <Navigate to="/dashboard" replace />;
   return children;
 }
 

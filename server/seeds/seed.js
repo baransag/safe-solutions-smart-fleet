@@ -217,7 +217,7 @@ async function seed() {
 
     const controllerEmp = insertedEmployees.find(e => e.role === 'controller') || insertedEmployees[0];
 
-    // Seed Employee QR Codes (Office & Site QR Codes)
+    // Seed Employee QR Codes (Only ONE permanent Head Office QR)
     console.log('  📌 Seeding Employee Attendance QR Codes...');
     const sampleQRs = [
       {
@@ -230,42 +230,6 @@ async function seed() {
         lat: 31.4504,
         lng: 73.1350,
         radius: 200,
-        status: 'active'
-      },
-      {
-        qr_id: 'QR-OFFICE-002',
-        qr_token: 'OFFICE_TOK_BRANCH_4481239811',
-        name: 'Lahore Branch Office',
-        type: 'office',
-        project_name: 'Gulberg Tech Center',
-        category: 'Branch Office',
-        lat: 31.5204,
-        lng: 74.3587,
-        radius: 250,
-        status: 'active'
-      },
-      {
-        qr_id: 'QR-SITE-101',
-        qr_token: 'SITE_TOK_PLANT4_7718239012',
-        name: 'Client Plant #4 Site',
-        type: 'site',
-        project_name: 'Industrial Zone Waterproofing Project',
-        category: 'Construction Site',
-        lat: 31.4200,
-        lng: 73.0800,
-        radius: 300,
-        status: 'active'
-      },
-      {
-        qr_id: 'QR-SITE-102',
-        qr_token: 'SITE_TOK_DEPOT_5561230912',
-        name: 'Multan Expansion Site',
-        type: 'site',
-        project_name: 'Warehouse Insulation & Application',
-        category: 'Temporary Project Site',
-        lat: 30.1575,
-        lng: 71.5249,
-        radius: 350,
         status: 'active'
       }
     ];

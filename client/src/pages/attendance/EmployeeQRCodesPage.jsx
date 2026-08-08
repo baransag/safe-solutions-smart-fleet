@@ -242,7 +242,7 @@ export default function EmployeeQRCodesPage() {
             </div>
 
             {/* Actions Toolbar */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6, borderTop: '1px solid #eee', paddingTop: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: qr.qr_id === 'QR-OFFICE-001' ? '1fr 1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 6, borderTop: '1px solid #eee', paddingTop: 12 }}>
               <button className="btn btn-secondary btn-sm" onClick={() => downloadPNG(qr)} title="Download PNG">
                 <Download size={14} /> PNG
               </button>
@@ -252,10 +252,18 @@ export default function EmployeeQRCodesPage() {
               <button className="btn btn-secondary btn-sm" onClick={() => printQR(qr)} title="Print QR Code">
                 <Printer size={14} /> Print
               </button>
-              <button className="btn btn-danger btn-sm" onClick={() => handleDelete(qr.id, qr.name)} title="Delete QR Code">
-                <Trash2 size={14} />
-              </button>
+              {qr.qr_id !== 'QR-OFFICE-001' && (
+                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(qr.id, qr.name)} title="Delete QR Code">
+                  <Trash2 size={14} />
+                </button>
+              )}
             </div>
+
+            {qr.qr_id === 'QR-OFFICE-001' && (
+              <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(2, 28, 79, 0.05)', borderRadius: 8, border: '1px solid rgba(2, 28, 79, 0.15)', fontSize: 11, color: '#021C4F', fontWeight: 700, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                🔒 Permanent Office QR — Assigned to SAFE SOLUTIONS Head Office Faisalabad
+              </div>
+            )}
           </div>
         ))}
       </div>

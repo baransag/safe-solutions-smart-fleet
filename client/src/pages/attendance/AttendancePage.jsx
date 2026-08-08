@@ -41,6 +41,7 @@ export default function AttendancePage() {
 
   // Filters for History table
   const [filterType, setFilterType] = useState('all'); // 'all' | 'office' | 'site'
+  const [attendanceSuccessModal, setAttendanceSuccessModal] = useState(null);
 
   // Sample site projects for selection
   const projectsList = [
@@ -149,7 +150,23 @@ export default function AttendancePage() {
       };
 
       const res = await api.post(endpoint, payload);
-      toast.success(activeAttendanceType === 'office' ? 'Attendance Successfully Marked' : 'Site Attendance submitted! Pending Manager Approval.');
+      const record = res.attendance;
+
+      if (activeAttendanceType === 'office') {
+        const timeStr = new Date(record?.check_in_time || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        const dateStr = new Date(record?.check_in_time || Date.now()).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        
+        setAttendanceSuccessModal({
+          title: 'Office Attendance Marked Successfully',
+          date: dateStr,
+          time: timeStr,
+          office: record?.project_name || qrVerification.name || 'Head Office Faisalabad',
+          gps_status: record?.gps_status || qrVerification.gps_status || 'Inside Office'
+        });
+        toast.success(`Office Attendance Marked Successfully at ${timeStr}`);
+      } else {
+        toast.success('Site Attendance submitted! Pending Manager Approval.');
+      }
       
       // Trigger global real-time synchronization across Dashboard & Header
       window.dispatchEvent(new CustomEvent('app:data-sync'));
@@ -668,6 +685,65 @@ export default function AttendancePage() {
         onScanSuccess={handleScanSuccess}
         title={`Scan ${activeAttendanceType === 'office' ? 'Office' : 'Site'} Attendance QR Code`}
       />
+      {/* Office Attendance Success Confirmation Modal */}
+      {attendanceSuccessModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(2, 28, 79, 0.75)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: 20
+        }}>
+          <div className="card-glass animate-scale-up" style={{
+            maxWidth: 440, width: '100%', background: '#fff', borderRadius: 24,
+            padding: 32, textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
+          }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)',
+              color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px'
+            }}>
+              <CheckCircle2 size={40} />
+            </div>
+
+            <h3 style={{ fontSize: 20, fontWeight: 900, color: '#021C4F', margin: '0 0 8px' }}>
+              {attendanceSuccessModal.title}
+            </h3>
+            <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 24px' }}>
+              Your check-in record has been saved and verified in the database.
+            </p>
+
+            <div style={{
+              background: '#f8fafc', borderRadius: 16, padding: 16, textAlign: 'left',
+              display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24, border: '1px solid #e2e8f0'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>Date:</span>
+                <strong style={{ color: '#021C4F' }}>{attendanceSuccessModal.date}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>Check-In Time:</span>
+                <strong style={{ color: '#10B981' }}>{attendanceSuccessModal.time}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>Office Location:</span>
+                <strong style={{ color: '#021C4F' }}>{attendanceSuccessModal.office}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>GPS Verification:</span>
+                <span className="status-badge badge-green">📍 {attendanceSuccessModal.gps_status}</span>
+              </div>
+            </div>
+
+            <button
+              className="btn btn-primary btn-lg"
+              onClick={() => setAttendanceSuccessModal(null)}
+              style={{ width: '100%', background: '#021C4F', borderRadius: 14, fontWeight: 700 }}
+            >
+              Done & Continue
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

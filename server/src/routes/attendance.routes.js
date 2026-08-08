@@ -30,13 +30,14 @@ router.post('/office', authenticate, async (req, res, next) => {
 
     // Check existing check-in today
     const { rows: existing } = await query(
-      `SELECT id FROM attendance_records
+      `SELECT id, check_in_time FROM attendance_records
        WHERE employee_id = $1 AND check_in_time::date = $2`,
       [userId, today]
     );
 
     if (existing.length > 0) {
-      return res.status(400).json({ error: 'Attendance already submitted for today.' });
+      const timeStr = new Date(existing[0].check_in_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return res.status(400).json({ error: `Attendance Already Recorded. Today's office attendance was already marked at ${timeStr}.` });
     }
 
     // Parse scanned QR token
@@ -230,8 +231,7 @@ router.patch('/:id/approve', authenticate, authorize('manager', 'controller'), a
 
     res.json({ attendance: rows[0] });
   } catch (err) {
-    console.warn('Attendance approve notice:', err.message);
-    res.json({ attendance: { id: req.params.id, approval_status: 'approved' } });
+    next(err);
   }
 });
 
@@ -248,7 +248,7 @@ router.patch('/:id/reject', authenticate, authorize('manager', 'controller'), as
       RETURNING *
     `, [req.user.id, notes || 'Rejected by Controller', id]);
 
-    if (rows.length === 0) return res.json({ attendance: { id, approval_status: 'rejected' } });
+    if (rows.length === 0) return res.status(404).json({ error: 'Attendance record not found.' });
 
     await query(`
       INSERT INTO notifications (user_id, title, message, type, link)
@@ -257,8 +257,7 @@ router.patch('/:id/reject', authenticate, authorize('manager', 'controller'), as
 
     res.json({ attendance: rows[0] });
   } catch (err) {
-    console.warn('Attendance reject notice:', err.message);
-    res.json({ attendance: { id: req.params.id, approval_status: 'rejected' } });
+    next(err);
   }
 });
 
