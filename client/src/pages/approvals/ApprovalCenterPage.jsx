@@ -19,11 +19,19 @@ export default function ApprovalCenterPage() {
 
   useEffect(() => {
     fetchPendingRequests();
+    const interval = setInterval(fetchPendingRequests, 8000);
+
+    const handleSync = () => fetchPendingRequests();
+    window.addEventListener('app:data-sync', handleSync);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('app:data-sync', handleSync);
+    };
   }, []);
 
   async function fetchPendingRequests() {
     try {
-      setLoading(true);
       const [attRes, fuelRes] = await Promise.all([
         api.get('/attendance/pending').catch(() => ({ requests: [] })),
         api.get('/fuel?status=pending').catch(() => ({ fuelLogs: [] }))
@@ -31,31 +39,33 @@ export default function ApprovalCenterPage() {
       setPendingRequests(attRes.requests || []);
       setPendingFuel(fuelRes.fuelLogs || []);
     } catch (err) {
-      toast.error('Failed to load pending requests.');
+      // Quiet background fetch fail
     } finally {
       setLoading(false);
     }
   }
 
   const handleApprove = async (id) => {
-    const noteText = remarks[id] || 'Approved by Controller';
+    const noteText = remarks[id] || 'Approved by Manager / Controller';
     try {
       await api.patch(`/attendance/${id}/approve`, { notes: noteText });
       toast.success(`Attendance request approved!`);
       setPendingRequests(prev => prev.filter(r => r.id !== id));
+      window.dispatchEvent(new CustomEvent('app:data-sync'));
     } catch (err) {
-      toast.error('Failed to approve attendance.');
+      toast.error(err.message || 'Failed to approve attendance.');
     }
   };
 
   const handleReject = async (id) => {
-    const noteText = remarks[id] || 'Rejected by Controller';
+    const noteText = remarks[id] || 'Rejected by Manager / Controller';
     try {
       await api.patch(`/attendance/${id}/reject`, { notes: noteText });
       toast.error(`Attendance request rejected!`);
       setPendingRequests(prev => prev.filter(r => r.id !== id));
+      window.dispatchEvent(new CustomEvent('app:data-sync'));
     } catch (err) {
-      toast.error('Failed to reject attendance.');
+      toast.error(err.message || 'Failed to reject attendance.');
     }
   };
 

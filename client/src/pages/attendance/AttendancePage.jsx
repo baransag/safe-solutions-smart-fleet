@@ -54,11 +54,19 @@ export default function AttendancePage() {
   useEffect(() => {
     fetchData();
     getCurrentGps();
+
+    const interval = setInterval(fetchData, 8000);
+    const handleSync = () => fetchData();
+    window.addEventListener('app:data-sync', handleSync);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('app:data-sync', handleSync);
+    };
   }, []);
 
   async function fetchData() {
     try {
-      setLoading(true);
       const [todayRes, histRes] = await Promise.all([
         api.get('/attendance/today').catch(() => ({ attendance: null })),
         api.get('/attendance/history').catch(() => ({ records: [] }))
@@ -66,7 +74,7 @@ export default function AttendancePage() {
       setTodayAttendance(todayRes.attendance);
       setHistory(histRes.records || []);
     } catch (err) {
-      toast.error('Failed to load attendance data.');
+      // Quiet background fetch fail
     } finally {
       setLoading(false);
     }
@@ -79,7 +87,6 @@ export default function AttendancePage() {
           setUserGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         },
         () => {
-          // Fallback to default Faisalabad GPS for development
           setUserGps({ lat: 31.4504, lng: 73.1350 });
         },
         { enableHighAccuracy: true, timeout: 10000 }
@@ -143,6 +150,10 @@ export default function AttendancePage() {
 
       const res = await api.post(endpoint, payload);
       toast.success(activeAttendanceType === 'office' ? 'Attendance Successfully Marked' : 'Site Attendance submitted! Pending Manager Approval.');
+      
+      // Trigger global real-time synchronization across Dashboard & Header
+      window.dispatchEvent(new CustomEvent('app:data-sync'));
+
       setScannedData(null);
       setQrVerification(null);
       fetchData();
@@ -182,6 +193,10 @@ export default function AttendancePage() {
 
       await api.post('/attendance/site', formData);
       toast.success('Site Attendance submitted successfully! Pending approval.');
+      
+      // Trigger global real-time synchronization across Dashboard & Header
+      window.dispatchEvent(new CustomEvent('app:data-sync'));
+
       setSelfieBlob(null);
       setSelfiePreview(null);
       setSitePhotoBlob(null);

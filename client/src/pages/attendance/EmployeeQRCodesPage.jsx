@@ -33,7 +33,9 @@ export default function EmployeeQRCodesPage() {
     try {
       setLoading(true);
       const res = await api.get('/employee-qr-codes');
-      setQrCodes(res.qrCodes || []);
+      // Show ONLY Office QR codes in Office QR Code Management view
+      const officeQrs = (res.qrCodes || []).filter(qr => qr.type === 'office');
+      setQrCodes(officeQrs);
     } catch (err) {
       toast.error('Failed to load QR codes.');
     } finally {

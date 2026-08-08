@@ -55,7 +55,7 @@ router.get('/employee', authenticate, async (req, res, next) => {
 });
 
 // GET /api/dashboard/manager
-router.get('/manager', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.get('/manager', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
@@ -63,7 +63,7 @@ router.get('/manager', authenticate, authorize('manager', 'controller'), async (
 
     const [
       vehicleStats, todayCheckins, pendingFuel, weeklyKm, monthlyKm,
-      alerts, recentCheckouts, attendanceStats
+      alerts, recentCheckouts, attendanceStats, activeEmployeesCount, vehiclesList
     ] = await Promise.all([
       query(`SELECT
               COUNT(*) as total_vehicles,
@@ -99,42 +99,55 @@ router.get('/manager', authenticate, authorize('manager', 'controller'), async (
              ORDER BY vo.checkout_time DESC LIMIT 20`, [today]),
 
       query(`SELECT
-              COUNT(DISTINCT employee_id) as total_attendance,
+              COUNT(*) as total_attendance,
               COUNT(CASE WHEN attendance_type = 'office' THEN 1 END) as office_present,
               COUNT(CASE WHEN attendance_type = 'site' THEN 1 END) as site_present,
               COUNT(CASE WHEN approval_status = 'pending' THEN 1 END) as pending_approval,
+              COUNT(CASE WHEN approval_status = 'approved' THEN 1 END) as approved_count,
+              COUNT(CASE WHEN approval_status = 'rejected' THEN 1 END) as rejected_count,
               COUNT(CASE WHEN is_late = true THEN 1 END) as late_employees
              FROM attendance_records
-             WHERE check_in_time::date = $1`, [today])
+             WHERE check_in_time::date = $1`, [today]),
+
+      query(`SELECT COUNT(*) as count FROM employees WHERE is_active = true`),
+
+      query(`SELECT v.*, e.name as assigned_employee_name, e.employee_id as emp_id
+             FROM vehicles v
+             LEFT JOIN vehicle_assignments va ON va.vehicle_id = v.id AND va.is_current = true
+             LEFT JOIN employees e ON e.id = va.employee_id
+             WHERE v.is_active = true
+             ORDER BY v.id ASC`)
     ]);
 
+    const attRow = attendanceStats?.rows?.[0] || {};
+
     res.json({
-      vehicles: vehicleStats?.rows?.[0] || { total_vehicles: 11, active_vehicles: 11, maintenance_vehicles: 0 },
-      today: todayCheckins?.rows?.[0] || { checked_in: 8, checked_out: 6, total_assigned: 11 },
+      vehicles: vehicleStats?.rows?.[0] || { total_vehicles: 0, active_vehicles: 0, maintenance_vehicles: 0 },
+      today: todayCheckins?.rows?.[0] || { checked_in: 0, checked_out: 0, total_assigned: 0 },
       pendingFuel: parseInt(pendingFuel?.rows?.[0]?.pending || 0),
-      weeklyKm: weeklyKm?.rows?.[0] || { total_km: 1450, avg_km: 45 },
-      monthlyKm: monthlyKm?.rows?.[0] || { total_km: 5800 },
+      weeklyKm: weeklyKm?.rows?.[0] || { total_km: 0, avg_km: 0 },
+      monthlyKm: monthlyKm?.rows?.[0] || { total_km: 0 },
       alerts: alerts?.rows || [],
       recentCheckouts: recentCheckouts?.rows || [],
-      employeeAttendance: attendanceStats?.rows?.[0] || { total_attendance: 10, office_present: 6, site_present: 4, pending_approval: 1, late_employees: 0 }
+      activeEmployees: parseInt(activeEmployeesCount?.rows?.[0]?.count || 0),
+      vehiclesList: vehiclesList?.rows || [],
+      employeeAttendance: {
+        total_attendance: parseInt(attRow.total_attendance || 0),
+        office_present: parseInt(attRow.office_present || 0),
+        site_present: parseInt(attRow.site_present || 0),
+        pending_approval: parseInt(attRow.pending_approval || 0),
+        approved_count: parseInt(attRow.approved_count || 0),
+        rejected_count: parseInt(attRow.rejected_count || 0),
+        late_employees: parseInt(attRow.late_employees || 0)
+      }
     });
   } catch (err) {
-    console.warn('Dashboard manager fetch notice:', err.message);
-    res.json({
-      vehicles: { total_vehicles: 11, active_vehicles: 11, maintenance_vehicles: 0 },
-      today: { checked_in: 8, checked_out: 6, total_assigned: 11 },
-      pendingFuel: 0,
-      weeklyKm: { total_km: 1450, avg_km: 45 },
-      monthlyKm: { total_km: 5800 },
-      alerts: [],
-      recentCheckouts: [],
-      employeeAttendance: { total_attendance: 10, office_present: 6, site_present: 4, pending_approval: 1, late_employees: 0 }
-    });
+    next(err);
   }
 });
 
 // GET /api/dashboard/controller
-router.get('/controller', authenticate, authorize('controller'), async (req, res, next) => {
+router.get('/controller', authenticate, authorize('controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
@@ -142,7 +155,8 @@ router.get('/controller', authenticate, authorize('controller'), async (req, res
 
     const [
       todayKm, weeklyKm, monthlyKm, fuelCost, vehicleHealth,
-      serviceDue, pendingVehicles, alerts, attendanceStats
+      serviceDue, pendingVehicles, alerts, attendanceStats,
+      activeEmployeesCount, pendingFuel, vehiclesList
     ] = await Promise.all([
       query(`SELECT COALESCE(SUM(distance_km), 0) as total FROM vehicle_checkouts WHERE checkout_time::date = $1`, [today]),
       query(`SELECT COALESCE(SUM(distance_km), 0) as total FROM vehicle_checkouts WHERE checkout_time::date >= $1`, [weekAgo]),
@@ -162,39 +176,51 @@ router.get('/controller', authenticate, authorize('controller'), async (req, res
              WHERE va.is_current = true AND vc.id IS NULL`, [today]),
       query(`SELECT COUNT(*) as count FROM vehicle_alerts WHERE is_resolved = false`),
       query(`SELECT
-              COUNT(DISTINCT employee_id) as total_attendance,
+              COUNT(*) as total_attendance,
               COUNT(CASE WHEN attendance_type = 'office' THEN 1 END) as office_present,
               COUNT(CASE WHEN attendance_type = 'site' THEN 1 END) as site_present,
               COUNT(CASE WHEN approval_status = 'pending' THEN 1 END) as pending_approval,
+              COUNT(CASE WHEN approval_status = 'approved' THEN 1 END) as approved_count,
+              COUNT(CASE WHEN approval_status = 'rejected' THEN 1 END) as rejected_count,
               COUNT(CASE WHEN is_late = true THEN 1 END) as late_employees
              FROM attendance_records
-             WHERE check_in_time::date = $1`, [today])
+             WHERE check_in_time::date = $1`, [today]),
+      query(`SELECT COUNT(*) as count FROM employees WHERE is_active = true`),
+      query(`SELECT COUNT(*) as pending FROM fuel_logs WHERE approval_status = 'pending'`),
+      query(`SELECT v.*, e.name as assigned_employee_name, e.employee_id as emp_id
+             FROM vehicles v
+             LEFT JOIN vehicle_assignments va ON va.vehicle_id = v.id AND va.is_current = true
+             LEFT JOIN employees e ON e.id = va.employee_id
+             WHERE v.is_active = true
+             ORDER BY v.id ASC`)
     ]);
+
+    const attRow = attendanceStats?.rows?.[0] || {};
 
     res.json({
       todayKm: parseFloat(todayKm?.rows?.[0]?.total || 0),
       weeklyKm: parseFloat(weeklyKm?.rows?.[0]?.total || 0),
       monthlyKm: parseFloat(monthlyKm?.rows?.[0]?.total || 0),
       fuelCost: fuelCost?.rows?.[0] || { total_cost: 0, total_liters: 0 },
-      vehicleHealth: vehicleHealth?.rows || [{ status: 'active', count: 11 }],
+      vehicleHealth: vehicleHealth?.rows || [],
       serviceDue: serviceDue?.rows || [],
       pendingVehicles: parseInt(pendingVehicles?.rows?.[0]?.count || 0),
       unresolvedAlerts: parseInt(alerts?.rows?.[0]?.count || 0),
-      employeeAttendance: attendanceStats?.rows?.[0] || { total_attendance: 10, office_present: 6, site_present: 4, pending_approval: 1, late_employees: 0 }
+      activeEmployees: parseInt(activeEmployeesCount?.rows?.[0]?.count || 0),
+      pendingFuel: parseInt(pendingFuel?.rows?.[0]?.pending || 0),
+      vehiclesList: vehiclesList?.rows || [],
+      employeeAttendance: {
+        total_attendance: parseInt(attRow.total_attendance || 0),
+        office_present: parseInt(attRow.office_present || 0),
+        site_present: parseInt(attRow.site_present || 0),
+        pending_approval: parseInt(attRow.pending_approval || 0),
+        approved_count: parseInt(attRow.approved_count || 0),
+        rejected_count: parseInt(attRow.rejected_count || 0),
+        late_employees: parseInt(attRow.late_employees || 0)
+      }
     });
   } catch (err) {
-    console.warn('Dashboard controller fetch notice:', err.message);
-    res.json({
-      todayKm: 280.5,
-      weeklyKm: 1450.0,
-      monthlyKm: 5800.0,
-      fuelCost: { total_cost: 45000, total_liters: 165 },
-      vehicleHealth: [{ status: 'active', count: 11 }],
-      serviceDue: [],
-      pendingVehicles: 0,
-      unresolvedAlerts: 0,
-      employeeAttendance: { total_attendance: 10, office_present: 6, site_present: 4, pending_approval: 1, late_employees: 0 }
-    });
+    next(err);
   }
 });
 

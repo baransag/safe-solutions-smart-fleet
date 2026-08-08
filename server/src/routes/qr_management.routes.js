@@ -192,16 +192,16 @@ router.post('/verify', authenticate, async (req, res, next) => {
     const qr = rows[0];
 
     if (qr.status !== 'active') {
-      return res.status(400).json({ valid: false, error: \`QR Code "\${qr.name}" is currently INACTIVE.\` });
+      return res.status(400).json({ valid: false, error: `QR Code "${qr.name}" is currently INACTIVE.` });
     }
 
     if (qr.type === 'site') {
       if (qr.is_used) {
-        return res.status(400).json({ valid: false, error: \`Site QR "\${qr.name}" has already been USED and is expired.\` });
+        return res.status(400).json({ valid: false, error: `Site QR "${qr.name}" has already been USED and is expired.` });
       }
       if (qr.expires_at && new Date(qr.expires_at) < new Date()) {
         await query('UPDATE employee_qr_codes SET status = $1 WHERE id = $2', ['inactive', qr.id]);
-        return res.status(400).json({ valid: false, error: \`Site QR "\${qr.name}" has EXPIRED.\` });
+        return res.status(400).json({ valid: false, error: `Site QR "${qr.name}" has EXPIRED.` });
       }
       if (qr.otp && parsedOtp !== qr.otp) {
         return res.status(400).json({ valid: false, error: 'OTP Verification Failed for Site QR.' });

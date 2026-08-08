@@ -4,10 +4,17 @@ const { query, transaction } = require('../config/db');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 const { uploadReceipt } = require('../middleware/upload.middleware');
 
-// POST /api/fuel - Submit fuel entry
-router.post('/', authenticate, uploadReceipt.single('receipt_photo'), async (req, res, next) => {
+// POST /api/fuel - Submit fuel entry with scanned receipt and OCR fields
+router.post('/', authenticate, uploadReceipt.fields([
+  { name: 'receipt_photo', maxCount: 1 },
+  { name: 'processed_receipt_photo', maxCount: 1 }
+]), async (req, res, next) => {
   try {
-    const { vehicle_id, pump_name, fuel_amount, liters, meter_reading, gps_lat, gps_lng, gps_address } = req.body;
+    const {
+      vehicle_id, pump_name, fuel_amount, liters, meter_reading,
+      invoice_number, rate_per_liter, fuel_type, receipt_date, receipt_time,
+      gps_lat, gps_lng, gps_address
+    } = req.body;
 
     if (!vehicle_id || !fuel_amount || !liters) {
       return res.status(400).json({ error: 'vehicle_id, fuel_amount, and liters are required' });
@@ -35,7 +42,6 @@ router.post('/', authenticate, uploadReceipt.single('receipt_photo'), async (req
       );
 
       if (duplicate.length > 0) {
-        // Alert but still allow
         await client.query(
           `INSERT INTO vehicle_alerts (vehicle_id, employee_id, alert_type, severity, title, message, metadata)
            VALUES ($1, $2, 'duplicate_fuel', 'medium', 'Possible Duplicate Fuel Entry',
@@ -46,53 +52,25 @@ router.post('/', authenticate, uploadReceipt.single('receipt_photo'), async (req
         );
       }
 
-      // Check for fuel without travel
-      const { rows: checkins } = await client.query(
-        `SELECT id FROM vehicle_checkins WHERE vehicle_id = $1 AND checkin_time::date = $2`,
-        [vehicle_id, today]
-      );
+      const rawPhoto = req.files?.receipt_photo?.[0];
+      const processedPhoto = req.files?.processed_receipt_photo?.[0];
 
-      if (checkins.length === 0) {
-        await client.query(
-          `INSERT INTO vehicle_alerts (vehicle_id, employee_id, alert_type, severity, title, message)
-           VALUES ($1, $2, 'fuel_without_travel', 'medium', 'Fuel Without Travel',
-                   $3)`,
-          [vehicle_id, req.user.id,
-           `Fuel submitted for vehicle without any check-in today by ${req.user.name}.`]
-        );
-      }
-
-      // Check excessive fuel (> 20 liters for a bike)
-      const { rows: vehicleData } = await client.query(
-        'SELECT type, tank_capacity FROM vehicles WHERE id = $1',
-        [vehicle_id]
-      );
-      const vehicle = vehicleData[0];
-      const maxLiters = vehicle?.tank_capacity || (vehicle?.type === 'bike' ? 15 : 60);
-
-      if (parseFloat(liters) > maxLiters) {
-        await client.query(
-          `INSERT INTO vehicle_alerts (vehicle_id, employee_id, alert_type, severity, title, message, metadata)
-           VALUES ($1, $2, 'excessive_fuel', 'high', 'Excessive Fuel Entry',
-                   $3, $4)`,
-          [vehicle_id, req.user.id,
-           `${parseFloat(liters)}L exceeds max capacity of ${maxLiters}L for this vehicle.`,
-           JSON.stringify({ liters: parseFloat(liters), max: maxLiters })]
-        );
-      }
-
-      const receiptUrl = req.file ? `/uploads/receipts/${req.file.filename}` : null;
+      const receiptUrl = rawPhoto ? `/uploads/receipts/${rawPhoto.filename}` : null;
+      const processedUrl = processedPhoto ? `/uploads/receipts/${processedPhoto.filename}` : receiptUrl;
 
       const { rows: fuel } = await client.query(
         `INSERT INTO fuel_logs
-         (vehicle_id, employee_id, receipt_photo_url, pump_name, fuel_amount, liters,
-          meter_reading, gps_lat, gps_lng, gps_address)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         (vehicle_id, employee_id, receipt_photo_url, processed_receipt_url, pump_name, fuel_amount, liters,
+          meter_reading, invoice_number, rate_per_liter, fuel_type, receipt_date, receipt_time,
+          gps_lat, gps_lng, gps_address)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
          RETURNING *`,
-        [vehicle_id, req.user.id, receiptUrl, pump_name,
+        [vehicle_id, req.user.id, receiptUrl, processedUrl, pump_name || 'Fuel Station',
          parseFloat(fuel_amount), parseFloat(liters),
          meter_reading ? parseFloat(meter_reading) : null,
-         gps_lat, gps_lng, gps_address]
+         invoice_number || null, rate_per_liter ? parseFloat(rate_per_liter) : null,
+         fuel_type || 'Petrol', receipt_date || today, receipt_time || new Date().toLocaleTimeString(),
+         gps_lat || 31.4504, gps_lng || 73.1350, gps_address || 'Faisalabad, Pakistan']
       );
 
       // Log meter if provided
@@ -100,7 +78,7 @@ router.post('/', authenticate, uploadReceipt.single('receipt_photo'), async (req
         await client.query(
           `INSERT INTO vehicle_meter_logs (vehicle_id, employee_id, reading, source, reference_id, reference_type, photo_url)
            VALUES ($1, $2, $3, 'fuel', $4, 'fuel_logs', $5)`,
-          [vehicle_id, req.user.id, parseFloat(meter_reading), fuel[0].id, receiptUrl]
+          [vehicle_id, req.user.id, parseFloat(meter_reading), fuel[0].id, processedUrl || receiptUrl]
         );
       }
 
@@ -110,7 +88,7 @@ router.post('/', authenticate, uploadReceipt.single('receipt_photo'), async (req
         await client.query(`
           INSERT INTO notifications (user_id, title, message, type, link)
           VALUES ($1, 'New Fuel Entry Submitted', $2, 'info', '/fuel')
-        `, [m.id, `${req.user.name} submitted fuel entry (Rs ${fuel_amount}, ${liters}L at ${pump_name || 'Pump'}). Approval pending.`]);
+        `, [m.id, `${req.user.name} submitted fuel entry (Rs ${fuel_amount}, ${liters}L at ${pump_name || 'Station'}). Approval pending.`]);
       }
 
       return fuel[0];

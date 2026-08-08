@@ -33,8 +33,15 @@ export default function Header({ onMenuClick }) {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 3000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchNotifications, 4000);
+
+    const handleSync = () => fetchNotifications();
+    window.addEventListener('app:data-sync', handleSync);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('app:data-sync', handleSync);
+    };
   }, []);
 
   useEffect(() => {
@@ -57,11 +64,15 @@ export default function Header({ onMenuClick }) {
     }
   }
 
-  async function markAsRead(id) {
+  async function markAsRead(n) {
     try {
-      await api.put(`/notifications/${id}/read`);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+      await api.put(`/notifications/${n.id}/read`);
+      setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, is_read: true } : item));
       setUnreadCount(prev => Math.max(0, prev - 1));
+      setShowNotifications(false);
+      if (n.link) {
+        window.location.href = n.link;
+      }
     } catch {
       // Silently fail
     }
@@ -169,7 +180,7 @@ export default function Header({ onMenuClick }) {
                   <div
                     key={n.id}
                     className="dropdown-item"
-                    onClick={() => markAsRead(n.id)}
+                    onClick={() => markAsRead(n)}
                     style={{
                       flexDirection: 'column', alignItems: 'flex-start', gap: '4px',
                       background: n.is_read ? 'transparent' : 'rgba(0,0,0,0.03)',

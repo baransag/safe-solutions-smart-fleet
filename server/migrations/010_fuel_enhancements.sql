@@ -1,0 +1,9 @@
+-- 010_fuel_enhancements.sql
+
+ALTER TABLE fuel_logs
+ADD COLUMN IF NOT EXISTS processed_receipt_url VARCHAR(500),
+ADD COLUMN IF NOT EXISTS invoice_number VARCHAR(100),
+ADD COLUMN IF NOT EXISTS rate_per_liter DECIMAL(8, 2),
+ADD COLUMN IF NOT EXISTS fuel_type VARCHAR(50),
+ADD COLUMN IF NOT EXISTS receipt_date VARCHAR(50),
+ADD COLUMN IF NOT EXISTS receipt_time VARCHAR(50);

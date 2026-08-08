@@ -116,10 +116,10 @@ export default function CheckInPage() {
       setMeterPreview(preview);
       // AI OCR Odometer Auto-Reading Simulation
       const baseMeter = parseFloat(assignment?.current_meter || 0.0);
-      const autoOcrMeter = (baseMeter + Math.floor(Math.random() * 8 + 2)).toFixed(1);
+      const autoOcrMeter = baseMeter.toFixed(1);
       setMeterReading(autoOcrMeter);
       setOcrReading(autoOcrMeter);
-      setOcrConfidence(98.6);
+      setOcrConfidence(95.0);
       toast.success(`🤖 AI OCR Detected Meter Reading: ${autoOcrMeter} KM`);
       setStep(4);
     }

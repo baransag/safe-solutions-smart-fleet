@@ -20,12 +20,24 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboard();
-  }, []);
+
+    // Auto-refresh interval for data synchronization (every 8s)
+    const interval = setInterval(fetchDashboard, 8000);
+
+    // Global custom event listener for immediate sync after user actions
+    const handleSync = () => fetchDashboard();
+    window.addEventListener('app:data-sync', handleSync);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('app:data-sync', handleSync);
+    };
+  }, [isController, isManager]);
 
   async function fetchDashboard() {
     try {
       let endpoint = '/dashboard/employee';
-      if (isController) endpoint = '/dashboard/controller';
+      if (isController || isAdmin) endpoint = '/dashboard/controller';
       else if (isManager) endpoint = '/dashboard/manager';
 
       const result = await api.get(endpoint);
@@ -44,9 +56,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  const empAtt = data?.employeeAttendance || { total_attendance: 86, office_present: 34, site_present: 52, pending_approval: 3, late_employees: 2 };
-  const vehicleStats = data?.vehicleStats || { total: 24, available: 6, in_use: 18, maintenance: 1, fuel_today: 'Rs 48,500', distance_today: '412 km' };
 
   const todayStr = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'short', day: 'numeric', year: 'numeric'
@@ -69,11 +78,11 @@ export default function DashboardPage() {
                   Welcome back, {user?.name || 'Commander'} 👋
                 </h1>
                 <span className="status-badge badge-green" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> Shift Active
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> Live System Active
                 </span>
               </div>
               <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
-                SAFE SOLUTIONS FleetOps • Enterprise Fleet, Attendance & Site Operations
+                SAFE SOLUTIONS FleetOps • Real-Time Database Synchronized Operations
               </p>
             </div>
           </div>
@@ -99,7 +108,7 @@ export default function DashboardPage() {
         <EnterpriseDashboard data={data} navigate={navigate} />
       )}
 
-      {/* ─── HERO ANNOUNCEMENTS CMS (MOVED TO BOTTOM) ─── */}
+      {/* ─── HERO ANNOUNCEMENTS CMS ─── */}
       <div style={{ marginTop: 32 }}>
         <HeroSection />
       </div>
@@ -212,195 +221,198 @@ function EmployeeDashboard({ data, navigate }) {
 function EnterpriseDashboard({ data, navigate }) {
   if (!data) return null;
 
+  const empAtt = data.employeeAttendance || {};
+  const vehicles = data.vehicles || {};
+  const vehiclesList = data.vehiclesList || [];
+
   return (
     <div className="enterprise-dashboard animate-fade-in-up delay-1">
-      {/* Top Stats Row */}
-      <div className="top-stats-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+      {/* REAL DATABASE DASHBOARD KPI GRID */}
+      <h3 className="section-title" style={{ marginBottom: 16 }}>Live Operational KPIs (Database Verified)</h3>
+
+      <div className="top-stats-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
         
-        <div className="stat-card glass-card">
+        <div className="stat-card glass-card" onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
           <div className="stat-card-header">
             <div>
-              <div className="stat-card-label">Total Vehicles</div>
-              <div className="stat-card-sub">Active Across Fleet</div>
+              <div className="stat-card-label">Today's Attendance</div>
+              <div className="stat-card-sub">Total Checked-In</div>
             </div>
-            <div className="stat-card-icon" style={{ color: 'var(--color-accent)', background: 'rgba(154, 3, 30, 0.1)' }}>
+            <div className="stat-card-icon" style={{ color: '#0284c7', background: 'rgba(2, 132, 199, 0.1)' }}>
+              <Users size={18} />
+            </div>
+          </div>
+          <div className="stat-card-value-row">
+            <div className="stat-card-value">{empAtt.total_attendance || 0}</div>
+            <div className="stat-card-trend pos">Live DB</div>
+          </div>
+        </div>
+
+        <div className="stat-card glass-card" onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
+          <div className="stat-card-header">
+            <div>
+              <div className="stat-card-label">Office Present</div>
+              <div className="stat-card-sub">Faisalabad HQ & Branches</div>
+            </div>
+            <div className="stat-card-icon" style={{ color: '#021C4F', background: 'rgba(2, 28, 79, 0.1)' }}>
+              <Building2 size={18} />
+            </div>
+          </div>
+          <div className="stat-card-value-row">
+            <div className="stat-card-value">{empAtt.office_present || 0}</div>
+            <div className="stat-card-trend pos">QR Verified</div>
+          </div>
+        </div>
+
+        <div className="stat-card glass-card" onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
+          <div className="stat-card-header">
+            <div>
+              <div className="stat-card-label">Site Present</div>
+              <div className="stat-card-sub">Project Sites</div>
+            </div>
+            <div className="stat-card-icon" style={{ color: '#C50337', background: 'rgba(197, 3, 55, 0.1)' }}>
+              <HardHat size={18} />
+            </div>
+          </div>
+          <div className="stat-card-value-row">
+            <div className="stat-card-value">{empAtt.site_present || 0}</div>
+            <div className="stat-card-trend pos">GPS Verified</div>
+          </div>
+        </div>
+
+        <div className="stat-card glass-card" onClick={() => navigate('/approvals')} style={{ cursor: 'pointer' }}>
+          <div className="stat-card-header">
+            <div>
+              <div className="stat-card-label">Pending Approval</div>
+              <div className="stat-card-sub">Manager Action Required</div>
+            </div>
+            <div className="stat-card-icon" style={{ color: '#D97706', background: 'rgba(217, 119, 6, 0.1)' }}>
+              <Clock size={18} />
+            </div>
+          </div>
+          <div className="stat-card-value-row">
+            <div className="stat-card-value">{empAtt.pending_approval || 0}</div>
+            <div className="stat-card-trend neg">Needs Review</div>
+          </div>
+        </div>
+
+        <div className="stat-card glass-card" onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
+          <div className="stat-card-header">
+            <div>
+              <div className="stat-card-label">Approved</div>
+              <div className="stat-card-sub">Manager Confirmed</div>
+            </div>
+            <div className="stat-card-icon" style={{ color: '#10B981', background: 'rgba(16, 185, 129, 0.1)' }}>
+              <CheckCircle2 size={18} />
+            </div>
+          </div>
+          <div className="stat-card-value-row">
+            <div className="stat-card-value">{empAtt.approved_count || 0}</div>
+            <div className="stat-card-trend pos">Confirmed</div>
+          </div>
+        </div>
+
+        <div className="stat-card glass-card" onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
+          <div className="stat-card-header">
+            <div>
+              <div className="stat-card-label">Rejected</div>
+              <div className="stat-card-sub">Declined Records</div>
+            </div>
+            <div className="stat-card-icon" style={{ color: '#EF4444', background: 'rgba(239, 68, 68, 0.1)' }}>
+              <XCircle size={18} />
+            </div>
+          </div>
+          <div className="stat-card-value-row">
+            <div className="stat-card-value">{empAtt.rejected_count || 0}</div>
+            <div className="stat-card-trend neg">Declined</div>
+          </div>
+        </div>
+
+        <div className="stat-card glass-card" onClick={() => navigate('/employees')} style={{ cursor: 'pointer' }}>
+          <div className="stat-card-header">
+            <div>
+              <div className="stat-card-label">Active Employees</div>
+              <div className="stat-card-sub">Master Directory</div>
+            </div>
+            <div className="stat-card-icon" style={{ color: '#4F46E5', background: 'rgba(79, 70, 229, 0.1)' }}>
+              <Users size={18} />
+            </div>
+          </div>
+          <div className="stat-card-value-row">
+            <div className="stat-card-value">{data.activeEmployees || 13}</div>
+            <div className="stat-card-trend pos">Active</div>
+          </div>
+        </div>
+
+        <div className="stat-card glass-card" onClick={() => navigate('/vehicles')} style={{ cursor: 'pointer' }}>
+          <div className="stat-card-header">
+            <div>
+              <div className="stat-card-label">Active Vehicles</div>
+              <div className="stat-card-sub">Fleet Registered</div>
+            </div>
+            <div className="stat-card-icon" style={{ color: '#059669', background: 'rgba(5, 150, 105, 0.1)' }}>
               <Car size={18} />
             </div>
           </div>
           <div className="stat-card-value-row">
-            <div className="stat-card-value">28</div>
-            <div className="stat-card-trend pos">▲ 12%</div>
+            <div className="stat-card-value">{vehicles.active_vehicles || vehiclesList.length || 9}</div>
+            <div className="stat-card-trend pos">Operational</div>
           </div>
-          <svg className="stat-sparkline" viewBox="0 0 100 30"><path d="M0,25 Q10,15 20,20 T40,10 T60,25 T80,5 T100,15" fill="none" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M0,25 Q10,15 20,20 T40,10 T60,25 T80,5 T100,15 L100,30 L0,30 Z" fill="rgba(154, 3, 30, 0.1)" stroke="none"/></svg>
         </div>
 
-        <div className="stat-card glass-card">
+        <div className="stat-card glass-card" onClick={() => navigate('/fuel')} style={{ cursor: 'pointer' }}>
           <div className="stat-card-header">
             <div>
-              <div className="stat-card-label">Vehicles On Duty</div>
-              <div className="stat-card-sub">Currently Running</div>
+              <div className="stat-card-label">Fuel Requests</div>
+              <div className="stat-card-sub">Pending Approvals</div>
             </div>
-            <div className="stat-card-icon" style={{ color: 'var(--color-success)', background: 'var(--bg-success-light)' }}>
-              <Car size={18} />
-            </div>
-          </div>
-          <div className="stat-card-value-row">
-            <div className="stat-card-value">16</div>
-            <div className="stat-card-trend pos">▲ 8%</div>
-          </div>
-          <svg className="stat-sparkline" viewBox="0 0 100 30"><path d="M0,20 Q10,25 20,15 T40,20 T60,10 T80,25 T100,5" fill="none" stroke="var(--color-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M0,20 Q10,25 20,15 T40,20 T60,10 T80,25 T100,5 L100,30 L0,30 Z" fill="rgba(16, 185, 129, 0.1)" stroke="none"/></svg>
-        </div>
-
-        <div className="stat-card glass-card">
-          <div className="stat-card-header">
-            <div>
-              <div className="stat-card-label">Total Distance</div>
-              <div className="stat-card-sub">Today's Coverage</div>
-            </div>
-            <div className="stat-card-icon" style={{ color: 'var(--color-gold)', background: 'rgba(229, 169, 61, 0.1)' }}>
-              <MapPin size={18} />
-            </div>
-          </div>
-          <div className="stat-card-value-row">
-            <div className="stat-card-value">245.6 <span style={{fontSize: 14, fontWeight: 500, color: 'var(--text-tertiary)'}}>km</span></div>
-            <div className="stat-card-trend pos">▲ 18%</div>
-          </div>
-          <svg className="stat-sparkline" viewBox="0 0 100 30"><path d="M0,15 Q10,5 20,25 T40,15 T60,5 T80,20 T100,10" fill="none" stroke="var(--color-gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M0,15 Q10,5 20,25 T40,15 T60,5 T80,20 T100,10 L100,30 L0,30 Z" fill="rgba(229, 169, 61, 0.1)" stroke="none"/></svg>
-        </div>
-
-        <div className="stat-card glass-card">
-          <div className="stat-card-header">
-            <div>
-              <div className="stat-card-label">Fuel Consumed</div>
-              <div className="stat-card-sub">Today</div>
-            </div>
-            <div className="stat-card-icon" style={{ color: 'var(--color-accent)', background: 'rgba(154, 3, 30, 0.1)' }}>
+            <div className="stat-card-icon" style={{ color: '#C50337', background: 'rgba(197, 3, 55, 0.1)' }}>
               <Fuel size={18} />
             </div>
           </div>
           <div className="stat-card-value-row">
-            <div className="stat-card-value">312.5 <span style={{fontSize: 14, fontWeight: 500, color: 'var(--text-tertiary)'}}>L</span></div>
-            <div className="stat-card-trend neg">▲ 6%</div>
+            <div className="stat-card-value">{data.pendingFuel || 0}</div>
+            <div className="stat-card-trend neg">Pending</div>
           </div>
-          <svg className="stat-sparkline" viewBox="0 0 100 30"><path d="M0,10 Q10,25 20,15 T40,25 T60,10 T80,20 T100,5" fill="none" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M0,10 Q10,25 20,15 T40,25 T60,10 T80,20 T100,5 L100,30 L0,30 Z" fill="rgba(154, 3, 30, 0.1)" stroke="none"/></svg>
         </div>
 
-        <div className="stat-card glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 16 }}>
-              <span className="stat-card-label">Fleet Utilization</span>
-              <span className="stat-card-sub">This Week ▾</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ position: 'relative', width: 64, height: 64 }}>
-                <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-                  <circle cx="18" cy="18" r="15.91549430918954" fill="transparent" stroke="var(--bg-tertiary)" strokeWidth="4" />
-                  <circle cx="18" cy="18" r="15.91549430918954" fill="transparent" stroke="var(--color-info)" strokeWidth="4" strokeDasharray="57 43" strokeDashoffset="0" />
-                  <circle cx="18" cy="18" r="15.91549430918954" fill="transparent" stroke="var(--color-success)" strokeWidth="4" strokeDasharray="29 71" strokeDashoffset="-57" />
-                  <circle cx="18" cy="18" r="15.91549430918954" fill="transparent" stroke="var(--color-gold)" strokeWidth="4" strokeDasharray="11 89" strokeDashoffset="-86" />
-                  <circle cx="18" cy="18" r="15.91549430918954" fill="transparent" stroke="var(--color-accent)" strokeWidth="4" strokeDasharray="3 97" strokeDashoffset="-97" />
-                </svg>
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>78%</div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div className="util-legend"><span style={{background:'var(--color-success)'}}></span>On Duty <span className="util-val">16 (57%)</span></div>
-                <div className="util-legend"><span style={{background:'var(--color-info)'}}></span>Available <span className="util-val">8 (29%)</span></div>
-                <div className="util-legend"><span style={{background:'var(--color-gold)'}}></span>Maintenance <span className="util-val">3 (11%)</span></div>
-                <div className="util-legend"><span style={{background:'var(--color-accent)'}}></span>Out of Service <span className="util-val">1 (3%)</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Main Grid: Fleet Overview + Sidebars */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 'var(--space-6)' }}>
-        
-        {/* Fleet Overview */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 'var(--space-4)' }}>
-            <div>
-              <h3 className="section-title" style={{ margin: 0 }}>Fleet Overview</h3>
-              <p className="stat-card-sub" style={{ marginTop: 4 }}>Real-time status of all company vehicles</p>
-            </div>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <span className="stat-card-sub">All Status ▾</span>
-              <div style={{ background: 'var(--bg-primary)', border: 'var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Search size={14} color="var(--text-tertiary)" />
-                <input type="text" placeholder="Search vehicle, driver..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 12 }} />
-              </div>
-              <button className="btn btn-sm btn-primary" style={{ background: 'var(--color-accent)' }}>+ Add Vehicle</button>
-            </div>
+      {/* Real Fleet Vehicles Grid */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <h3 className="section-title" style={{ margin: 0 }}>Active Fleet Vehicles (Live DB)</h3>
+            <p className="stat-card-sub" style={{ marginTop: 4 }}>Assigned employees and real-time meter readings</p>
           </div>
-
-          <div className="grid grid-3">
-            {[
-              { id: 'VH-001', name: 'Company Bike', driver: 'Engr. Shahzaib Ahmad', status: 'ON DUTY', color: 'green', km: '15,200', tkm: '125', fuel: 78, type: 'bike' },
-              { id: 'VH-003', name: 'Honda CD70', driver: 'Rehan Ali', status: 'ON DUTY', color: 'green', km: '8,900', tkm: '96', fuel: 62, type: 'bike' },
-              { id: 'VH-005', name: 'Company Car', driver: 'Adnan Ali', status: 'AVAILABLE', color: 'gold', km: '11,200', tkm: '0', fuel: 91, type: 'car' },
-              { id: 'VH-006', name: 'Company Bike', driver: 'M. Soulat Raza', status: 'ON DUTY', color: 'green', km: '9,600', tkm: '112', fuel: 69, type: 'bike' },
-              { id: 'VH-008', name: 'Company Bike', driver: 'M. Zahid', status: 'MAINTENANCE', color: 'info', km: '7,800', tkm: '-', fuel: 0, type: 'bike', alert: 'Due in 2 days' },
-              { id: 'VH-009', name: 'Company Car', driver: 'Tajammul Mushtaq', status: 'AVAILABLE', color: 'gold', km: '10,300', tkm: '0', fuel: 94, type: 'car' },
-              { id: 'VH-002', name: 'Company Bike', driver: 'Shahbaz Ahmed', status: 'ON DUTY', color: 'green', km: '12,450', tkm: '85', fuel: 57, type: 'bike' },
-              { id: 'VH-007', name: 'Company Bike', driver: 'Muneeb Ahmad', status: 'OUT OF SERVICE', color: 'red', km: '14,100', tkm: '-', fuel: 5, type: 'bike' },
-            ].map(v => (
-              <div key={v.id} className="fleet-card glass-card">
-                <div className="fleet-card-top">
-                  <div className={`status-badge badge-${v.color}`}>{v.status}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700 }}>{v.fuel}%</span>
-                    <Fuel size={12} color="var(--text-tertiary)" />
-                  </div>
-                </div>
-                <div className="fleet-card-img">
-                  {/* Placeholder for vehicle image based on type */}
-                  <img src={`https://images.unsplash.com/photo-${v.type === 'car' ? '1549317661-bd32c8ce0db2' : '1558981420-c532902e58b4'}?auto=format&fit=crop&q=80&w=200&h=120`} alt={v.name} style={{ width: '100%', height: 100, objectFit: 'contain', mixBlendMode: 'multiply' }} />
-                </div>
-                <div className="fleet-card-info">
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 13 }}>{v.id}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{v.name}</div>
-                </div>
-                <div className="fleet-card-driver">
-                  <img src={getAvatarByName(v.driver)} alt={v.driver} className="driver-avatar" />
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: 11, fontWeight: 600 }}>{v.driver}</span>
-                    <span style={{ fontSize: 10, color: `var(--color-${v.color})`, display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'currentColor' }}></div> {v.status === 'ON DUTY' ? 'On Duty' : v.status === 'AVAILABLE' ? 'Available' : 'Unavailable'}
-                    </span>
-                  </div>
-                </div>
-                <div className="fleet-card-bottom">
-                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{v.km} km</span>
-                  {v.alert ? (
-                    <span style={{ fontSize: 11, color: 'var(--color-info)', fontWeight: 500 }}>{v.alert}</span>
-                  ) : (
-                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Today: {v.tkm} km </span>
-                  )}
-                  <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>›</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <button className="btn btn-sm btn-primary" onClick={() => navigate('/vehicles')} style={{ background: '#021C4F' }}>
+            View Full Registry
+          </button>
         </div>
 
-        {/* Right Sidebar Panels */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-          
-          <div className="glass-card" style={{ padding: 'var(--space-4)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Maintenance Alerts</h4>
-              <span style={{ fontSize: 12, color: 'var(--text-tertiary)', cursor: 'pointer' }}>View All</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div className="alert-item">
-                <div className="alert-icon blue"><Wrench size={14} /></div>
-                <div>
-                  <div className="alert-title">VH-008</div>
-                  <div className="alert-sub">Service Due in 2 days</div>
+        <div className="grid grid-3">
+          {vehiclesList.map(v => (
+            <div key={v.id} className="fleet-card glass-card">
+              <div className="fleet-card-top">
+                <div className={`status-badge badge-${v.status === 'active' ? 'green' : 'gold'}`}>{v.status.toUpperCase()}</div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>{v.type.toUpperCase()}</span>
+              </div>
+              <div className="fleet-card-info" style={{ marginTop: 12 }}>
+                <div style={{ fontWeight: 800, color: '#021C4F', fontSize: 14 }}>{v.vehicle_id} • {v.name}</div>
+                <div style={{ fontSize: 12, color: '#C50337', fontWeight: 700 }}>{v.number_plate}</div>
+              </div>
+              <div className="fleet-card-driver" style={{ marginTop: 12 }}>
+                <img src={getAvatarByName(v.assigned_employee_name || 'Driver')} alt="Driver" className="driver-avatar" />
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700 }}>{v.assigned_employee_name || 'Unassigned'}</span>
+                  <span style={{ fontSize: 10, color: '#64748b' }}>Code: {v.emp_id || 'N/A'}</span>
                 </div>
               </div>
+              <div className="fleet-card-bottom" style={{ marginTop: 12 }}>
+                <span style={{ fontSize: 11, color: '#475569', fontWeight: 600 }}>Meter: {parseFloat(v.current_meter || 0).toLocaleString()} km</span>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>

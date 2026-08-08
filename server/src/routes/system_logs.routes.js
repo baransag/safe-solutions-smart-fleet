@@ -7,7 +7,7 @@ const { authenticate, authorize } = require('../middleware/auth.middleware');
 router.get('/', authenticate, authorize('admin', 'boss', 'controller'), async (req, res, next) => {
   try {
     const { level, module: mod, limit = 50, offset = 0 } = req.query;
-    let sql =
+    let sql = `
       SELECT sl.id, sl.action, sl.module, sl.details, sl.ip_address, sl.level, sl.created_at,
       e.name as employee_name, e.employee_id, e.role
       FROM system_logs sl
