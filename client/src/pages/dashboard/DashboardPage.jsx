@@ -339,7 +339,7 @@ function EnterpriseDashboard({ data, navigate }) {
             </div>
           </div>
           <div className="stat-card-value-row">
-            <div className="stat-card-value">{data.activeEmployees || 13}</div>
+            <div className="stat-card-value">{data.activeEmployees ?? 0}</div>
             <div className="stat-card-trend pos">Active</div>
           </div>
         </div>
@@ -355,7 +355,7 @@ function EnterpriseDashboard({ data, navigate }) {
             </div>
           </div>
           <div className="stat-card-value-row">
-            <div className="stat-card-value">{vehicles.active_vehicles || vehiclesList.length || 9}</div>
+            <div className="stat-card-value">{vehicles.active_vehicles ?? vehiclesList.length ?? 0}</div>
             <div className="stat-card-trend pos">Operational</div>
           </div>
         </div>

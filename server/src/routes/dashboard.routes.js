@@ -36,21 +36,15 @@ router.get('/employee', authenticate, async (req, res, next) => {
     ]);
 
     res.json({
-      assignment: assignment?.rows?.[0] || { id: 1, vehicle_id: 1, v_id: 'VH-001', vehicle_name: 'Company Bike', number_plate: 'AGN-1227-21', vehicle_type: 'bike', current_meter: 12450.0 },
+      assignment: assignment?.rows?.[0] || null,
       todayCheckin: todayCheckin?.rows?.[0] || null,
       todayAttendance: todayAttendance?.rows?.[0] || null,
       recentActivity: recentActivity?.rows || [],
       fuelHistory: fuelHistory?.rows || []
     });
   } catch (err) {
-    console.warn('Dashboard employee fetch notice:', err.message);
-    res.json({
-      assignment: { id: 1, vehicle_id: 1, v_id: 'VH-001', vehicle_name: 'Company Bike', number_plate: 'AGN-1227-21', vehicle_type: 'bike', current_meter: 12450.0 },
-      todayCheckin: null,
-      todayAttendance: null,
-      recentActivity: [],
-      fuelHistory: []
-    });
+    console.error('Dashboard employee fetch error:', err.message);
+    res.status(500).json({ error: 'Failed to retrieve employee dashboard data from database' });
   }
 });
 
@@ -142,7 +136,8 @@ router.get('/manager', authenticate, authorize('manager', 'controller', 'boss', 
       }
     });
   } catch (err) {
-    next(err);
+    console.error('Manager dashboard fetch error:', err.message);
+    res.status(500).json({ error: 'Failed to retrieve manager dashboard data from database' });
   }
 });
 
@@ -220,7 +215,8 @@ router.get('/controller', authenticate, authorize('controller', 'boss', 'admin')
       }
     });
   } catch (err) {
-    next(err);
+    console.error('Controller dashboard fetch error:', err.message);
+    res.status(500).json({ error: 'Failed to retrieve controller dashboard data from database' });
   }
 });
 

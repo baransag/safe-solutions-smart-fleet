@@ -1,6 +1,26 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET environment variable is missing in production environment');
+    }
+    return 'safe-solutions-jwt-secret-2024-change-in-production';
+  }
+  return secret;
+}
+
+function getRefreshSecret() {
+  const secret = process.env.JWT_REFRESH_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL SECURITY ERROR: JWT_REFRESH_SECRET environment variable is missing in production environment');
+    }
+    return 'safe-solutions-refresh-secret-2024';
+  }
+  return secret;
+}
 
 function authenticate(req, res, next) {
   const header = req.headers.authorization;
@@ -10,7 +30,7 @@ function authenticate(req, res, next) {
 
   const token = header.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
     req.user = decoded;
     next();
   } catch (err) {
@@ -34,13 +54,13 @@ function authorize(...roles) {
 }
 
 function generateToken(payload) {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, getJwtSecret(), {
     expiresIn: process.env.JWT_EXPIRES_IN || '24h'
   });
 }
 
 function generateRefreshToken(payload) {
-  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET || 'refresh-secret', {
+  return jwt.sign(payload, getRefreshSecret(), {
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
   });
 }

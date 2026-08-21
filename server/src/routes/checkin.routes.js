@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { query, transaction } = require('../config/db');
 const { authenticate } = require('../middleware/auth.middleware');
-const { uploadSelfie, uploadMeter } = require('../middleware/upload.middleware');
+const storageService = require('../services/storage.service');
 const multer = require('multer');
 
 // Helper: create alert
@@ -29,19 +29,7 @@ async function createAlert(client, { vehicle_id, employee_id, alert_type, severi
 
 // POST /api/checkins/vehicle-checkin - Morning check-in
 const checkinUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      const dir = file.fieldname === 'selfie'
-        ? require('path').join(__dirname, '..', '..', 'uploads', 'selfies')
-        : require('path').join(__dirname, '..', '..', 'uploads', 'meters');
-      cb(null, dir);
-    },
-    filename: (req, file, cb) => {
-      const { v4: uuidv4 } = require('uuid');
-      const ext = require('path').extname(file.originalname).toLowerCase();
-      cb(null, `${uuidv4()}${ext}`);
-    }
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10485760 }
 }).fields([
   { name: 'selfie', maxCount: 1 },
@@ -59,6 +47,12 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
     const meterVal = parseFloat(meter_reading);
     const employeeId = req.user.id;
 
+    const selfieFile = req.files?.selfie?.[0];
+    const meterFile = req.files?.meter_photo?.[0];
+
+    const selfieUrl = selfieFile ? await storageService.uploadFile(selfieFile, 'selfies') : null;
+    const meterPhotoUrl = meterFile ? await storageService.uploadFile(meterFile, 'meters') : null;
+
     const result = await transaction(async (client) => {
       // 1. Verify vehicle assignment
       const { rows: assignment } = await client.query(
@@ -70,7 +64,6 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
       );
 
       if (assignment.length === 0) {
-        // ALERT: Wrong vehicle
         await createAlert(client, {
           vehicle_id: parseInt(vehicle_id),
           employee_id: employeeId,
@@ -102,7 +95,7 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
         throw Object.assign(new Error('Already checked in today'), { status: 400 });
       }
 
-      // 3. Validate meter reading (must not be less than last known)
+      // 3. Validate meter reading
       const prevMeter = parseFloat(assignment[0].current_meter) || 0;
       if (meterVal < prevMeter) {
         await createAlert(client, {
@@ -117,9 +110,6 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
       }
 
       // 4. Insert check-in
-      const selfieUrl = req.files?.selfie?.[0] ? `/uploads/selfies/${req.files.selfie[0].filename}` : null;
-      const meterPhotoUrl = req.files?.meter_photo?.[0] ? `/uploads/meters/${req.files.meter_photo[0].filename}` : null;
-
       const { rows: checkin } = await client.query(
         `INSERT INTO vehicle_checkins
          (vehicle_id, employee_id, gps_lat, gps_lng, gps_address, selfie_url, meter_photo_url,
@@ -167,6 +157,12 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
 
     const meterVal = parseFloat(meter_reading);
     const employeeId = req.user.id;
+
+    const selfieFile = req.files?.selfie?.[0];
+    const meterFile = req.files?.meter_photo?.[0];
+
+    const selfieUrl = selfieFile ? await storageService.uploadFile(selfieFile, 'selfies') : null;
+    const meterPhotoUrl = meterFile ? await storageService.uploadFile(meterFile, 'meters') : null;
 
     const result = await transaction(async (client) => {
       // 1. Find today's check-in
@@ -236,9 +232,6 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
       }
 
       // 5. Insert checkout
-      const selfieUrl = req.files?.selfie?.[0] ? `/uploads/selfies/${req.files.selfie[0].filename}` : null;
-      const meterPhotoUrl = req.files?.meter_photo?.[0] ? `/uploads/meters/${req.files.meter_photo[0].filename}` : null;
-
       const { rows: checkout } = await client.query(
         `INSERT INTO vehicle_checkouts
          (vehicle_id, employee_id, checkin_id, gps_lat, gps_lng, gps_address,
@@ -316,8 +309,8 @@ router.get('/today', authenticate, async (req, res, next) => {
       hasCheckedOut: (checkout?.length || 0) > 0
     });
   } catch (err) {
-    console.warn('Checkin status fetch notice:', err.message);
-    res.json({ checkin: null, checkout: null, hasCheckedIn: false, hasCheckedOut: false });
+    console.error('Checkin status fetch error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch checkin status' });
   }
 });
 

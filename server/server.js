@@ -12,23 +12,27 @@ const PORT = process.env.PORT || 5000;
 // Security & Performance
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(compression());
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, serverless) or any vercel app domain or localhost
-    if (!origin || origin.includes('vercel.app') || origin.includes('localhost') || origin === process.env.CLIENT_URL) {
+    const allowedClientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    if (!origin || origin.includes('vercel.app') || origin.includes('localhost') || origin === allowedClientUrl) {
+      callback(null, true);
+    } else if (process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
-      callback(null, true); // Fallback allow all origins
+      callback(new Error('CORS origin blocked: ' + origin));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static uploads & assets
+// Static uploads & assets (durable local fallback)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/assets', express.static(path.join(__dirname, '../client/public/assets')));
 
@@ -61,8 +65,8 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err.message);
-  console.error(err.stack);
+  console.error('API Error:', err.message);
+  if (err.stack) console.error(err.stack);
 
   if (err.name === 'ValidationError') {
     return res.status(400).json({ error: err.message });

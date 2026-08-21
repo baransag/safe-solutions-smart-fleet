@@ -3,6 +3,7 @@ const router = express.Router();
 const { query } = require('../config/db');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 const { uploadSite } = require('../middleware/upload.middleware');
+const storageService = require('../services/storage.service');
 
 // Helper to calculate Haversine distance in meters
 function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -124,8 +125,11 @@ router.post('/site', authenticate, uploadSite.fields([
       return res.status(400).json({ error: 'Attendance already submitted for today.' });
     }
 
-    const selfieUrl = req.files?.selfie?.[0] ? `/uploads/sites/${req.files.selfie[0].filename}` : null;
-    const sitePhotoUrl = req.files?.site_photo?.[0] ? `/uploads/sites/${req.files.site_photo[0].filename}` : null;
+    const selfieFile = req.files?.selfie?.[0];
+    const sitePhotoFile = req.files?.site_photo?.[0];
+
+    const selfieUrl = selfieFile ? await storageService.uploadFile(selfieFile, 'sites') : null;
+    const sitePhotoUrl = sitePhotoFile ? await storageService.uploadFile(sitePhotoFile, 'sites') : null;
 
     const now = new Date();
     const isLate = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 15);
@@ -219,7 +223,7 @@ router.patch('/:id/approve', authenticate, authorize('manager', 'controller'), a
       RETURNING *
     `, [req.user.id, notes || 'Approved by Controller', id]);
 
-    if (rows.length === 0) return res.json({ attendance: { id, approval_status: 'approved' } });
+    if (rows.length === 0) return res.status(404).json({ error: 'Attendance record not found.' });
 
     // Notify employee
     await query(`
@@ -308,10 +312,10 @@ router.get('/history', authenticate, async (req, res, next) => {
 // GET /api/attendance/reports (Daily, Weekly, Monthly, Office, Site, Late, Absent)
 router.get('/reports', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
   try {
-    const { report_type, date, month, year } = req.query;
+    const { date } = req.query;
     const targetDate = date || new Date().toISOString().split('T')[0];
 
-    const [daily, officeCount, siteCount, pendingCount, lateCount, records] = await Promise.all([
+    const [daily, records] = await Promise.all([
       query(`
         SELECT
           COUNT(DISTINCT ar.employee_id) as total_present,
@@ -323,11 +327,6 @@ router.get('/reports', authenticate, authorize('manager', 'controller'), async (
         FROM attendance_records ar
         WHERE ar.check_in_time::date = $1
       `, [targetDate]),
-
-      query(`SELECT COUNT(*) as count FROM attendance_records WHERE attendance_type = 'office' AND check_in_time::date = $1`, [targetDate]),
-      query(`SELECT COUNT(*) as count FROM attendance_records WHERE attendance_type = 'site' AND check_in_time::date = $1`, [targetDate]),
-      query(`SELECT COUNT(*) as count FROM attendance_records WHERE approval_status = 'pending'`),
-      query(`SELECT COUNT(*) as count FROM attendance_records WHERE is_late = true AND check_in_time::date = $1`, [targetDate]),
 
       query(`
         SELECT ar.*, e.name as employee_name, e.employee_id as emp_id, e.designation, e.department,
@@ -341,15 +340,12 @@ router.get('/reports', authenticate, authorize('manager', 'controller'), async (
     ]);
 
     res.json({
-      summary: daily?.rows?.[0] || { total_present: 0, office_present: 0, site_present: 0, pending_approval: 0, late_employees: 0, total_employees: 12 },
+      summary: daily?.rows?.[0] || { total_present: 0, office_present: 0, site_present: 0, pending_approval: 0, late_employees: 0, total_employees: 0 },
       records: records?.rows || []
     });
   } catch (err) {
-    console.warn('Attendance reports fetch notice:', err.message);
-    res.json({
-      summary: { total_present: 0, office_present: 0, site_present: 0, pending_approval: 0, late_employees: 0, total_employees: 12 },
-      records: []
-    });
+    console.error('Attendance reports fetch error:', err.message);
+    res.status(500).json({ error: 'Failed to retrieve attendance reports from database' });
   }
 });
 

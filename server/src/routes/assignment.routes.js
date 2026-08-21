@@ -106,7 +106,7 @@ router.delete('/:id', authenticate, authorize('manager', 'controller'), async (r
   }
 });
 
-// GET /api/vehicle-assignments/my - Get current user's assignment
+// GET /api/vehicle-assignments/my - Get current user's assignment from PostgreSQL
 router.get('/my', authenticate, async (req, res, next) => {
   try {
     const { rows } = await query(
@@ -121,24 +121,12 @@ router.get('/my', authenticate, async (req, res, next) => {
     if (rows && rows.length > 0) {
       return res.json({ assignment: rows[0] });
     }
+
+    return res.json({ assignment: null });
   } catch (err) {
-    console.warn('Assignment fetch notice:', err.message);
+    console.error('Assignment fetch error:', err.message);
+    return res.status(500).json({ error: 'Failed to retrieve vehicle assignment from database' });
   }
-
-  // Cloud/Fallback Assignment
-  const fallbackAssignment = {
-    id: 1,
-    vehicle_id: 1,
-    employee_id: req.user.id,
-    v_id: 'VH-001',
-    vehicle_name: 'Company Bike',
-    number_plate: 'AGN-1227-21',
-    vehicle_type: 'bike',
-    current_meter: 12450.0,
-    employee_name: req.user.name
-  };
-
-  res.json({ assignment: fallbackAssignment });
 });
 
 module.exports = router;

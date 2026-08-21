@@ -5,7 +5,7 @@ const { authenticate, authorize } = require('../middleware/auth.middleware');
 const { uploadVehicle } = require('../middleware/upload.middleware');
 const QRCode = require('qrcode');
 
-// GET /api/vehicles - List all vehicles
+// GET /api/vehicles - List all vehicles from PostgreSQL
 router.get('/', authenticate, async (req, res, next) => {
   try {
     const { search, status, type, assigned } = req.query;
@@ -40,26 +40,11 @@ router.get('/', authenticate, async (req, res, next) => {
     sql += ' ORDER BY v.name ASC';
 
     const { rows } = await query(sql, params);
-    if (rows && rows.length > 0) {
-      return res.json({ vehicles: rows });
-    }
+    return res.json({ vehicles: rows || [] });
   } catch (err) {
-    console.warn('Vehicles fetch notice:', err.message);
+    console.error('Vehicles fetch error:', err.message);
+    return res.status(500).json({ error: 'Failed to retrieve vehicles from database' });
   }
-
-  const fallbackVehicles = [
-    { id: 1, vehicle_id: 'VH-001', name: 'Company Bike', number_plate: 'BBE-5688', type: 'bike', status: 'active', current_meter: 0, assigned_employee_name: 'Engr. Shahzaib Ahmad' },
-    { id: 2, vehicle_id: 'VH-002', name: 'Company Bike', number_plate: 'AGN-1227-21', type: 'bike', status: 'active', current_meter: 0, assigned_employee_name: 'Shahbaz Ahmed' },
-    { id: 3, vehicle_id: 'VH-003', name: 'Honda CD70', number_plate: 'FDR-203-15', type: 'bike', status: 'active', current_meter: 0, assigned_employee_name: 'Rehan Ali' },
-    { id: 4, vehicle_id: 'VH-004', name: 'Company Bike', number_plate: 'AWD-24-3818', type: 'bike', status: 'active', current_meter: 0, assigned_employee_name: 'Adnan Tahir' },
-    { id: 5, vehicle_id: 'VH-005', name: 'Company Car', number_plate: 'AHV-378', type: 'car', status: 'active', current_meter: 0, assigned_employee_name: 'Adnan Ali' },
-    { id: 6, vehicle_id: 'VH-006', name: 'Company Bike', number_plate: 'BFF-6452/26', type: 'bike', status: 'active', current_meter: 0, assigned_employee_name: 'M. Soulat Raza' },
-    { id: 7, vehicle_id: 'VH-007', name: 'Company Bike', number_plate: 'BFF-7907-26', type: 'bike', status: 'active', current_meter: 0, assigned_employee_name: 'Muneeb Ahmad' },
-    { id: 8, vehicle_id: 'VH-008', name: 'Company Bike', number_plate: 'FDL-6381-07', type: 'bike', status: 'active', current_meter: 0, assigned_employee_name: 'M. Zahid' },
-    { id: 9, vehicle_id: 'VH-009', name: 'Company Car', number_plate: 'FD-17-84', type: 'car', status: 'active', current_meter: 0, assigned_employee_name: 'Tajammul Mushtaq' }
-  ];
-
-  res.json({ vehicles: fallbackVehicles });
 });
 
 // GET /api/vehicles/:id
@@ -182,7 +167,9 @@ router.post('/:id/image', authenticate, authorize('admin', 'boss', 'controller',
       return res.status(400).json({ error: 'Image file is required' });
     }
 
-    const imageUrl = `/uploads/vehicles/${req.file.filename}`;
+    const storageService = require('../services/storage.service');
+    const imageUrl = await storageService.uploadFile(req.file, 'vehicles');
+
     await query('UPDATE vehicles SET image_url = $1, updated_at = NOW() WHERE id = $2', [imageUrl, req.params.id]);
 
     res.json({ image_url: imageUrl });

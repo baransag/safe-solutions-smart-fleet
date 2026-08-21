@@ -3,6 +3,7 @@ const router = express.Router();
 const { query, transaction } = require('../config/db');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 const { uploadReceipt } = require('../middleware/upload.middleware');
+const storageService = require('../services/storage.service');
 
 // POST /api/fuel - Submit fuel entry with scanned receipt and OCR fields
 router.post('/', authenticate, uploadReceipt.fields([
@@ -55,8 +56,8 @@ router.post('/', authenticate, uploadReceipt.fields([
       const rawPhoto = req.files?.receipt_photo?.[0];
       const processedPhoto = req.files?.processed_receipt_photo?.[0];
 
-      const receiptUrl = rawPhoto ? `/uploads/receipts/${rawPhoto.filename}` : null;
-      const processedUrl = processedPhoto ? `/uploads/receipts/${processedPhoto.filename}` : receiptUrl;
+      const receiptUrl = rawPhoto ? await storageService.uploadFile(rawPhoto, 'receipts') : null;
+      const processedUrl = processedPhoto ? await storageService.uploadFile(processedPhoto, 'receipts') : receiptUrl;
 
       const { rows: fuel } = await client.query(
         `INSERT INTO fuel_logs
@@ -152,8 +153,8 @@ router.put('/:id/approve', authenticate, authorize('manager', 'controller'), asy
   try {
     const { approval_status, approval_notes } = req.body;
 
-    if (!['approved', 'rejected'].includes(approval_status)) {
-      return res.status(400).json({ error: 'approval_status must be approved or rejected' });
+    if (!['approved', 'rejected', 'correction_requested'].includes(approval_status)) {
+      return res.status(400).json({ error: 'approval_status must be approved, rejected, or correction_requested' });
     }
 
     const { rows } = await query(
@@ -174,8 +175,8 @@ router.put('/:id/approve', authenticate, authorize('manager', 'controller'), asy
       `INSERT INTO notifications (user_id, title, message, type)
        VALUES ($1, $2, $3, $4)`,
       [fuel.employee_id,
-       `Fuel Request ${approval_status === 'approved' ? 'Approved' : 'Rejected'}`,
-       `Your fuel request of ${fuel.liters}L has been ${approval_status}.`,
+       `Fuel Request ${approval_status === 'approved' ? 'Approved' : approval_status === 'rejected' ? 'Rejected' : 'Correction Requested'}`,
+       `Your fuel request of ${fuel.liters}L has been updated: ${approval_status}. ${approval_notes || ''}`,
        approval_status === 'approved' ? 'success' : 'warning']
     );
 

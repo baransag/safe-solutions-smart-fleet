@@ -5,22 +5,6 @@ const { query } = require('../config/db');
 const { authenticate, generateToken, generateRefreshToken } = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validation.middleware');
 
-const MOCK_USERS = [
-  { id: 0, employee_id: 'SYSADMIN001', name: 'System Admin', email: 'admin@safesolutions.com', phone: '03000000000', role: 'admin', designation: 'System Administrator', department: 'IT', avatar_url: '/assets/images/logo.jpeg', pass: 'Admin@2024' },
-  { id: 1, employee_id: 'ADMIN001', name: 'SAFE SOLUTIONS Boss', email: 'boss@safesolutions.com', phone: '03001112233', role: 'boss', designation: 'Managing Director', department: 'Executive', avatar_url: '/assets/images/logo.jpeg', pass: 'SS@Admin26' },
-  { id: 2, employee_id: 'EMP001', name: 'M. Husnain Farooq', email: 'baransag68@gmail.com', phone: '03468760963', role: 'controller', designation: 'Controller', department: 'Management', avatar_url: '/assets/images/Husnain.jpeg', pass: 'Controller@2024' },
-  { id: 3, employee_id: 'EMP002', name: 'Samaira Mubashar', email: 'sm.bajwa786fsd@gmail.com', phone: '03006646124', role: 'manager', designation: 'Manager Accounts & Finance', department: 'Finance', avatar_url: '/assets/images/Samaira.jpeg', pass: 'Safe@2024' },
-  { id: 3, employee_id: 'EMP003', name: 'Engr. Shahzaib Ahmad', email: 'zaiberana37@gmail.com', phone: '03007684761', role: 'employee', designation: 'Marketing Executive', department: 'Marketing', avatar_url: '/assets/images/Shahzaib.jpeg', pass: 'Safe@2024' },
-  { id: 4, employee_id: 'EMP004', name: 'Shahbaz Ahmed', email: 'shabazbutt1132@gmail.com', phone: '03237684200', role: 'employee', designation: 'Application Supervisor', department: 'Operations', avatar_url: '/assets/images/Shahbaz.jpeg', pass: 'Safe@2024' },
-  { id: 5, employee_id: 'EMP005', name: 'Rehan Ali', email: 'Arehan079@gmail.com', phone: '03237674000', role: 'employee', designation: 'Application Supervisor', department: 'Operations', avatar_url: '/assets/images/Rehan.jpeg', pass: 'Safe@2024' },
-  { id: 6, employee_id: 'EMP006', name: 'Adnan Tahir', email: 'tahiradnan31@gmail.com', phone: '03237864100', role: 'employee', designation: 'ASM', department: 'Sales', avatar_url: '/assets/images/Adnan-Tahir.jpeg', pass: 'Safe@2024' },
-  { id: 7, employee_id: 'EMP007', name: 'Adnan Ali', email: 'mianadnanali88@gmail.com', phone: '03217684400', role: 'employee', designation: 'Area Sales Manager', department: 'Sales', avatar_url: '/assets/images/Adnan-Ali.jpeg', pass: 'Safe@2024' },
-  { id: 8, employee_id: 'EMP008', name: 'M. Soulat Raza', email: 'mirzasoulat112@gmail.com', phone: '03397684700', role: 'employee', designation: 'Execution Officer', department: 'Operations', avatar_url: '/assets/images/Soulat.jpeg', pass: 'Safe@2024' },
-  { id: 9, employee_id: 'EMP009', name: 'Muneeb Ahmad', email: 'muneeb01250@gmail.com', phone: '03077684400', role: 'employee', designation: 'Store & Inventory', department: 'Inventory', avatar_url: '/assets/images/Muneeb.jpeg', pass: 'Safe@2024' },
-  { id: 10, employee_id: 'EMP010', name: 'M. Zahid', email: 'muhammadzahid5324@gmail.com', phone: '03079682902', role: 'employee', designation: 'Helper', department: 'Support', avatar_url: '/assets/images/Zahid.jpeg', pass: 'Safe@2024', number_plate: 'FDL-6381-07' },
-  { id: 11, employee_id: 'EMP011', name: 'Tajammul Mushtaq', email: 'tajammulbajwa545@gmail.com', phone: '03217684500', role: 'employee', designation: 'Area Sales Manager', department: 'Sales', avatar_url: '/assets/images/Tajammul.jpeg', pass: 'Safe@2024' }
-];
-
 // POST /api/auth/login
 router.post('/login', validate({
   email: { required: true },
@@ -31,43 +15,53 @@ router.post('/login', validate({
 
   try {
     const { rows } = await query(
-      'SELECT id, employee_id, name, email, role, password_hash, designation, department, avatar_url, is_active FROM employees WHERE LOWER(email) = $1 OR LOWER(employee_id) = $1',
+      `SELECT id, employee_id, name, email, role, password_hash, designation, department, avatar_url, is_active 
+       FROM employees 
+       WHERE LOWER(email) = $1 OR LOWER(employee_id) = $1`,
       [cleanEmail]
     );
 
-    if (rows.length > 0) {
-      const user = rows[0];
-      if (!user.is_active) return res.status(403).json({ error: 'Account is deactivated' });
-      const valid = await bcrypt.compare(password, user.password_hash);
-      if (valid) {
-        const payload = { id: user.id, employee_id: user.employee_id, name: user.name, email: user.email, role: user.role };
-        return res.json({
-          token: generateToken(payload),
-          refreshToken: generateRefreshToken({ id: user.id }),
-          user: { id: user.id, employee_id: user.employee_id, name: user.name, email: user.email, role: user.role, designation: user.designation, department: user.department, avatar_url: user.avatar_url }
-        });
-      }
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid email/employee ID or password' });
     }
-  } catch (err) {
-    console.warn('DB query notice, checking static account authentication:', err.message);
-  }
 
-  // Cloud/Fallback Auth Check
-  const fallbackUser = MOCK_USERS.find(u =>
-    u.email.toLowerCase() === cleanEmail ||
-    u.employee_id.toLowerCase() === cleanEmail ||
-    (cleanEmail === 'boss' && u.employee_id === 'ADMIN001')
-  );
-  if (fallbackUser && password === fallbackUser.pass) {
-    const payload = { id: fallbackUser.id, employee_id: fallbackUser.employee_id, name: fallbackUser.name, email: fallbackUser.email, role: fallbackUser.role };
+    const user = rows[0];
+
+    if (!user.is_active) {
+      return res.status(403).json({ error: 'Account is deactivated' });
+    }
+
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid email/employee ID or password' });
+    }
+
+    const payload = { 
+      id: user.id, 
+      employee_id: user.employee_id, 
+      name: user.name, 
+      email: user.email, 
+      role: user.role 
+    };
+
     return res.json({
       token: generateToken(payload),
-      refreshToken: generateRefreshToken({ id: fallbackUser.id }),
-      user: { id: fallbackUser.id, employee_id: fallbackUser.employee_id, name: fallbackUser.name, email: fallbackUser.email, role: fallbackUser.role, designation: fallbackUser.designation, department: fallbackUser.department, avatar_url: fallbackUser.avatar_url }
+      refreshToken: generateRefreshToken({ id: user.id }),
+      user: { 
+        id: user.id, 
+        employee_id: user.employee_id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role, 
+        designation: user.designation, 
+        department: user.department, 
+        avatar_url: user.avatar_url 
+      }
     });
+  } catch (err) {
+    console.error('Database login error:', err.message);
+    return res.status(500).json({ error: 'Authentication service temporarily unavailable' });
   }
-
-  return res.status(401).json({ error: 'Invalid email or password' });
 });
 
 // GET /api/auth/me
@@ -79,19 +73,15 @@ router.get('/me', authenticate, async (req, res, next) => {
       [req.user.id]
     );
 
-    if (rows.length > 0) {
-      return res.json({ user: rows[0] });
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'User account not found' });
     }
+
+    return res.json({ user: rows[0] });
   } catch (err) {
-    console.warn('DB query notice in /me:', err.message);
+    console.error('Database /me error:', err.message);
+    return res.status(500).json({ error: 'Failed to retrieve user profile' });
   }
-
-  const fallbackUser = MOCK_USERS.find(u => u.id === parseInt(req.user.id) || u.email === req.user.email);
-  if (fallbackUser) {
-    return res.json({ user: fallbackUser });
-  }
-
-  res.json({ user: req.user });
 });
 
 // PUT /api/auth/password
@@ -130,7 +120,7 @@ router.post('/refresh', async (req, res, next) => {
     }
 
     const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'refresh-secret');
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'safe-solutions-refresh-secret-2024');
 
     const { rows } = await query(
       'SELECT id, employee_id, name, email, role FROM employees WHERE id = $1 AND is_active = true',
