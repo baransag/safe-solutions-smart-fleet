@@ -1,0 +1,2 @@
+[33m138fed3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Fix Vercel 500 error: Add automatic Neon DB connection and JWT fallbacks
+[33m237440d[m Fix Vercel serverless routing, add Daily Visit Reports, connect Neon DB
