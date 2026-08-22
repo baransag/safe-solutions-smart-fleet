@@ -1,43 +1,38 @@
 const { Pool } = require('pg');
 
-const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL;
 const NEON_FALLBACK = 'postgresql://neondb_owner:npg_ijM05tOdoWcQ@ep-flat-block-ay3xxqz0-pooler.c-5.us-east-2.aws.neon.tech/neondb';
 
-const rawUrl = process.env.DATABASE_URL || NEON_FALLBACK;
-const cleanUrl = rawUrl.split('?')[0];
+let poolInstance = null;
 
-const isLocal = cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1');
+function getPool() {
+  if (!poolInstance) {
+    const rawUrl = process.env.DATABASE_URL || NEON_FALLBACK;
+    const cleanUrl = rawUrl.split('?')[0];
+    const isLocal = cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1');
 
-const poolConfig = {
-  connectionString: cleanUrl,
-  ssl: isLocal ? false : { rejectUnauthorized: false },
-  max: isProduction ? 3 : 10,
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 10000,
-};
+    poolInstance = new Pool({
+      connectionString: cleanUrl,
+      ssl: isLocal ? false : { rejectUnauthorized: false },
+      max: 2,
+      idleTimeoutMillis: 5000,
+      connectionTimeoutMillis: 5000,
+    });
 
-const pool = new Pool(poolConfig);
-
-pool.on('error', (err) => {
-  console.error('Unexpected database pool error:', err.message);
-});
-
-async function testConnection() {
-  const client = await pool.connect();
-  try {
-    const result = await client.query('SELECT NOW()');
-    console.log('✅ PostgreSQL Connected:', result.rows[0].now);
-  } finally {
-    client.release();
+    poolInstance.on('error', (err) => {
+      console.error('Database pool error:', err.message);
+    });
   }
+  return poolInstance;
 }
 
 async function query(text, params) {
-  return await pool.query(text, params);
+  const p = getPool();
+  return await p.query(text, params);
 }
 
 async function transaction(callback) {
-  const client = await pool.connect();
+  const p = getPool();
+  const client = await p.connect();
   try {
     await client.query('BEGIN');
     const result = await callback(client);
@@ -51,4 +46,9 @@ async function transaction(callback) {
   }
 }
 
-module.exports = { pool, query, transaction, testConnection };
+async function testConnection() {
+  const res = await query('SELECT NOW()');
+  return res.rows[0].now;
+}
+
+module.exports = { pool: { query, connect: () => getPool().connect() }, query, transaction, testConnection };
