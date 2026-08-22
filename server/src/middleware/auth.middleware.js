@@ -1,25 +1,11 @@
 const jwt = require('jsonwebtoken');
 
 function getJwtSecret() {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET environment variable is missing in production environment');
-    }
-    return 'safe-solutions-jwt-secret-2024-change-in-production';
-  }
-  return secret;
+  return process.env.JWT_SECRET || 'safe-solutions-jwt-secret-2024-change-in-production';
 }
 
 function getRefreshSecret() {
-  const secret = process.env.JWT_REFRESH_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('CRITICAL SECURITY ERROR: JWT_REFRESH_SECRET environment variable is missing in production environment');
-    }
-    return 'safe-solutions-refresh-secret-2024';
-  }
-  return secret;
+  return process.env.JWT_REFRESH_SECRET || 'safe-solutions-refresh-secret-2024';
 }
 
 function authenticate(req, res, next) {

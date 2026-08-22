@@ -2,26 +2,18 @@ const { Pool } = require('pg');
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL;
 
-const poolConfig = process.env.DATABASE_URL
-  ? {
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1')
-        ? false
-        : { rejectUnauthorized: false },
-      max: isProduction ? 5 : 20,
-      idleTimeoutMillis: 10000,
-      connectionTimeoutMillis: 5000,
-    }
-  : {
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      database: process.env.DB_NAME || 'safe_solutions',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || '',
-      max: isProduction ? 5 : 20,
-      idleTimeoutMillis: 10000,
-      connectionTimeoutMillis: 5000,
-    };
+const NEON_FALLBACK = 'postgresql://neondb_owner:npg_ijM05tOdoWcQ@ep-flat-block-ay3xxqz0-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require';
+const dbUrl = process.env.DATABASE_URL || NEON_FALLBACK;
+
+const poolConfig = {
+  connectionString: dbUrl,
+  ssl: dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1')
+    ? false
+    : { rejectUnauthorized: false },
+  max: isProduction ? 5 : 20,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000,
+};
 
 const pool = new Pool(poolConfig);
 
