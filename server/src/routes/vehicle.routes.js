@@ -197,7 +197,7 @@ router.get('/:id/qr', authenticate, async (req, res, next) => {
 });
 
 // POST /api/vehicles/:id/regenerate-qr
-router.post('/:id/regenerate-qr', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.post('/:id/regenerate-qr', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { rows: vehicle } = await query(
       'SELECT vehicle_id, name, number_plate FROM vehicles WHERE id = $1',

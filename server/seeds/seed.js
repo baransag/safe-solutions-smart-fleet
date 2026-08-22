@@ -289,7 +289,7 @@ async function seed() {
             2023,
             'Red',
             'petrol',
-            1500.00,
+            0.00,
             qrCode
           ]
         );

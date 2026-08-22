@@ -1,14 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../config/db');
-const { authorize } = require('../middleware/auth.middleware');
+const { pool, query } = require('../config/db');
+const { authenticate, authorize } = require('../middleware/auth.middleware');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+
+// Ensure media upload directory exists
+const mediaDir = path.join(__dirname, '../../uploads/media');
+if (!fs.existsSync(mediaDir)) {
+  fs.mkdirSync(mediaDir, { recursive: true });
+}
 
 // Configure Multer for Hero Media Uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '../../uploads/media'));
+    cb(null, mediaDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -17,8 +24,36 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+// GET /api/hero-slides — Return active hero slides (public, no auth needed for dashboard display)
+router.get('/', async (req, res) => {
+  try {
+    // First try hero_slides table (seeded data)
+    const { rows: slides } = await query(
+      `SELECT * FROM hero_slides WHERE is_active = true ORDER BY sort_order ASC`
+    );
+    
+    // Also get hero_posts if any
+    const { rows: posts } = await query(`
+      SELECT h.*, e.name as author_name 
+      FROM hero_posts h 
+      LEFT JOIN employees e ON h.created_by = e.id
+      WHERE h.status = 'published'
+        AND h.start_date <= NOW()
+        AND (h.expiry_date IS NULL OR h.expiry_date > NOW())
+      ORDER BY 
+        CASE WHEN priority = 'high' THEN 1 WHEN priority = 'normal' THEN 2 ELSE 3 END,
+        created_at DESC
+    `);
+    
+    res.json({ slides, posts });
+  } catch (err) {
+    console.error('Hero slides fetch error:', err.message);
+    res.json({ slides: [], posts: [] });
+  }
+});
+
 // Create New Hero Post
-router.post('/', authorize(['admin', 'boss', 'controller', 'manager']), upload.single('media_file'), async (req, res) => {
+router.post('/', authenticate, authorize('admin', 'boss', 'controller', 'manager'), upload.single('media_file'), async (req, res) => {
   try {
     const { title, description, rich_text, priority, status, start_date, expiry_date } = req.body;
     let media_url = null;
@@ -32,18 +67,15 @@ router.post('/', authorize(['admin', 'boss', 'controller', 'manager']), upload.s
       else if (mime === 'application/pdf') media_type = 'pdf';
     }
 
-    const query = `
+    const result = await pool.query(`
       INSERT INTO hero_posts (title, description, rich_text, media_url, media_type, priority, status, start_date, expiry_date, created_by)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
-    `;
-    const values = [
+    `, [
       title, description, rich_text, media_url, media_type,
       priority || 'normal', status || 'published',
       start_date || new Date(), expiry_date || null, req.user.id
-    ];
-
-    const result = await pool.query(query, values);
+    ]);
 
     // Create Notification
     await pool.query(
@@ -79,7 +111,7 @@ router.get('/active', async (req, res) => {
 });
 
 // Get All Hero Posts (For Management)
-router.get('/all', authorize(['admin', 'boss', 'controller', 'manager']), async (req, res) => {
+router.get('/all', authenticate, authorize('admin', 'boss', 'controller', 'manager'), async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT h.*, e.name as author_name 
@@ -94,7 +126,7 @@ router.get('/all', authorize(['admin', 'boss', 'controller', 'manager']), async 
 });
 
 // Delete Post
-router.delete('/:id', authorize(['admin', 'boss', 'controller', 'manager']), async (req, res) => {
+router.delete('/:id', authenticate, authorize('admin', 'boss', 'controller', 'manager'), async (req, res) => {
   try {
     await pool.query('DELETE FROM hero_posts WHERE id = $1', [req.params.id]);
     res.json({ success: true, message: 'Post deleted successfully' });

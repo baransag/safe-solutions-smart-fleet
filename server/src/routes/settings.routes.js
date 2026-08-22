@@ -33,7 +33,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // PUT /api/settings - Update System Settings (Boss, Admin, Controller, Manager)
-router.put('/', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.put('/', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const updates = req.body;
     const allowedKeys = [

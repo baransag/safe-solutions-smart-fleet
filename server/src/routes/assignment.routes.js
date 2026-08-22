@@ -3,6 +3,29 @@ const router = express.Router();
 const { query, transaction } = require('../config/db');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 
+// GET /api/vehicle-assignments/my - Get current user's assignment (MUST be before /:id)
+router.get('/my', authenticate, async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      `SELECT va.*, v.vehicle_id as v_id, v.name as vehicle_name, v.number_plate,
+              v.type as vehicle_type, v.qr_code, v.current_meter, v.image_url
+       FROM vehicle_assignments va
+       JOIN vehicles v ON v.id = va.vehicle_id
+       WHERE va.employee_id = $1 AND va.is_current = true`,
+      [req.user.id]
+    );
+
+    if (rows && rows.length > 0) {
+      return res.json({ assignment: rows[0] });
+    }
+
+    return res.json({ assignment: null });
+  } catch (err) {
+    console.error('Assignment fetch error:', err.message);
+    return res.status(500).json({ error: 'Failed to retrieve vehicle assignment from database' });
+  }
+});
+
 // GET /api/vehicle-assignments - List current assignments
 router.get('/', authenticate, async (req, res, next) => {
   try {
@@ -40,7 +63,7 @@ router.get('/', authenticate, async (req, res, next) => {
 });
 
 // POST /api/vehicle-assignments - Assign vehicle to employee
-router.post('/', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.post('/', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { vehicle_id, employee_id, notes } = req.body;
 
@@ -88,7 +111,7 @@ router.post('/', authenticate, authorize('manager', 'controller'), async (req, r
 });
 
 // DELETE /api/vehicle-assignments/:id - Unassign
-router.delete('/:id', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.delete('/:id', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { rows } = await query(
       `UPDATE vehicle_assignments SET is_current = false, unassigned_at = NOW()
@@ -103,29 +126,6 @@ router.delete('/:id', authenticate, authorize('manager', 'controller'), async (r
     res.json({ message: 'Vehicle unassigned successfully' });
   } catch (err) {
     next(err);
-  }
-});
-
-// GET /api/vehicle-assignments/my - Get current user's assignment from PostgreSQL
-router.get('/my', authenticate, async (req, res, next) => {
-  try {
-    const { rows } = await query(
-      `SELECT va.*, v.vehicle_id as v_id, v.name as vehicle_name, v.number_plate,
-              v.type as vehicle_type, v.qr_code, v.current_meter, v.image_url
-       FROM vehicle_assignments va
-       JOIN vehicles v ON v.id = va.vehicle_id
-       WHERE va.employee_id = $1 AND va.is_current = true`,
-      [req.user.id]
-    );
-
-    if (rows && rows.length > 0) {
-      return res.json({ assignment: rows[0] });
-    }
-
-    return res.json({ assignment: null });
-  } catch (err) {
-    console.error('Assignment fetch error:', err.message);
-    return res.status(500).json({ error: 'Failed to retrieve vehicle assignment from database' });
   }
 });
 

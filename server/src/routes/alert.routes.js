@@ -4,7 +4,7 @@ const { query } = require('../config/db');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 
 // GET /api/alerts
-router.get('/', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.get('/', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { resolved, severity, type } = req.query;
     let sql = `SELECT va.*, v.name as vehicle_name, v.number_plate, v.vehicle_id as v_id,
@@ -40,7 +40,7 @@ router.get('/', authenticate, authorize('manager', 'controller'), async (req, re
 });
 
 // PUT /api/alerts/:id/resolve
-router.put('/:id/resolve', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.put('/:id/resolve', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { resolution_notes } = req.body;
     const { rows } = await query(

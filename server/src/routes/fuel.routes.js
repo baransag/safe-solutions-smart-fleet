@@ -149,7 +149,7 @@ router.get('/', authenticate, async (req, res, next) => {
 });
 
 // PUT /api/fuel/:id/approve
-router.put('/:id/approve', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.put('/:id/approve', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { approval_status, approval_notes } = req.body;
 

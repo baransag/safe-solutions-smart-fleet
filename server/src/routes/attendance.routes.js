@@ -195,7 +195,7 @@ router.get('/today', authenticate, async (req, res, next) => {
 });
 
 // GET /api/attendance/pending (For Manager & Controller Approval Center)
-router.get('/pending', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.get('/pending', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { rows } = await query(`
       SELECT ar.*, e.name as employee_name, e.employee_id as emp_code, e.designation, e.department, e.avatar_url
@@ -211,7 +211,7 @@ router.get('/pending', authenticate, authorize('manager', 'controller'), async (
 });
 
 // PATCH /api/attendance/:id/approve
-router.patch('/:id/approve', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.patch('/:id/approve', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const { notes } = req.body;
@@ -238,7 +238,7 @@ router.patch('/:id/approve', authenticate, authorize('manager', 'controller'), a
 });
 
 // PATCH /api/attendance/:id/reject
-router.patch('/:id/reject', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.patch('/:id/reject', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const { notes } = req.body;
@@ -310,7 +310,7 @@ router.get('/history', authenticate, async (req, res, next) => {
 });
 
 // GET /api/attendance/reports (Daily, Weekly, Monthly, Office, Site, Late, Absent)
-router.get('/reports', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.get('/reports', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { date } = req.query;
     const targetDate = date || new Date().toISOString().split('T')[0];

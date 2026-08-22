@@ -30,7 +30,7 @@ router.get('/', authenticate, async (req, res, next) => {
 });
 
 // POST /api/vehicle-services
-router.post('/', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.post('/', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const {
       vehicle_id, service_type, description, service_date,
@@ -58,7 +58,7 @@ router.post('/', authenticate, authorize('manager', 'controller'), async (req, r
 });
 
 // GET /api/vehicle-services/due - Upcoming services
-router.get('/due', authenticate, authorize('manager', 'controller'), async (req, res, next) => {
+router.get('/due', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { rows } = await query(`
       SELECT DISTINCT ON (vs.vehicle_id)
