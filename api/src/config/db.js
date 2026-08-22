@@ -1,18 +1,19 @@
 const { Pool } = require('pg');
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL;
+const NEON_FALLBACK = 'postgresql://neondb_owner:npg_ijM05tOdoWcQ@ep-flat-block-ay3xxqz0-pooler.c-5.us-east-2.aws.neon.tech/neondb';
 
-const NEON_FALLBACK = 'postgresql://neondb_owner:npg_ijM05tOdoWcQ@ep-flat-block-ay3xxqz0-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require';
-const dbUrl = process.env.DATABASE_URL || NEON_FALLBACK;
+const rawUrl = process.env.DATABASE_URL || NEON_FALLBACK;
+const cleanUrl = rawUrl.split('?')[0];
+
+const isLocal = cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1');
 
 const poolConfig = {
-  connectionString: dbUrl,
-  ssl: dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1')
-    ? false
-    : { rejectUnauthorized: false },
-  max: isProduction ? 5 : 20,
+  connectionString: cleanUrl,
+  ssl: isLocal ? false : { rejectUnauthorized: false },
+  max: isProduction ? 3 : 10,
   idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 10000,
 };
 
 const pool = new Pool(poolConfig);
