@@ -36,8 +36,17 @@ export default function HeroSection() {
 
   async function fetchSlides() {
     try {
-      const data = await api.get('/hero-slides/active');
-      if (data.posts && data.posts.length > 0) {
+      const data = await api.get('/hero-slides');
+      // Use hero_slides from DB if available, else hero_posts, else keep defaults
+      if (data.slides && data.slides.length > 0) {
+        setSlides(data.slides.map(s => ({
+          ...s,
+          image_url: s.image_url,
+          title: s.title,
+          description: s.description,
+          category: 'Company Announcement'
+        })));
+      } else if (data.posts && data.posts.length > 0) {
         setSlides(data.posts);
       }
     } catch {
@@ -121,7 +130,7 @@ export default function HeroSection() {
                 {slide.category && (
                   <span style={{
                     fontSize: 10, fontWeight: 850, padding: '3px 10px', borderRadius: 4,
-                    background: '#C50337', color: '#fff', textTransform: 'uppercase', marginBottom: 6, display: 'inline-block', letterSpacing: '0.05em'
+                    background: '#D42D56', color: '#fff', textTransform: 'uppercase', marginBottom: 6, display: 'inline-block', letterSpacing: '0.05em'
                   }}>
                     {slide.category}
                   </span>

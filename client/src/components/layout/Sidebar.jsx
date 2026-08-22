@@ -27,6 +27,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/check-in', icon: ClipboardCheck, label: 'Vehicle Check-in' },
     { to: '/check-out', icon: Route, label: 'Vehicle Check-out' },
     { to: '/fuel', icon: Fuel, label: 'Fuel Management' },
+    { to: '/visit-reports', icon: FileText, label: 'Daily Visit Reports', badge: 'NEW' },
 
     { section: 'Attendance & Approvals' },
     { to: '/attendance', icon: CalendarCheck, label: 'Attendance' },

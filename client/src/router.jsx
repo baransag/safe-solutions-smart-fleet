@@ -21,6 +21,7 @@ import SystemSettingsPage from './pages/dashboard/SystemSettingsPage';
 import EmployeesPage from './pages/employees/EmployeesPage';
 import ProfilePage from './pages/profile/ProfilePage';
 import SystemLogsPage from './pages/logs/SystemLogsPage';
+import VisitReportsPage from './pages/reports/VisitReportsPage';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -84,6 +85,7 @@ export default function AppRouter() {
           <Route path="/check-in" element={<CheckInPage />} />
           <Route path="/check-out" element={<CheckOutPage />} />
           <Route path="/fuel" element={<FuelPage />} />
+          <Route path="/visit-reports" element={<VisitReportsPage />} />
 
           {/* Employee Attendance, QR Management & Approvals */}
           <Route path="/attendance" element={<AttendancePage />} />

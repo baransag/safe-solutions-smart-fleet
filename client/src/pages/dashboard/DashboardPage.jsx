@@ -254,7 +254,7 @@ function EnterpriseDashboard({ data, navigate }) {
               <div className="stat-card-label">Office Present</div>
               <div className="stat-card-sub">Faisalabad HQ & Branches</div>
             </div>
-            <div className="stat-card-icon" style={{ color: '#021C4F', background: 'rgba(2, 28, 79, 0.1)' }}>
+            <div className="stat-card-icon" style={{ color: '#0F2B5B', background: 'rgba(2, 28, 79, 0.1)' }}>
               <Building2 size={18} />
             </div>
           </div>
@@ -270,7 +270,7 @@ function EnterpriseDashboard({ data, navigate }) {
               <div className="stat-card-label">Site Present</div>
               <div className="stat-card-sub">Project Sites</div>
             </div>
-            <div className="stat-card-icon" style={{ color: '#C50337', background: 'rgba(197, 3, 55, 0.1)' }}>
+            <div className="stat-card-icon" style={{ color: '#D42D56', background: 'rgba(197, 3, 55, 0.1)' }}>
               <HardHat size={18} />
             </div>
           </div>
@@ -366,7 +366,7 @@ function EnterpriseDashboard({ data, navigate }) {
               <div className="stat-card-label">Fuel Requests</div>
               <div className="stat-card-sub">Pending Approvals</div>
             </div>
-            <div className="stat-card-icon" style={{ color: '#C50337', background: 'rgba(197, 3, 55, 0.1)' }}>
+            <div className="stat-card-icon" style={{ color: '#D42D56', background: 'rgba(197, 3, 55, 0.1)' }}>
               <Fuel size={18} />
             </div>
           </div>
@@ -385,7 +385,7 @@ function EnterpriseDashboard({ data, navigate }) {
             <h3 className="section-title" style={{ margin: 0 }}>Active Fleet Vehicles (Live DB)</h3>
             <p className="stat-card-sub" style={{ marginTop: 4 }}>Assigned employees and real-time meter readings</p>
           </div>
-          <button className="btn btn-sm btn-primary" onClick={() => navigate('/vehicles')} style={{ background: '#021C4F' }}>
+          <button className="btn btn-sm btn-primary" onClick={() => navigate('/vehicles')} style={{ background: '#0F2B5B' }}>
             View Full Registry
           </button>
         </div>
@@ -398,8 +398,8 @@ function EnterpriseDashboard({ data, navigate }) {
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>{v.type.toUpperCase()}</span>
               </div>
               <div className="fleet-card-info" style={{ marginTop: 12 }}>
-                <div style={{ fontWeight: 800, color: '#021C4F', fontSize: 14 }}>{v.vehicle_id} • {v.name}</div>
-                <div style={{ fontSize: 12, color: '#C50337', fontWeight: 700 }}>{v.number_plate}</div>
+                <div style={{ fontWeight: 800, color: '#0F2B5B', fontSize: 14 }}>{v.vehicle_id} • {v.name}</div>
+                <div style={{ fontSize: 12, color: '#D42D56', fontWeight: 700 }}>{v.number_plate}</div>
               </div>
               <div className="fleet-card-driver" style={{ marginTop: 12 }}>
                 <img src={getAvatarByName(v.assigned_employee_name || 'Driver')} alt="Driver" className="driver-avatar" />

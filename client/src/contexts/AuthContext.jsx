@@ -67,12 +67,12 @@ export function AuthProvider({ children }) {
     updateUser,
     isAuthenticated: !!user,
     isEmployee: user?.role === 'employee',
-    isManager: user?.role === 'manager',
-    isController: user?.role === 'controller',
+    isManager: ['manager', 'controller', 'admin', 'boss'].includes(user?.role),
+    isController: ['controller', 'admin', 'boss'].includes(user?.role),
     isBoss: user?.role === 'boss' || user?.employee_id === 'ADMIN001' || user?.email === 'boss@safesolutions.com',
     isSysAdmin: user?.role === 'admin',
     isAdmin: ['admin', 'boss', 'controller', 'manager'].includes(user?.role),
-    isSuperAdmin: ['admin', 'boss'].includes(user?.role),
+    isSuperAdmin: ['admin', 'boss', 'controller'].includes(user?.role),
   };
 
   return (

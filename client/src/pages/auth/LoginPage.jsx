@@ -134,7 +134,7 @@ export default function LoginPage() {
             <span>📍 Faisalabad HQ</span>
           </div>
           <div className="intro-progress-bar" style={{ width: 220, height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden', margin: '0 auto' }}>
-            <div className="intro-progress-fill" style={{ width: `${introProgress}%`, height: '100%', background: 'linear-gradient(90deg, #C50337 0%, var(--color-gold) 100%)', boxShadow: '0 0 10px #C50337' }} />
+            <div className="intro-progress-fill" style={{ width: `${introProgress}%`, height: '100%', background: 'linear-gradient(90deg, #D42D56 0%, var(--color-gold) 100%)', boxShadow: '0 0 10px #D42D56' }} />
           </div>
         </div>
       </div>
@@ -183,8 +183,8 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-bg-shapes">
-        <div className="login-shape shape-1" style={{ background: '#C50337' }} />
-        <div className="login-shape shape-2" style={{ background: '#021C4F' }} />
+        <div className="login-shape shape-1" style={{ background: '#D42D56' }} />
+        <div className="login-shape shape-2" style={{ background: '#0F2B5B' }} />
         <div className="login-shape shape-3" style={{ background: '#D97706' }} />
       </div>
 
@@ -263,7 +263,7 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  style={{ accentColor: '#C50337' }}
+                  style={{ accentColor: '#D42D56' }}
                 />
                 Remember Me
               </label>
@@ -280,7 +280,7 @@ export default function LoginPage() {
               type="submit"
               className="btn btn-primary btn-lg"
               disabled={loading}
-              style={{ width: '100%', marginTop: 8, background: '#C50337', borderColor: '#C50337', fontWeight: 800, height: 48, borderRadius: 10 }}
+              style={{ width: '100%', marginTop: 8, background: '#D42D56', borderColor: '#D42D56', fontWeight: 800, height: 48, borderRadius: 10 }}
             >
               {loading ? (
                 <>

@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
 import ReceiptScanner from '../../components/fuel/ReceiptScanner';
-import { Fuel, CheckCircle2, AlertTriangle, Eye, X, Image as ImageIcon } from 'lucide-react';
+import { Fuel, CheckCircle2, AlertTriangle, Eye, X, Image as ImageIcon, FileText, Check } from 'lucide-react';
 
 export default function FuelPage() {
   const { user, isManager, isController, isAdmin } = useAuth();
@@ -23,14 +23,12 @@ export default function FuelPage() {
     fuel_type: 'Super Petrol',
     invoice_no: '',
     rate: '',
-    receipt_date: '',
-    receipt_time: ''
+    receipt_date: new Date().toISOString().split('T')[0],
+    receipt_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   });
 
   const [rawBlob, setRawBlob] = useState(null);
   const [processedBlob, setProcessedBlob] = useState(null);
-  const [extractedInfo, setExtractedInfo] = useState(null);
-  const [lowConfidenceFields, setLowConfidenceFields] = useState([]);
   const [previewModalImg, setPreviewModalImg] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -53,34 +51,38 @@ export default function FuelPage() {
   const handleCaptureComplete = (data) => {
     setRawBlob(data.rawBlob);
     setProcessedBlob(data.processedBlob);
-    setExtractedInfo(data.extracted);
-    setLowConfidenceFields(data.lowConfidenceFields || []);
+    toast.success('📷 Receipt slip photo attached successfully!');
+  };
 
-    if (data.extracted) {
-      setForm(prev => ({
-        ...prev,
-        pump_name: data.extracted.pump_name || prev.pump_name,
-        fuel_amount: data.extracted.fuel_amount || prev.fuel_amount,
-        liters: data.extracted.liters || prev.liters,
-        rate: data.extracted.rate || prev.rate,
-        fuel_type: data.extracted.fuel_type || prev.fuel_type,
-        invoice_no: data.extracted.invoice_no || prev.invoice_no,
-        receipt_date: data.extracted.date || prev.receipt_date,
-        receipt_time: data.extracted.time || prev.receipt_time
-      }));
+  // Auto-calculate Total when liters or rate changes
+  const handleLitersChange = (val) => {
+    const l = parseFloat(val);
+    const r = parseFloat(form.rate);
+    const updated = { ...form, liters: val };
+    if (!isNaN(l) && !isNaN(r) && r > 0) {
+      updated.fuel_amount = (l * r).toFixed(0);
     }
+    setForm(updated);
+  };
 
-    toast.success('📷 Receipt scanned & enhanced via CamScanner engine!');
+  const handleRateChange = (val) => {
+    const r = parseFloat(val);
+    const l = parseFloat(form.liters);
+    const updated = { ...form, rate: val };
+    if (!isNaN(l) && !isNaN(r) && l > 0) {
+      updated.fuel_amount = (l * r).toFixed(0);
+    }
+    setForm(updated);
   };
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (!processedBlob && !rawBlob) {
-      toast.warning('Please scan the fuel receipt using the camera.');
+      toast.warning('Please attach or take a photo of the fuel receipt slip.');
       return;
     }
     if (!form.fuel_amount || !form.liters) {
-      toast.warning('Amount and liters are required');
+      toast.warning('Total Amount (Rs) and Liters are required.');
       return;
     }
 
@@ -93,14 +95,14 @@ export default function FuelPage() {
       const vehiclesData = await api.get('/vehicles');
       const matched = vehiclesData.vehicles?.find(v => v.vehicle_id === assignment?.v_id || v.id === assignment?.vehicle_id) || vehiclesData.vehicles?.[0];
       if (!matched) {
-        toast.error('No valid assigned vehicle found');
+        toast.error('No valid assigned vehicle found in database.');
         setSubmitting(false);
         return;
       }
 
       const formData = new FormData();
       formData.append('vehicle_id', matched.id);
-      formData.append('pump_name', form.pump_name);
+      formData.append('pump_name', form.pump_name || 'Filling Station');
       formData.append('fuel_amount', form.fuel_amount);
       formData.append('liters', form.liters);
       if (form.meter_reading) formData.append('meter_reading', form.meter_reading);
@@ -119,15 +121,24 @@ export default function FuelPage() {
       if (processedBlob) formData.append('processed_receipt_photo', processedBlob, 'processed_receipt.jpg');
 
       await api.upload('/fuel', formData);
-      toast.success('Fuel receipt log saved to database & submitted for manager approval!');
+      toast.success('Fuel receipt submitted for controller approval!');
       
       // Trigger global data synchronization event across app
       window.dispatchEvent(new CustomEvent('app:data-sync'));
 
-      setForm({ pump_name: '', fuel_amount: '', liters: '', meter_reading: '', fuel_type: 'Super Petrol', invoice_no: '', rate: '', receipt_date: '', receipt_time: '' });
+      setForm({
+        pump_name: '',
+        fuel_amount: '',
+        liters: '',
+        meter_reading: '',
+        fuel_type: 'Super Petrol',
+        invoice_no: '',
+        rate: '',
+        receipt_date: new Date().toISOString().split('T')[0],
+        receipt_time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
       setRawBlob(null);
       setProcessedBlob(null);
-      setExtractedInfo(null);
       fetchData();
       setTab('history');
     } catch (err) {
@@ -140,7 +151,7 @@ export default function FuelPage() {
   async function handleApproval(id, status) {
     try {
       await api.put(`/fuel/${id}/approve`, { approval_status: status });
-      toast.success(`Fuel entry ${status}`);
+      toast.success(`Fuel entry marked as ${status}`);
       window.dispatchEvent(new CustomEvent('app:data-sync'));
       fetchData();
     } catch (err) {
@@ -153,100 +164,93 @@ export default function FuelPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Fuel Management</h1>
-          <p className="page-description">CamScanner-Style Receipt Scanner, OCR Extraction & Database Fuel Approvals</p>
+          <p className="page-description">Slip Verification, Expense Entry & Controller Fuel Approvals</p>
         </div>
       </div>
 
       <div className="tabs">
-        <button className={`tab ${tab === 'submit' ? 'active' : ''}`} onClick={() => setTab('submit')}>Submit Fuel</button>
-        <button className={`tab ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>History</button>
+        <button className={`tab ${tab === 'submit' ? 'active' : ''}`} onClick={() => setTab('submit')}>Submit Fuel Slip</button>
+        <button className={`tab ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>Fuel Logs History</button>
         {isManagerOrController && <button className={`tab ${tab === 'approvals' ? 'active' : ''}`} onClick={() => setTab('approvals')}>Approvals Center</button>}
       </div>
 
       {tab === 'submit' && (
-        <div style={{ maxWidth: 640, margin: '0 auto' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto' }}>
           <form onSubmit={handleSubmit} className="card-elevated">
-            <h3 style={{ marginBottom: 'var(--space-5)', fontWeight: 800, color: '#021C4F', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Fuel size={20} color="#C50337" />
-              CamScanner Fuel Receipt Scanner
+            <h3 style={{ marginBottom: 16, fontWeight: 800, color: '#0F2B5B', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Fuel size={22} color="#D42D56" />
+              Upload & Verify Fuel Slip
             </h3>
 
-            {/* Receipt Camera & Enhancement Component */}
+            {/* 1. Receipt Slip Camera / File Upload Component */}
             <ReceiptScanner
               onCaptureComplete={handleCaptureComplete}
               assignedVehicleName={assignment?.vehicle_name ? `${assignment.vehicle_name} (${assignment.number_plate})` : null}
             />
 
-            {/* Extracted Structured Input Fields */}
-            <div style={{ background: '#f8fafc', padding: 18, borderRadius: 16, border: '1px solid #cbd5e1', marginBottom: 20 }}>
-              <h4 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 800, color: '#021C4F' }}>
-                📋 Verified Receipt Information
+            {/* 2. Structured Input Fields for User to Type & Verify against Slip */}
+            <div style={{ background: '#F8FAFC', padding: 20, borderRadius: 16, border: '1px solid #E2E8F0', marginBottom: 20 }}>
+              <h4 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 800, color: '#0F2B5B', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <FileText size={16} color="#0F2B5B" />
+                Fill Slip Details (Check & Match with Photo)
               </h4>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 700 }}>
-                    Station Name {lowConfidenceFields.includes('pump_name') && <span style={{ color: '#D97706', fontSize: 11 }}>(Verify)</span>}
-                  </label>
+                  <label className="form-label" style={{ fontWeight: 700 }}>Petrol Pump / Station Name</label>
                   <input
                     className="form-input"
                     value={form.pump_name}
                     onChange={(e) => setForm({...form, pump_name: e.target.value})}
-                    placeholder="e.g. PSO Super Station"
-                    style={{ borderColor: lowConfidenceFields.includes('pump_name') ? '#F59E0B' : undefined }}
+                    placeholder="e.g. PSO / Shell / Total Station"
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 700 }}>Invoice / Receipt No.</label>
+                  <label className="form-label" style={{ fontWeight: 700 }}>Slip / Invoice No.</label>
                   <input
                     className="form-input"
                     value={form.invoice_no}
                     onChange={(e) => setForm({...form, invoice_no: e.target.value})}
-                    placeholder="e.g. INV-10492"
+                    placeholder="e.g. 004812"
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 700 }}>
-                    Total Amount (Rs) * {lowConfidenceFields.includes('fuel_amount') && <span style={{ color: '#D97706', fontSize: 11 }}>(Verify)</span>}
-                  </label>
-                  <input
-                    className="form-input"
-                    type="number"
-                    value={form.fuel_amount}
-                    onChange={(e) => setForm({...form, fuel_amount: e.target.value})}
-                    placeholder="e.g. 3500"
-                    required
-                    style={{ borderColor: lowConfidenceFields.includes('fuel_amount') ? '#F59E0B' : undefined }}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 700 }}>
-                    Volume (Litres) * {lowConfidenceFields.includes('liters') && <span style={{ color: '#D97706', fontSize: 11 }}>(Verify)</span>}
-                  </label>
+                  <label className="form-label" style={{ fontWeight: 700 }}>Volume (Litres) *</label>
                   <input
                     className="form-input"
                     type="number"
                     step="0.01"
                     value={form.liters}
-                    onChange={(e) => setForm({...form, liters: e.target.value})}
-                    placeholder="e.g. 12.5"
+                    onChange={(e) => handleLitersChange(e.target.value)}
+                    placeholder="e.g. 10.5"
                     required
-                    style={{ borderColor: lowConfidenceFields.includes('liters') ? '#F59E0B' : undefined }}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ fontWeight: 700 }}>Rate / Litre (Rs)</label>
+                  <label className="form-label" style={{ fontWeight: 700 }}>Rate per Litre (Rs)</label>
                   <input
                     className="form-input"
                     type="number"
                     step="0.01"
                     value={form.rate}
-                    onChange={(e) => setForm({...form, rate: e.target.value})}
+                    onChange={(e) => handleRateChange(e.target.value)}
                     placeholder="e.g. 280.00"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>Total Fuel Amount (Rs) *</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    value={form.fuel_amount}
+                    onChange={(e) => setForm({...form, fuel_amount: e.target.value})}
+                    placeholder="e.g. 2940"
+                    required
+                    style={{ fontWeight: 800, color: '#0F2B5B' }}
                   />
                 </div>
 
@@ -281,19 +285,34 @@ export default function FuelPage() {
                     className="form-input"
                     value={assignment ? `${assignment.vehicle_name} (${assignment.number_plate})` : 'Company Vehicle'}
                     disabled
-                    style={{ background: '#e2e8f0' }}
+                    style={{ background: '#E2E8F0', color: '#475569', fontWeight: 600 }}
                   />
                 </div>
               </div>
             </div>
 
+            {/* 3. Live Slip Voucher Summary Card */}
+            {(form.fuel_amount || form.liters) && (
+              <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', padding: 14, borderRadius: 12, marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#065F46', marginBottom: 4 }}>
+                  🧾 Slip Summary Preview:
+                </div>
+                <div style={{ fontSize: 12, color: '#047857', display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+                  <span><strong>Amount:</strong> Rs {form.fuel_amount || 0}</span>
+                  <span><strong>Volume:</strong> {form.liters || 0} L</span>
+                  <span><strong>Rate:</strong> Rs {form.rate || '—'}/L</span>
+                  <span><strong>Station:</strong> {form.pump_name || 'Station'}</span>
+                </div>
+              </div>
+            )}
+
             <button
               type="submit"
               className="btn btn-primary btn-lg"
               disabled={submitting || (!processedBlob && !rawBlob)}
-              style={{ width: '100%', padding: '16px', fontWeight: 800, background: '#021C4F' }}
+              style={{ width: '100%', padding: '16px', fontWeight: 800, background: '#0F2B5B', borderRadius: 12 }}
             >
-              {submitting ? 'Saving to Database & Submitting...' : 'Confirm & Save Fuel Entry to Database'}
+              {submitting ? 'Submitting to Database...' : 'Confirm Slip & Submit Fuel Request'}
             </button>
           </form>
         </div>
@@ -305,11 +324,11 @@ export default function FuelPage() {
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Receipt Image</th>
+                <th>Receipt Slip</th>
                 <th>Vehicle</th>
                 <th>Station</th>
-                <th>Amount</th>
-                <th>Liters</th>
+                <th>Amount (Rs)</th>
+                <th>Volume</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -323,9 +342,9 @@ export default function FuelPage() {
                         type="button"
                         className="btn btn-ghost btn-sm"
                         onClick={() => setPreviewModalImg(f.processed_receipt_url || f.receipt_photo_url)}
-                        style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#021C4F', fontWeight: 700 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#0F2B5B', fontWeight: 700 }}
                       >
-                        <ImageIcon size={14} /> View Receipt
+                        <ImageIcon size={14} /> View Slip
                       </button>
                     ) : (
                       <span style={{ fontSize: 11, color: '#94a3b8' }}>No Image</span>
@@ -336,8 +355,8 @@ export default function FuelPage() {
                     <div style={{ fontSize: 11, color: '#64748b' }}>{f.number_plate}</div>
                   </td>
                   <td>{f.pump_name || 'Station'}</td>
-                  <td><strong style={{ color: '#021C4F' }}>Rs {parseFloat(f.fuel_amount).toLocaleString()}</strong></td>
-                  <td>{f.liters}L</td>
+                  <td><strong style={{ color: '#0F2B5B' }}>Rs {parseFloat(f.fuel_amount).toLocaleString()}</strong></td>
+                  <td>{f.liters} L</td>
                   <td>
                     <span className={`badge badge-${f.approval_status === 'approved' ? 'green' : f.approval_status === 'rejected' ? 'red' : 'yellow'}`}>
                       {f.approval_status}
@@ -360,11 +379,11 @@ export default function FuelPage() {
               <tr>
                 <th>Date</th>
                 <th>Employee</th>
-                <th>Receipt Photo</th>
+                <th>Receipt Slip</th>
                 <th>Vehicle</th>
                 <th>Station</th>
                 <th>Amount</th>
-                <th>Liters</th>
+                <th>Volume</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -385,7 +404,7 @@ export default function FuelPage() {
                         onClick={() => setPreviewModalImg(f.processed_receipt_url || f.receipt_photo_url)}
                         style={{ display: 'flex', alignItems: 'center', gap: 4 }}
                       >
-                        <Eye size={14} /> Scanned Image
+                        <Eye size={14} /> Full Slip
                       </button>
                     ) : (
                       <span style={{ fontSize: 11, color: '#94a3b8' }}>No Image</span>
@@ -393,12 +412,12 @@ export default function FuelPage() {
                   </td>
                   <td>{f.vehicle_name} ({f.number_plate})</td>
                   <td>{f.pump_name || 'Station'}</td>
-                  <td><strong style={{ color: '#021C4F' }}>Rs {parseFloat(f.fuel_amount).toLocaleString()}</strong></td>
-                  <td>{f.liters}L</td>
+                  <td><strong style={{ color: '#0F2B5B' }}>Rs {parseFloat(f.fuel_amount).toLocaleString()}</strong></td>
+                  <td>{f.liters} L</td>
                   <td><span className="badge badge-yellow">⏳ Pending</span></td>
                   <td style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn btn-primary btn-sm" onClick={() => handleApproval(f.id, 'approved')} style={{ background: '#10B981', border: 'none' }}>Approve</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleApproval(f.id, 'rejected')} style={{ background: '#EF4444', border: 'none' }}>Reject</button>
+                    <button className="btn btn-primary btn-sm" onClick={() => handleApproval(f.id, 'approved')} style={{ background: '#059669', border: 'none', fontWeight: 700 }}>Approve</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleApproval(f.id, 'rejected')} style={{ background: '#DC2626', border: 'none', fontWeight: 700 }}>Reject</button>
                   </td>
                 </tr>
               ))}
@@ -410,137 +429,13 @@ export default function FuelPage() {
         </div>
       )}
 
-      {/* RECEIPT IMAGE LIGHTBOX MODAL */}
+      {/* FULL IMAGE PREVIEW MODAL */}
       {previewModalImg && (
-        <div className="modal-overlay" onClick={() => setPreviewModalImg(null)}>
-          <div className="modal-content animate-scale-in" style={{ maxWidth: 540, padding: 20, textAlign: 'center', borderRadius: 20 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#021C4F' }}>Scanned Fuel Receipt Image</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setPreviewModalImg(null)}><X size={18} /></button>
-            </div>
-            <img
-              src={previewModalImg.startsWith('/') ? previewModalImg : `/${previewModalImg}`}
-              alt="Receipt Preview"
-              style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: 12, border: '1px solid #cbd5e1' }}
-              onError={(e) => { e.currentTarget.alt = 'Receipt Image Unavailable'; }}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ReceiptCamera({ onCapture }) {
-  const videoRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const streamRef = useRef(null);
-  const [active, setActive] = useState(false);
-  const [error, setError] = useState(null);
-
-  async function start() {
-    setError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: 'environment' } }
-      }).catch(async () => {
-        // Fallback to ideal facingMode if exact fails
-        return await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      });
-
-      streamRef.current = stream;
-      setActive(true);
-    } catch (err) {
-      console.warn('MediaDevices camera error, fallback to native camera intent:', err);
-      // Trigger native camera intent directly on mobile
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      } else {
-        setError('Camera permission denied or camera not found.');
-      }
-    }
-  }
-
-  useEffect(() => {
-    if (active && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-    }
-  }, [active]);
-
-  function capture() {
-    const v = videoRef.current;
-    if (!v) return;
-    const c = document.createElement('canvas');
-    c.width = v.videoWidth || 1280;
-    c.height = v.videoHeight || 720;
-    const ctx = c.getContext('2d');
-    ctx.drawImage(v, 0, 0, c.width, c.height);
-
-    c.toBlob(blob => {
-      const preview = c.toDataURL('image/jpeg', 0.85);
-      stopStream();
-      onCapture(blob, preview);
-    }, 'image/jpeg', 0.85);
-  }
-
-  function stopStream() {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
-    setActive(false);
-  }
-
-  function handleFileSelect(e) {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        onCapture(file, evt.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  useEffect(() => {
-    return () => stopStream();
-  }, []);
-
-  return (
-    <div style={{ marginTop: 'var(--space-2)' }}>
-      {/* Hidden file input strictly for native camera intent */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileSelect}
-        style={{ display: 'none' }}
-      />
-
-      {!active ? (
-        <div>
-          <button
-            type="button"
-            className="btn btn-primary btn-lg"
-            onClick={start}
-            style={{ width: '100%', padding: '16px' }}
-          >
-            <Camera size={20} /> Open Camera to Capture Fuel Receipt
-          </button>
-          {error && <p className="form-error" style={{ marginTop: 6, textAlign: 'center' }}>{error}</p>}
-        </div>
-      ) : (
-        <div>
-          <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: '#000', marginBottom: 12 }}>
-            <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', maxHeight: 360, objectFit: 'cover' }} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <button type="button" className="btn btn-ghost" onClick={stopStream}>
-              Cancel
-            </button>
-            <button type="button" className="btn btn-teal" onClick={capture}>
-              <Camera size={16} /> Snap Live Receipt
+        <div className="modal-backdrop" onClick={() => setPreviewModalImg(null)}>
+          <div className="modal animate-scale-in" style={{ maxWidth: 640, padding: 20, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <img src={previewModalImg.startsWith('/') ? previewModalImg : `/${previewModalImg}`} alt="Fuel Slip Preview" style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: 12 }} />
+            <button className="btn btn-primary" onClick={() => setPreviewModalImg(null)} style={{ marginTop: 16, background: '#0F2B5B' }}>
+              Close Preview
             </button>
           </div>
         </div>

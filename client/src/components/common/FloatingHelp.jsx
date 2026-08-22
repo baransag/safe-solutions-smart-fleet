@@ -43,11 +43,11 @@ export default function FloatingHelp() {
             boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
             border: '1px solid rgba(2, 28, 79, 0.15)',
             padding: 16,
-            color: '#021C4F'
+            color: '#0F2B5B'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottom: '1px solid #eee', paddingBottom: 8 }}>
               <div>
-                <h4 style={{ fontWeight: 800, margin: 0, fontSize: 14, color: '#021C4F' }}>Need Help?</h4>
+                <h4 style={{ fontWeight: 800, margin: 0, fontSize: 14, color: '#0F2B5B' }}>Need Help?</h4>
                 <p style={{ margin: '2px 0 0', fontSize: 11, color: '#666' }}>Contact Manager or Controller on WhatsApp</p>
               </div>
               <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: 4 }}>
@@ -87,7 +87,7 @@ export default function FloatingHelp() {
                   alignItems: 'center',
                   gap: 10,
                   padding: '10px 12px',
-                  background: '#021C4F',
+                  background: '#0F2B5B',
                   color: '#fff',
                   border: 'none',
                   borderRadius: 10,
@@ -114,7 +114,7 @@ export default function FloatingHelp() {
             alignItems: 'center',
             gap: 6,
             padding: '10px 16px',
-            background: 'linear-gradient(135deg, #021C4F 0%, #C50337 100%)',
+            background: 'linear-gradient(135deg, #0F2B5B 0%, #D42D56 100%)',
             color: '#fff',
             border: 'none',
             borderRadius: 30,

@@ -59,12 +59,12 @@ export default function QRCodesPage() {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: 'Inter', Arial, sans-serif; display: flex; justify-content: center; padding: 20px; }
-          .sticker { width: 300px; border: 2px solid #021C4F; border-radius: 12px; padding: 20px; text-align: center; }
-          .sticker-header { font-size: 14px; font-weight: 800; color: #021C4F; letter-spacing: 0.05em; margin-bottom: 4px; }
+          .sticker { width: 300px; border: 2px solid #0F2B5B; border-radius: 12px; padding: 20px; text-align: center; }
+          .sticker-header { font-size: 14px; font-weight: 800; color: #0F2B5B; letter-spacing: 0.05em; margin-bottom: 4px; }
           .sticker-sub { font-size: 9px; color: #6B5B54; margin-bottom: 16px; }
           .qr-img { width: 200px; height: 200px; margin: 0 auto 16px; display: block; }
-          .vehicle-id { font-size: 16px; font-weight: 800; color: #021C4F; }
-          .vehicle-plate { font-size: 20px; font-weight: 800; color: #C50337; margin: 4px 0 8px; letter-spacing: 0.1em; }
+          .vehicle-id { font-size: 16px; font-weight: 800; color: #0F2B5B; }
+          .vehicle-plate { font-size: 20px; font-weight: 800; color: #D42D56; margin: 4px 0 8px; letter-spacing: 0.1em; }
           .vehicle-name { font-size: 11px; color: #6B5B54; }
           .sticker-footer { margin-top: 12px; padding-top: 8px; border-top: 1px solid #ddd; font-size: 8px; color: #999; }
           @media print { body { padding: 0; } }

@@ -93,10 +93,10 @@ export default function ReportsPage() {
           <title>Attendance Report - ${activeTab.toUpperCase()}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
-            h2 { color: #021C4F; margin-bottom: 5px; }
+            h2 { color: #0F2B5B; margin-bottom: 5px; }
             table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #021C4F; color: white; }
+            th { background-color: #0F2B5B; color: white; }
             .header-info { margin-bottom: 15px; font-size: 13px; color: #555; }
           </style>
         </head>
@@ -151,7 +151,7 @@ export default function ReportsPage() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ padding: 10, background: '#021C4F', borderRadius: 12, color: '#fff' }}>
+            <div style={{ padding: 10, background: '#0F2B5B', borderRadius: 12, color: '#fff' }}>
               <FileText size={24} />
             </div>
             <div>
@@ -166,7 +166,7 @@ export default function ReportsPage() {
           <button className="btn btn-secondary" onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}>
             <Download size={16} /> Export CSV
           </button>
-          <button className="btn btn-primary" onClick={exportPDF} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#021C4F', fontWeight: 700 }}>
+          <button className="btn btn-primary" onClick={exportPDF} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#0F2B5B', fontWeight: 700 }}>
             <Printer size={16} /> Export PDF
           </button>
         </div>
@@ -174,17 +174,17 @@ export default function ReportsPage() {
 
       {/* Metric Cards Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
-        <div className="card-elevated" style={{ padding: 16, borderRadius: 12, borderLeft: '4px solid #021C4F' }}>
+        <div className="card-elevated" style={{ padding: 16, borderRadius: 12, borderLeft: '4px solid #0F2B5B' }}>
           <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Total Present</span>
-          <h3 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, color: '#021C4F' }}>{summary?.total_present || records.length}</h3>
+          <h3 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, color: '#0F2B5B' }}>{summary?.total_present || records.length}</h3>
         </div>
         <div className="card-elevated" style={{ padding: 16, borderRadius: 12, borderLeft: '4px solid #0284c7' }}>
           <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Office Present</span>
           <h3 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, color: '#0284c7' }}>{summary?.office_present || records.filter(r => r.attendance_type === 'office').length}</h3>
         </div>
-        <div className="card-elevated" style={{ padding: 16, borderRadius: 12, borderLeft: '4px solid #C50337' }}>
+        <div className="card-elevated" style={{ padding: 16, borderRadius: 12, borderLeft: '4px solid #D42D56' }}>
           <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Site Present</span>
-          <h3 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, color: '#C50337' }}>{summary?.site_present || records.filter(r => r.attendance_type === 'site').length}</h3>
+          <h3 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, color: '#D42D56' }}>{summary?.site_present || records.filter(r => r.attendance_type === 'site').length}</h3>
         </div>
         <div className="card-elevated" style={{ padding: 16, borderRadius: 12, borderLeft: '4px solid #D97706' }}>
           <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Pending Approval</span>
@@ -212,7 +212,7 @@ export default function ReportsPage() {
             onClick={() => setActiveTab(t.key)}
             style={{
               padding: '8px 16px', borderRadius: 20, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer',
-              background: activeTab === t.key ? '#021C4F' : '#f0f4f8', color: activeTab === t.key ? '#fff' : '#666',
+              background: activeTab === t.key ? '#0F2B5B' : '#f0f4f8', color: activeTab === t.key ? '#fff' : '#666',
               whiteSpace: 'nowrap'
             }}
           >
@@ -277,13 +277,13 @@ export default function ReportsPage() {
                     <span style={{
                       padding: '3px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700,
                       background: r.attendance_type === 'site' ? '#fff1f2' : '#eff6ff',
-                      color: r.attendance_type === 'site' ? '#c50337' : '#021c4f'
+                      color: r.attendance_type === 'site' ? '#d42d56' : '#0f2b5b'
                     }}>
                       {r.attendance_type === 'site' ? '🏗️ Site' : '🏢 Office'}
                     </span>
                   </td>
                   <td>
-                    <div style={{ fontWeight: 600, color: '#021C4F' }}>{r.location_name || 'Head Office'}</div>
+                    <div style={{ fontWeight: 600, color: '#0F2B5B' }}>{r.location_name || 'Head Office'}</div>
                     {r.project_name && <div style={{ fontSize: 11, color: '#64748b' }}>{r.project_name}</div>}
                   </td>
                   <td>

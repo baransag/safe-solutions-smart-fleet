@@ -130,8 +130,8 @@ export default function EmployeeQRScanner({ isOpen, onClose, onScanSuccess, titl
     <div className="modal-overlay" onClick={() => { stopScanner(); onClose(); }}>
       <div className="modal-content animate-fade-in" style={{ maxWidth: 440, padding: 24 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, color: '#021C4F' }}>
-            <Camera size={20} color="#C50337" /> {title}
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, color: '#0F2B5B' }}>
+            <Camera size={20} color="#D42D56" /> {title}
           </h3>
           <button className="btn-icon" onClick={() => { stopScanner(); onClose(); }} style={{ background: '#f1f5f9', borderRadius: '50%' }}>
             <X size={18} />
@@ -171,7 +171,7 @@ export default function EmployeeQRScanner({ isOpen, onClose, onScanSuccess, titl
             borderRadius: 12,
             overflow: 'hidden',
             background: '#0f172a',
-            border: '2px solid #021C4F',
+            border: '2px solid #0F2B5B',
             position: 'relative'
           }}
         />

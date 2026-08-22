@@ -460,7 +460,7 @@ export default function AttendancePage() {
               className="btn btn-danger btn-lg"
               disabled={actionLoading || !gpsVerified || !selfieBlob || !sitePhotoBlob || !workCompleted || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
               onClick={handleSubmitSiteAttendance}
-              style={{ width: '100%', marginTop: 12, height: 50, fontSize: 15, fontWeight: 800, background: '#C50337', borderColor: '#C50337' }}
+              style={{ width: '100%', marginTop: 12, height: 50, fontSize: 15, fontWeight: 800, background: '#D42D56', borderColor: '#D42D56' }}
             >
               {actionLoading ? 'Submitting Site Attendance...' : 'Submit Site Attendance'}
             </button>
@@ -696,7 +696,7 @@ export default function AttendancePage() {
               <CheckCircle2 size={40} />
             </div>
 
-            <h3 style={{ fontSize: 20, fontWeight: 900, color: '#021C4F', margin: '0 0 8px' }}>
+            <h3 style={{ fontSize: 20, fontWeight: 900, color: '#0F2B5B', margin: '0 0 8px' }}>
               {attendanceSuccessModal.title}
             </h3>
             <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 24px' }}>
@@ -709,7 +709,7 @@ export default function AttendancePage() {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                 <span style={{ color: '#64748b', fontWeight: 600 }}>Date:</span>
-                <strong style={{ color: '#021C4F' }}>{attendanceSuccessModal.date}</strong>
+                <strong style={{ color: '#0F2B5B' }}>{attendanceSuccessModal.date}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                 <span style={{ color: '#64748b', fontWeight: 600 }}>Check-In Time:</span>
@@ -717,7 +717,7 @@ export default function AttendancePage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                 <span style={{ color: '#64748b', fontWeight: 600 }}>Office Location:</span>
-                <strong style={{ color: '#021C4F' }}>{attendanceSuccessModal.office}</strong>
+                <strong style={{ color: '#0F2B5B' }}>{attendanceSuccessModal.office}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                 <span style={{ color: '#64748b', fontWeight: 600 }}>GPS Verification:</span>
@@ -728,7 +728,7 @@ export default function AttendancePage() {
             <button
               className="btn btn-primary btn-lg"
               onClick={() => setAttendanceSuccessModal(null)}
-              style={{ width: '100%', background: '#021C4F', borderRadius: 14, fontWeight: 700 }}
+              style={{ width: '100%', background: '#0F2B5B', borderRadius: 14, fontWeight: 700 }}
             >
               Done & Continue
             </button>

@@ -161,7 +161,7 @@ export default function HeroManagementPage() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ padding: 10, background: '#021C4F', borderRadius: 12, color: '#fff' }}>
+            <div style={{ padding: 10, background: '#0F2B5B', borderRadius: 12, color: '#fff' }}>
               <Megaphone size={24} />
             </div>
             <div>
@@ -184,7 +184,7 @@ export default function HeroManagementPage() {
             });
             setShowModal(true);
           }}
-          style={{ background: '#021C4F', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}
+          style={{ background: '#0F2B5B', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}
         >
           <Plus size={18} /> New Announcement Banner
         </button>
@@ -203,7 +203,7 @@ export default function HeroManagementPage() {
               />
               <span style={{
                 position: 'absolute', top: 12, left: 12, padding: '4px 10px', borderRadius: 6,
-                background: '#C50337', color: '#fff', fontSize: 10, fontWeight: 800, textTransform: 'uppercase'
+                background: '#D42D56', color: '#fff', fontSize: 10, fontWeight: 800, textTransform: 'uppercase'
               }}>
                 {slide.category || 'Company Notice'}
               </span>
@@ -221,7 +221,7 @@ export default function HeroManagementPage() {
             </div>
 
             <div style={{ padding: 18 }}>
-              <h4 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 800, color: '#021C4F' }}>{slide.title}</h4>
+              <h4 style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 800, color: '#0F2B5B' }}>{slide.title}</h4>
               <p style={{ margin: '0 0 12px', fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>{slide.description}</p>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', borderTop: '1px dashed #e2e8f0', paddingTop: 10, marginBottom: 14 }}>
@@ -249,8 +249,8 @@ export default function HeroManagementPage() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-content animate-fade-in" style={{ maxWidth: 520, padding: 24 }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, color: '#021C4F', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Megaphone size={20} color="#C50337" /> {editSlide ? 'Edit Announcement Banner' : 'Create Company Announcement'}
+            <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, color: '#0F2B5B', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Megaphone size={20} color="#D42D56" /> {editSlide ? 'Edit Announcement Banner' : 'Create Company Announcement'}
             </h3>
 
             <form onSubmit={handleSubmit}>
@@ -331,7 +331,7 @@ export default function HeroManagementPage() {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={actionLoading} style={{ background: '#021C4F', fontWeight: 700 }}>
+                <button type="submit" className="btn btn-primary" disabled={actionLoading} style={{ background: '#0F2B5B', fontWeight: 700 }}>
                   {actionLoading ? 'Saving...' : 'Publish Announcement'}
                 </button>
               </div>
@@ -347,13 +347,13 @@ export default function HeroManagementPage() {
             <div style={{ position: 'relative', height: 320, background: '#000' }}>
               <img src={previewSlide.image_url || '/assets/images/hero-1.jpeg'} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', color: '#fff' }}>
-                <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 4, background: '#C50337', textTransform: 'uppercase' }}>{previewSlide.category || 'Announcement'}</span>
+                <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 4, background: '#D42D56', textTransform: 'uppercase' }}>{previewSlide.category || 'Announcement'}</span>
                 <h3 style={{ margin: '6px 0 4px', fontSize: 20, fontWeight: 800 }}>{previewSlide.title}</h3>
                 <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{previewSlide.description}</p>
               </div>
             </div>
             <div style={{ padding: 16, display: 'flex', justifyContent: 'flex-end', background: '#f8fafc' }}>
-              <button className="btn btn-primary" onClick={() => setPreviewSlide(null)} style={{ background: '#021C4F', fontWeight: 700 }}>Close Preview</button>
+              <button className="btn btn-primary" onClick={() => setPreviewSlide(null)} style={{ background: '#0F2B5B', fontWeight: 700 }}>Close Preview</button>
             </div>
           </div>
         </div>

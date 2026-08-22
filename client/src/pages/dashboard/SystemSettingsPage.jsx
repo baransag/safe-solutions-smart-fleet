@@ -68,7 +68,7 @@ export default function SystemSettingsPage() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ padding: 10, background: '#021C4F', borderRadius: 12, color: '#fff' }}>
+            <div style={{ padding: 10, background: '#0F2B5B', borderRadius: 12, color: '#fff' }}>
               <Settings size={24} />
             </div>
             <div>
@@ -98,7 +98,7 @@ export default function SystemSettingsPage() {
             <span style={{ fontSize: 11, fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               PRODUCTION GO-LIVE MODE ACTIVE
             </span>
-            <h3 style={{ margin: '2px 0 0', fontSize: 17, fontWeight: 800, color: '#021C4F' }}>
+            <h3 style={{ margin: '2px 0 0', fontSize: 17, fontWeight: 800, color: '#0F2B5B' }}>
               SAFE SOLUTIONS OPS System Operational Status: ALL MODULES ENABLED
             </h3>
             <p style={{ margin: '4px 0 0', fontSize: 13, color: '#334155' }}>
@@ -118,7 +118,7 @@ export default function SystemSettingsPage() {
                 <Car size={24} />
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#021C4F' }}>Vehicle Attendance</h4>
+                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0F2B5B' }}>Vehicle Attendance</h4>
                 <span style={{ fontSize: 11, color: '#64748b' }}>Morning Check-In, Evening Check-Out & Meter Reading</span>
               </div>
             </div>
@@ -148,11 +148,11 @@ export default function SystemSettingsPage() {
         <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 22, border: '1px solid rgba(2, 28, 79, 0.1)', background: '#fff' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ padding: 10, borderRadius: 12, background: 'rgba(2, 28, 79, 0.1)', color: '#021C4F' }}>
+              <div style={{ padding: 10, borderRadius: 12, background: 'rgba(2, 28, 79, 0.1)', color: '#0F2B5B' }}>
                 <Users size={24} />
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#021C4F' }}>Employee Attendance</h4>
+                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0F2B5B' }}>Employee Attendance</h4>
                 <span style={{ fontSize: 11, color: '#64748b' }}>Unified Attendance Center & Approval Workflow</span>
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function SystemSettingsPage() {
                 <Building2 size={24} />
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#021C4F' }}>Office Attendance</h4>
+                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0F2B5B' }}>Office Attendance</h4>
                 <span style={{ fontSize: 11, color: '#64748b' }}>Head Office & Branch Office QR Verification</span>
               </div>
             </div>
@@ -216,11 +216,11 @@ export default function SystemSettingsPage() {
         <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 22, border: '1px solid rgba(197, 3, 55, 0.1)', background: '#fff' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ padding: 10, borderRadius: 12, background: 'rgba(197, 3, 55, 0.1)', color: '#C50337' }}>
+              <div style={{ padding: 10, borderRadius: 12, background: 'rgba(197, 3, 55, 0.1)', color: '#D42D56' }}>
                 <HardHat size={24} />
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#021C4F' }}>Site Attendance</h4>
+                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0F2B5B' }}>Site Attendance</h4>
                 <span style={{ fontSize: 11, color: '#64748b' }}>Client Construction Site & Temporary QR Verification</span>
               </div>
             </div>
@@ -254,7 +254,7 @@ export default function SystemSettingsPage() {
                 <Settings size={24} />
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#021C4F' }}>Hero Banner Carousel</h4>
+                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0F2B5B' }}>Hero Banner Carousel</h4>
                 <span style={{ fontSize: 11, color: '#64748b' }}>Announcements, Holiday & Friday Posts</span>
               </div>
             </div>
@@ -288,7 +288,7 @@ export default function SystemSettingsPage() {
                 <Shield size={24} />
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#021C4F' }}>QR Code Security</h4>
+                <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0F2B5B' }}>QR Code Security</h4>
                 <span style={{ fontSize: 11, color: '#64748b' }}>Office & Temporary Site QR Validation</span>
               </div>
             </div>

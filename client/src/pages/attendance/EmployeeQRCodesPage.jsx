@@ -124,8 +124,8 @@ export default function EmployeeQRCodesPage() {
           <title>Print QR Code - ${qr.name}</title>
           <style>
             body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
-            .card { border: 2px solid #021C4F; border-radius: 16px; padding: 30px; display: inline-block; max-width: 400px; }
-            h2 { color: #021C4F; margin: 0 0 5px; }
+            .card { border: 2px solid #0F2B5B; border-radius: 16px; padding: 30px; display: inline-block; max-width: 400px; }
+            h2 { color: #0F2B5B; margin: 0 0 5px; }
             p { color: #555; font-size: 14px; margin: 5px 0; }
             img { width: 280px; height: 280px; margin: 20px 0; }
             .footer { font-size: 12px; color: #777; margin-top: 15px; }
@@ -139,7 +139,7 @@ export default function EmployeeQRCodesPage() {
             <img src="${qr.qr_image_data}" alt="${qr.name}" />
             <p><strong>ID: ${qr.qr_id}</strong></p>
             <p style="font-size:12px;">Radius: ${qr.allowed_radius_meters}m • Category: ${qr.category}</p>
-            ${qr.type === 'site' ? `<p style="color:#c50337; font-weight:bold; font-size:18px; margin-top:10px;">OTP: ${qr.otp_secret || 'N/A'}</p>` : ''}
+            ${qr.type === 'site' ? `<p style="color:#d42d56; font-weight:bold; font-size:18px; margin-top:10px;">OTP: ${qr.otp_secret || 'N/A'}</p>` : ''}
             <div class="footer">Scan with SAFE SOLUTIONS Employee App for Attendance</div>
           </div>
           <script>window.print(); setTimeout(() => window.close(), 1000);</script>
@@ -183,10 +183,10 @@ export default function EmployeeQRCodesPage() {
           <div key={qr.id} className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 20, border: '1px solid rgba(2, 28, 79, 0.1)', background: '#fff', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
               <div>
-                <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: qr.type === 'site' ? '#fff1f2' : qr.type === 'temporary' ? '#fef3c7' : '#eff6ff', color: qr.type === 'site' ? '#c50337' : qr.type === 'temporary' ? '#d97706' : '#021c4f', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: qr.type === 'site' ? '#fff1f2' : qr.type === 'temporary' ? '#fef3c7' : '#eff6ff', color: qr.type === 'site' ? '#d42d56' : qr.type === 'temporary' ? '#d97706' : '#0f2b5b', textTransform: 'uppercase' }}>
                   {qr.type} ATTENDANCE
                 </span>
-                <h4 style={{ margin: '6px 0 0', fontSize: 16, fontWeight: 800, color: '#021C4F' }}>{qr.name}</h4>
+                <h4 style={{ margin: '6px 0 0', fontSize: 16, fontWeight: 800, color: '#0F2B5B' }}>{qr.name}</h4>
                 {qr.project_name && <p style={{ margin: '2px 0 0', fontSize: 11, color: '#64748b' }}>Project: {qr.project_name}</p>}
               </div>
 
@@ -208,7 +208,7 @@ export default function EmployeeQRCodesPage() {
                 alt={qr.name}
                 style={{ width: 180, height: 180, objectFit: 'contain' }}
               />
-              <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: '#021C4F', fontFamily: 'monospace' }}>
+              <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: '#0F2B5B', fontFamily: 'monospace' }}>
                 ID: {qr.qr_id}
               </div>
             </div>
@@ -217,7 +217,7 @@ export default function EmployeeQRCodesPage() {
             <div style={{ fontSize: 12, color: '#475569', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Assigned Category</span>
-                <strong style={{ color: '#021C4F' }}>{qr.category || 'Head Office'}</strong>
+                <strong style={{ color: '#0F2B5B' }}>{qr.category || 'Head Office'}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>GPS Location</span>
@@ -260,7 +260,7 @@ export default function EmployeeQRCodesPage() {
             </div>
 
             {qr.qr_id === 'QR-OFFICE-001' && (
-              <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(2, 28, 79, 0.05)', borderRadius: 8, border: '1px solid rgba(2, 28, 79, 0.15)', fontSize: 11, color: '#021C4F', fontWeight: 700, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(2, 28, 79, 0.05)', borderRadius: 8, border: '1px solid rgba(2, 28, 79, 0.15)', fontSize: 11, color: '#0F2B5B', fontWeight: 700, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 🔒 Permanent Office QR — Assigned to SAFE SOLUTIONS Head Office Faisalabad
               </div>
             )}
@@ -272,8 +272,8 @@ export default function EmployeeQRCodesPage() {
       {showGenerateModal && (
         <div className="modal-overlay" onClick={() => setShowGenerateModal(false)}>
           <div className="modal-content animate-fade-in" style={{ maxWidth: 500, padding: 24 }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, color: '#021C4F', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <QrCode size={20} color="#C50337" /> Generate New Attendance QR Code
+            <h3 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, color: '#0F2B5B', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <QrCode size={20} color="#D42D56" /> Generate New Attendance QR Code
             </h3>
 
             <form onSubmit={handleCreateQR}>
@@ -372,7 +372,7 @@ export default function EmployeeQRCodesPage() {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowGenerateModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={actionLoading} style={{ background: '#021C4F', fontWeight: 700 }}>
+                <button type="submit" className="btn btn-primary" disabled={actionLoading} style={{ background: '#0F2B5B', fontWeight: 700 }}>
                   {actionLoading ? 'Generating...' : 'Generate & Secure QR'}
                 </button>
               </div>

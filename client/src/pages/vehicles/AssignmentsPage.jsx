@@ -90,7 +90,7 @@ export default function AssignmentsPage() {
                   <span style={{ fontWeight: 800, fontSize: '15px', color: 'var(--text-primary)' }}>{a.employee_name}</span>
                   <span className="badge badge-gray" style={{ fontSize: '11px', fontWeight: 700 }}>{a.emp_id || a.employee_code || 'EMP'}</span>
                   <ArrowRight size={14} style={{ color: 'var(--text-tertiary)' }} />
-                  <span style={{ fontWeight: 700, color: '#C50337' }}>{a.vehicle_name}</span>
+                  <span style={{ fontWeight: 700, color: '#D42D56' }}>{a.vehicle_name}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <span className="badge badge-teal" style={{ fontWeight: 700 }}>{a.number_plate}</span>
