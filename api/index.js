@@ -1,13 +1,84 @@
-let app;
-try {
-  app = require('../server/server.js');
-} catch (e) {
-  console.error('CRITICAL SERVER REQUIRE ERROR:', e);
-}
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
 
-module.exports = (req, res) => {
-  if (!app) {
-    return res.status(500).json({ error: 'Server initialization failed in Vercel lambda environment.' });
-  }
-  return app(req, res);
+const app = express();
+
+// Security & Performance
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(compression());
+
+// Allow all origins for seamless Vercel production & preview domains
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+
+// Self-contained routers inside api/src
+const authRoutes = require('./src/routes/auth.routes');
+const employeeRoutes = require('./src/routes/employee.routes');
+const attendanceRoutes = require('./src/routes/attendance.routes');
+const vehicleRoutes = require('./src/routes/vehicle.routes');
+const assignmentRoutes = require('./src/routes/assignment.routes');
+const checkinRoutes = require('./src/routes/checkin.routes');
+const fuelRoutes = require('./src/routes/fuel.routes');
+const dashboardRoutes = require('./src/routes/dashboard.routes');
+const notificationRoutes = require('./src/routes/notification.routes');
+const heroRoutes = require('./src/routes/hero.routes');
+const alertRoutes = require('./src/routes/alert.routes');
+const serviceRoutes = require('./src/routes/service.routes');
+const qrRoutes = require('./src/routes/qr_management.routes');
+const settingsRoutes = require('./src/routes/settings.routes');
+const logsRoutes = require('./src/routes/system_logs.routes');
+const visitReportsRoutes = require('./src/routes/visit_report.routes');
+
+const registerRoute = (pathName, router) => {
+  app.use(`/api/${pathName}`, router);
+  app.use(`/${pathName}`, router);
 };
+
+registerRoute('auth', authRoutes);
+registerRoute('employees', employeeRoutes);
+registerRoute('attendance', attendanceRoutes);
+registerRoute('vehicles', vehicleRoutes);
+registerRoute('vehicle-assignments', assignmentRoutes);
+registerRoute('checkins', checkinRoutes);
+registerRoute('fuel', fuelRoutes);
+registerRoute('dashboard', dashboardRoutes);
+registerRoute('notifications', notificationRoutes);
+registerRoute('hero-slides', heroRoutes);
+registerRoute('alerts', alertRoutes);
+registerRoute('vehicle-services', serviceRoutes);
+registerRoute('employee-qr-codes', qrRoutes);
+registerRoute('settings', settingsRoutes);
+registerRoute('system-logs', logsRoutes);
+registerRoute('visit-reports', visitReportsRoutes);
+
+// Health check
+app.get(['/api/health', '/health', '/api', '/'], (req, res) => {
+  res.json({ status: 'ok', service: 'SAFE SOLUTIONS FleetOps API on Vercel', timestamp: new Date().toISOString() });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: `API route not found: ${req.method} ${req.url}` });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Vercel API Error:', err.message);
+  if (err.stack) console.error(err.stack);
+
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal server error'
+  });
+});
+
+module.exports = app;
