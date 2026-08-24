@@ -6,10 +6,16 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure media upload directory exists
-const mediaDir = path.join(__dirname, '../../uploads/media');
-if (!fs.existsSync(mediaDir)) {
-  fs.mkdirSync(mediaDir, { recursive: true });
+const os = require('os');
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || __dirname.includes('/var/task') || process.env.NODE_ENV === 'production';
+const mediaDir = isServerless ? path.join(os.tmpdir(), 'media') : path.join(__dirname, '../../uploads/media');
+
+try {
+  if (!fs.existsSync(mediaDir)) {
+    fs.mkdirSync(mediaDir, { recursive: true });
+  }
+} catch (e) {
+  console.warn('Media directory creation notice:', e.message);
 }
 
 // Configure Multer for Hero Media Uploads
@@ -55,7 +61,7 @@ router.get('/', async (req, res) => {
 // Create New Hero Post
 router.post('/', authenticate, authorize('admin', 'boss', 'controller', 'manager'), upload.single('media_file'), async (req, res) => {
   try {
-    const { title, description, rich_text, priority, status, start_date, expiry_date } = req.body;
+    const { title, description, rich_text, priority, status, start_date, expiry_date, end_date, category } = req.body;
     let media_url = null;
     let media_type = 'none';
 
@@ -72,9 +78,9 @@ router.post('/', authenticate, authorize('admin', 'boss', 'controller', 'manager
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `, [
-      title, description, rich_text, media_url, media_type,
+      title, description || null, rich_text || category || 'Company Notice', media_url, media_type,
       priority || 'normal', status || 'published',
-      start_date || new Date(), expiry_date || null, req.user.id
+      start_date || new Date(), expiry_date || end_date || null, req.user.id
     ]);
 
     // Create Notification
@@ -85,6 +91,65 @@ router.post('/', authenticate, authorize('admin', 'boss', 'controller', 'manager
     );
 
     res.status(201).json({ success: true, post: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update / Edit Hero Post or Toggle Status
+router.put('/:id', authenticate, authorize('admin', 'boss', 'controller', 'manager'), upload.single('media_file'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, rich_text, priority, status, is_active, start_date, expiry_date, end_date, category } = req.body;
+
+    let statusVal = status;
+    if (is_active !== undefined) {
+      statusVal = (is_active === true || is_active === 'true') ? 'published' : 'archived';
+    }
+
+    let media_url = undefined;
+    let media_type = undefined;
+    if (req.file) {
+      media_url = `/uploads/media/${req.file.filename}`;
+      const mime = req.file.mimetype;
+      if (mime.startsWith('image/')) media_type = 'image';
+      else if (mime.startsWith('video/')) media_type = 'video';
+      else if (mime === 'application/pdf') media_type = 'pdf';
+    }
+
+    const { rows: existing } = await pool.query('SELECT * FROM hero_posts WHERE id = $1', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, error: 'Announcement not found.' });
+    }
+
+    const updatedResult = await pool.query(`
+      UPDATE hero_posts
+      SET title = COALESCE($1, title),
+          description = COALESCE($2, description),
+          rich_text = COALESCE($3, rich_text),
+          priority = COALESCE($4, priority),
+          status = COALESCE($5, status),
+          start_date = COALESCE($6, start_date),
+          expiry_date = COALESCE($7, expiry_date),
+          media_url = COALESCE($8, media_url),
+          media_type = COALESCE($9, media_type),
+          updated_at = NOW()
+      WHERE id = $10
+      RETURNING *
+    `, [
+      title !== undefined ? title : null,
+      description !== undefined ? description : null,
+      (rich_text || category) !== undefined ? (rich_text || category) : null,
+      priority !== undefined ? priority : null,
+      statusVal !== undefined ? statusVal : null,
+      start_date !== undefined ? start_date : null,
+      (expiry_date || end_date) !== undefined ? (expiry_date || end_date) : null,
+      media_url !== undefined ? media_url : null,
+      media_type !== undefined ? media_type : null,
+      id
+    ]);
+
+    res.json({ success: true, post: updatedResult.rows[0] });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

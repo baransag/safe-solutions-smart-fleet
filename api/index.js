@@ -18,22 +18,22 @@ app.use(cors({
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
-const authRoutes = require('./src/routes/auth.routes');
-const employeeRoutes = require('./src/routes/employee.routes');
-const attendanceRoutes = require('./src/routes/attendance.routes');
-const vehicleRoutes = require('./src/routes/vehicle.routes');
-const assignmentRoutes = require('./src/routes/assignment.routes');
-const checkinRoutes = require('./src/routes/checkin.routes');
-const fuelRoutes = require('./src/routes/fuel.routes');
-const dashboardRoutes = require('./src/routes/dashboard.routes');
-const notificationRoutes = require('./src/routes/notification.routes');
-const heroRoutes = require('./src/routes/hero.routes');
-const alertRoutes = require('./src/routes/alert.routes');
-const serviceRoutes = require('./src/routes/service.routes');
-const qrRoutes = require('./src/routes/qr_management.routes');
-const settingsRoutes = require('./src/routes/settings.routes');
-const logsRoutes = require('./src/routes/system_logs.routes');
-const visitReportsRoutes = require('./src/routes/visit_report.routes');
+const authRoutes = require('./_src/routes/auth.routes');
+const employeeRoutes = require('./_src/routes/employee.routes');
+const attendanceRoutes = require('./_src/routes/attendance.routes');
+const vehicleRoutes = require('./_src/routes/vehicle.routes');
+const assignmentRoutes = require('./_src/routes/assignment.routes');
+const checkinRoutes = require('./_src/routes/checkin.routes');
+const fuelRoutes = require('./_src/routes/fuel.routes');
+const dashboardRoutes = require('./_src/routes/dashboard.routes');
+const notificationRoutes = require('./_src/routes/notification.routes');
+const heroRoutes = require('./_src/routes/hero.routes');
+const alertRoutes = require('./_src/routes/alert.routes');
+const serviceRoutes = require('./_src/routes/service.routes');
+const qrRoutes = require('./_src/routes/qr_management.routes');
+const settingsRoutes = require('./_src/routes/settings.routes');
+const logsRoutes = require('./_src/routes/system_logs.routes');
+const visitReportsRoutes = require('./_src/routes/visit_report.routes');
 
 const registerRoute = (pathName, router) => {
   app.use(`/api/${pathName}`, router);

@@ -75,21 +75,19 @@ export default function HeroManagementPage() {
 
     setActionLoading(true);
     try {
+      const formData = new FormData();
+      formData.append('title', form.title);
+      formData.append('description', form.description || '');
+      formData.append('category', form.category || 'Holiday Notice');
+      formData.append('priority', form.priority || 'normal');
+      formData.append('start_date', form.start_date);
+      if (form.end_date) formData.append('end_date', form.end_date);
+      if (imageFile) formData.append('media_file', imageFile);
+
       if (editSlide) {
-        await api.put(`/hero-slides/${editSlide.id}`, {
-          ...form,
-          sort_order: parseInt(form.priority, 10)
-        });
+        await api.put(`/hero-slides/${editSlide.id}`, formData);
         toast.success('Announcement updated!');
       } else {
-        const formData = new FormData();
-        formData.append('title', form.title);
-        formData.append('description', form.description);
-        formData.append('priority', form.priority);
-        formData.append('start_date', form.start_date);
-        if (form.end_date) formData.append('end_date', form.end_date);
-        if (imageFile) formData.append('media_file', imageFile);
-
         await api.post('/hero-slides', formData);
         toast.success('Company announcement created & published!');
       }
@@ -113,9 +111,14 @@ export default function HeroManagementPage() {
 
   const handleToggleActive = async (slide) => {
     try {
-      await api.put(`/hero-slides/${slide.id}`, { is_active: !slide.is_active });
-      toast.success(`Announcement marked as ${!slide.is_active ? 'ACTIVE' : 'INACTIVE'}`);
-      setSlides(prev => prev.map(s => s.id === slide.id ? { ...s, is_active: !s.is_active } : s));
+      const isCurrentlyActive = slide.status === 'published' || (slide.is_active && slide.status !== 'archived');
+      await api.put(`/hero-slides/${slide.id}`, { is_active: !isCurrentlyActive });
+      toast.success(`Announcement marked as ${!isCurrentlyActive ? 'ACTIVE' : 'INACTIVE'}`);
+      setSlides(prev => prev.map(s => s.id === slide.id ? {
+        ...s,
+        status: !isCurrentlyActive ? 'published' : 'archived',
+        is_active: !isCurrentlyActive
+      } : s));
     } catch (err) {
       toast.error('Failed to update announcement status.');
     }
@@ -137,14 +140,14 @@ export default function HeroManagementPage() {
     setForm({
       title: slide.title || '',
       description: slide.description || '',
-      category: slide.category || 'Holiday Notice',
-      priority: String(slide.sort_order || 1),
-      start_date: slide.start_date || new Date().toISOString().split('T')[0],
-      end_date: slide.end_date || '',
-      is_active: slide.is_active ?? true,
-      image_url: slide.image_url || ''
+      category: slide.rich_text || slide.category || 'Holiday Notice',
+      priority: slide.priority || 'normal',
+      start_date: slide.start_date ? new Date(slide.start_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      end_date: slide.expiry_date ? new Date(slide.expiry_date).toISOString().split('T')[0] : (slide.end_date || ''),
+      is_active: slide.status === 'published',
+      image_url: slide.media_url || slide.image_url || ''
     });
-    setImagePreview(slide.image_url || null);
+    setImagePreview(slide.media_url || slide.image_url || null);
     setShowModal(true);
   };
 
@@ -196,7 +199,7 @@ export default function HeroManagementPage() {
           <div key={slide.id} className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(2, 28, 79, 0.1)' }}>
             <div style={{ position: 'relative', height: 180, background: '#000' }}>
               <img
-                src={slide.image_url || '/assets/images/hero-1.jpeg'}
+                src={slide.media_url || slide.image_url || '/assets/images/hero-1.jpeg'}
                 alt={slide.title}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={(e) => { e.currentTarget.src = '/assets/images/hero-1.jpeg'; }}
@@ -205,7 +208,7 @@ export default function HeroManagementPage() {
                 position: 'absolute', top: 12, left: 12, padding: '4px 10px', borderRadius: 6,
                 background: '#D42D56', color: '#fff', fontSize: 10, fontWeight: 800, textTransform: 'uppercase'
               }}>
-                {slide.category || 'Company Notice'}
+                {slide.rich_text || slide.category || 'Company Notice'}
               </span>
 
               <button
@@ -213,10 +216,10 @@ export default function HeroManagementPage() {
                 style={{
                   position: 'absolute', top: 12, right: 12, border: 'none', borderRadius: 20,
                   padding: '4px 12px', fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                  background: slide.is_active ? '#10B981' : '#EF4444', color: '#fff'
+                  background: (slide.status === 'published' || (slide.is_active && slide.status !== 'archived')) ? '#10B981' : '#EF4444', color: '#fff'
                 }}
               >
-                {slide.is_active ? 'ACTIVE' : 'INACTIVE'}
+                {(slide.status === 'published' || (slide.is_active && slide.status !== 'archived')) ? 'ACTIVE' : 'INACTIVE'}
               </button>
             </div>
 

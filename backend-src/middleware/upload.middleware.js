@@ -4,8 +4,8 @@ const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 
 const os = require('os');
-const isVercel = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
-const UPLOAD_DIR = isVercel ? path.join(os.tmpdir(), 'uploads') : path.join(__dirname, '..', '..', 'uploads');
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || __dirname.includes('/var/task') || process.env.NODE_ENV === 'production';
+const UPLOAD_DIR = isServerless ? path.join(os.tmpdir(), 'uploads') : path.join(__dirname, '..', '..', 'uploads');
 
 // Ensure upload directories exist
 const dirs = ['selfies', 'meters', 'receipts', 'vehicles', 'slides', 'avatars', 'sites'];

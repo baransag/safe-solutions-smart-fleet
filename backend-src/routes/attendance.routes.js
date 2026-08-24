@@ -176,6 +176,161 @@ router.post('/site', authenticate, uploadSite.fields([
   }
 });
 
+// POST /api/attendance/office/checkout (Office Attendance Check-Out)
+router.post('/office/checkout', authenticate, async (req, res, next) => {
+  try {
+    const { scanned_data, lat, lng, notes } = req.body;
+    const userId = req.user.id;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Find today's existing office attendance record
+    const { rows: existing } = await query(
+      `SELECT * FROM attendance_records
+       WHERE employee_id = $1 AND check_in_time::date = $2 AND attendance_type = 'office'
+       ORDER BY check_in_time DESC LIMIT 1`,
+      [userId, today]
+    );
+
+    if (existing.length === 0) {
+      return res.status(400).json({ error: 'No active office check-in found for today. Please complete check-in first.' });
+    }
+
+    const currentRecord = existing[0];
+    if (currentRecord.check_out_time) {
+      const outTimeStr = new Date(currentRecord.check_out_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return res.status(400).json({ error: `Office Check-Out Already Recorded. You have already completed check-out today at ${outTimeStr}.` });
+    }
+
+    // Parse scanned QR token
+    let parsedToken = scanned_data;
+    let parsedId = null;
+    if (typeof scanned_data === 'string' && scanned_data.trim().startsWith('{')) {
+      try {
+        const json = JSON.parse(scanned_data);
+        parsedToken = json.qr_token || json.qr_id || scanned_data;
+        parsedId = json.qr_id || null;
+      } catch {}
+    }
+
+    // Verify QR Code in DB
+    const { rows: qrRows } = await query(
+      `SELECT * FROM employee_qr_codes WHERE (qr_token = $1 OR qr_id = $1 OR qr_token = $2 OR qr_id = $2)`,
+      [parsedToken, parsedId || parsedToken]
+    );
+
+    if (qrRows.length === 0) {
+      return res.status(400).json({ error: 'Invalid QR Code. Office check-out rejected.' });
+    }
+
+    const qr = qrRows[0];
+    if (qr.status !== 'active') {
+      return res.status(400).json({ error: `QR Code "${qr.name}" is INACTIVE. Check-out rejected.` });
+    }
+    if (qr.expiry_date && new Date(qr.expiry_date) < new Date()) {
+      return res.status(400).json({ error: `QR Code "${qr.name}" has EXPIRED. Check-out rejected.` });
+    }
+
+    const dist = getDistanceMeters(parseFloat(lat), parseFloat(lng), parseFloat(qr.lat), parseFloat(qr.lng));
+    const isWithinRadius = dist <= (qr.allowed_radius_meters || 200);
+    const gpsStatus = isWithinRadius ? 'Inside Office' : 'Outside Office';
+
+    const checkOutTime = new Date();
+    const checkInTime = new Date(currentRecord.check_in_time);
+    const workHours = Math.max(0, Math.round(((checkOutTime - checkInTime) / (1000 * 60 * 60)) * 100) / 100);
+
+    const updatedNotes = notes && notes.trim()
+      ? (currentRecord.notes ? `${currentRecord.notes} | Check-Out: ${notes.trim()}` : `Check-Out: ${notes.trim()}`)
+      : currentRecord.notes;
+
+    const { rows: updatedRows } = await query(`
+      UPDATE attendance_records
+      SET check_out_time = NOW(),
+          check_out_lat = $1,
+          check_out_lng = $2,
+          work_hours = $3,
+          notes = $4
+      WHERE id = $5
+      RETURNING *
+    `, [
+      lat || null, lng || null, workHours, updatedNotes || null, currentRecord.id
+    ]);
+
+    // Send notifications to Controllers & Managers
+    const { rows: managers } = await query(`SELECT id FROM employees WHERE role IN ('manager', 'controller') AND is_active = true`);
+    for (const m of managers) {
+      await query(`
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES ($1, 'Office Attendance Check-Out', $2, 'info', '/attendance')
+      `, [m.id, `${req.user.name} checked out from Office Attendance at ${qr.name}. Total work duration: ${workHours} hrs.`]);
+    }
+
+    res.status(200).json({ attendance: updatedRows[0], message: 'Office Check-Out completed successfully.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/attendance/site/checkout (Site Attendance Check-Out)
+router.post('/site/checkout', authenticate, async (req, res, next) => {
+  try {
+    const { lat, lng, notes } = req.body;
+    const userId = req.user.id;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Find today's existing site attendance record
+    const { rows: existing } = await query(
+      `SELECT * FROM attendance_records
+       WHERE employee_id = $1 AND check_in_time::date = $2 AND attendance_type = 'site'
+       ORDER BY check_in_time DESC LIMIT 1`,
+      [userId, today]
+    );
+
+    if (existing.length === 0) {
+      return res.status(400).json({ error: 'No active site check-in found for today. Please complete site check-in first.' });
+    }
+
+    const currentRecord = existing[0];
+    if (currentRecord.check_out_time) {
+      const outTimeStr = new Date(currentRecord.check_out_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return res.status(400).json({ error: `Site Check-Out Already Recorded. You have already completed check-out today at ${outTimeStr}.` });
+    }
+
+    const checkOutTime = new Date();
+    const checkInTime = new Date(currentRecord.check_in_time);
+    const workHours = Math.max(0, Math.round(((checkOutTime - checkInTime) / (1000 * 60 * 60)) * 100) / 100);
+
+    const updatedNotes = notes && notes.trim()
+      ? (currentRecord.notes ? `${currentRecord.notes}\nCheck-Out Note: ${notes.trim()}` : `Check-Out Note: ${notes.trim()}`)
+      : currentRecord.notes;
+
+    const { rows: updatedRows } = await query(`
+      UPDATE attendance_records
+      SET check_out_time = NOW(),
+          check_out_lat = $1,
+          check_out_lng = $2,
+          work_hours = $3,
+          notes = $4
+      WHERE id = $5
+      RETURNING *
+    `, [
+      lat || null, lng || null, workHours, updatedNotes || null, currentRecord.id
+    ]);
+
+    // Send notifications to Controllers & Managers
+    const { rows: managers } = await query(`SELECT id FROM employees WHERE role IN ('manager', 'controller') AND is_active = true`);
+    for (const m of managers) {
+      await query(`
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES ($1, 'Site Attendance Check-Out', $2, 'info', '/attendance')
+      `, [m.id, `${req.user.name} checked out from Site Attendance (${currentRecord.project_name || currentRecord.location_name || 'On-Site'}). Total work duration: ${workHours} hrs.`]);
+    }
+
+    res.status(200).json({ attendance: updatedRows[0], message: 'Site Check-Out completed successfully.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/attendance/today
 router.get('/today', authenticate, async (req, res, next) => {
   try {

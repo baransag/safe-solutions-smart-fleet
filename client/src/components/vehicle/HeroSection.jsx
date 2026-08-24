@@ -37,17 +37,28 @@ export default function HeroSection() {
   async function fetchSlides() {
     try {
       const data = await api.get('/hero-slides');
-      // Use hero_slides from DB if available, else hero_posts, else keep defaults
-      if (data.slides && data.slides.length > 0) {
-        setSlides(data.slides.map(s => ({
-          ...s,
-          image_url: s.image_url,
-          title: s.title,
-          description: s.description,
-          category: 'Company Announcement'
-        })));
-      } else if (data.posts && data.posts.length > 0) {
-        setSlides(data.posts);
+      const activePosts = (data.posts || []).map(p => ({
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        category: p.rich_text || 'Company Announcement',
+        media_url: p.media_url,
+        media_type: p.media_type || 'image',
+        image_url: p.media_url || '/assets/images/hero-1.jpeg'
+      }));
+      const activeSlides = (data.slides || []).map(s => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        category: s.category || 'Company Announcement',
+        image_url: s.image_url,
+        media_url: s.image_url,
+        media_type: 'image'
+      }));
+
+      const combined = [...activePosts, ...activeSlides];
+      if (combined.length > 0) {
+        setSlides(combined);
       }
     } catch {
       // Keep default slides

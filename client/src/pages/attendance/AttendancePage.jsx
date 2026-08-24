@@ -22,6 +22,8 @@ export default function AttendancePage() {
   // Scanner modal state
   const [scannerOpen, setScannerOpen] = useState(false);
   const [activeAttendanceType, setActiveAttendanceType] = useState('office'); // 'office' | 'site'
+  const [scanAction, setScanAction] = useState('checkin'); // 'checkin' | 'checkout'
+  const [siteCheckoutNotes, setSiteCheckoutNotes] = useState('');
 
   // Form State after scan
   const [scannedData, setScannedData] = useState(null);
@@ -88,12 +90,17 @@ export default function AttendancePage() {
     }
   };
 
-  const handleStartScan = (type) => {
-    if (todayAttendance && todayAttendance.approval_status !== 'rejected') {
+  const handleStartScan = (type, action = 'checkin') => {
+    if (action === 'checkin' && todayAttendance && todayAttendance.approval_status !== 'rejected') {
       toast.warning('You have already submitted employee attendance for today.');
       return;
     }
+    if (action === 'checkout' && (!todayAttendance || todayAttendance.check_out_time)) {
+      toast.warning('Check-out is not available.');
+      return;
+    }
     setActiveAttendanceType(type);
+    setScanAction(action);
     setScannedData(null);
     setQrVerification(null);
     getCurrentGps();
@@ -131,32 +138,60 @@ export default function AttendancePage() {
 
     setActionLoading(true);
     try {
-      const endpoint = activeAttendanceType === 'office' ? '/attendance/office' : '/attendance/site';
-      const payload = {
-        scanned_data: scannedData,
-        project_name: activeAttendanceType === 'site' ? projectName : undefined,
-        lat: userGps.lat || 31.4504,
-        lng: userGps.lng || 73.1350,
-        notes
-      };
+      if (scanAction === 'checkout') {
+        const endpoint = activeAttendanceType === 'office' ? '/attendance/office/checkout' : '/attendance/site/checkout';
+        const payload = {
+          scanned_data: scannedData,
+          lat: userGps.lat || 31.4504,
+          lng: userGps.lng || 73.1350,
+          notes
+        };
 
-      const res = await api.post(endpoint, payload);
-      const record = res.attendance;
+        const res = await api.post(endpoint, payload);
+        const record = res.attendance;
 
-      if (activeAttendanceType === 'office') {
-        const timeStr = new Date(record?.check_in_time || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        const timeInStr = new Date(record?.check_in_time || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        const timeOutStr = new Date(record?.check_out_time || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
         const dateStr = new Date(record?.check_in_time || Date.now()).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-        
+
         setAttendanceSuccessModal({
-          title: 'Office Attendance Marked Successfully',
+          title: 'Office Attendance Checked-Out Successfully',
           date: dateStr,
-          time: timeStr,
-          office: record?.project_name || qrVerification.name || 'Head Office Faisalabad',
-          gps_status: record?.gps_status || qrVerification.gps_status || 'Inside Office'
+          time: timeInStr,
+          check_out_time: timeOutStr,
+          work_hours: record?.work_hours || 0,
+          office: record?.project_name || qrVerification?.name || 'Head Office Faisalabad',
+          gps_status: record?.gps_status || qrVerification?.gps_status || 'Inside Office'
         });
-        toast.success(`Office Attendance Marked Successfully at ${timeStr}`);
+        toast.success(`Office Check-Out Marked Successfully at ${timeOutStr}`);
       } else {
-        toast.success('Site Attendance submitted! Pending Manager Approval.');
+        const endpoint = activeAttendanceType === 'office' ? '/attendance/office' : '/attendance/site';
+        const payload = {
+          scanned_data: scannedData,
+          project_name: activeAttendanceType === 'site' ? projectName : undefined,
+          lat: userGps.lat || 31.4504,
+          lng: userGps.lng || 73.1350,
+          notes
+        };
+
+        const res = await api.post(endpoint, payload);
+        const record = res.attendance;
+
+        if (activeAttendanceType === 'office') {
+          const timeStr = new Date(record?.check_in_time || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+          const dateStr = new Date(record?.check_in_time || Date.now()).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+          
+          setAttendanceSuccessModal({
+            title: 'Office Attendance Marked Successfully',
+            date: dateStr,
+            time: timeStr,
+            office: record?.project_name || qrVerification?.name || 'Head Office Faisalabad',
+            gps_status: record?.gps_status || qrVerification?.gps_status || 'Inside Office'
+          });
+          toast.success(`Office Attendance Marked Successfully at ${timeStr}`);
+        } else {
+          toast.success('Site Attendance submitted! Pending Manager Approval.');
+        }
       }
       
       // Trigger global real-time synchronization across Dashboard & Header
@@ -164,9 +199,52 @@ export default function AttendancePage() {
 
       setScannedData(null);
       setQrVerification(null);
+      setNotes('');
       fetchData();
     } catch (err) {
       toast.error(err.message || 'Failed to submit attendance.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSiteCheckout = async () => {
+    if (!todayAttendance || todayAttendance.check_out_time) {
+      toast.error('No open site attendance session to check out.');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const payload = {
+        lat: userGps.lat || 31.4504,
+        lng: userGps.lng || 73.1350,
+        notes: siteCheckoutNotes || ''
+      };
+
+      const res = await api.post('/attendance/site/checkout', payload);
+      const record = res.attendance;
+
+      const timeInStr = new Date(record?.check_in_time || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      const timeOutStr = new Date(record?.check_out_time || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      const dateStr = new Date(record?.check_in_time || Date.now()).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+      setAttendanceSuccessModal({
+        title: 'Site Attendance Checked-Out Successfully',
+        date: dateStr,
+        time: timeInStr,
+        check_out_time: timeOutStr,
+        work_hours: record?.work_hours || 0,
+        office: record?.project_name || record?.location_name || 'On-Site Project',
+        gps_status: 'GPS Verified'
+      });
+      toast.success(`Site Check-Out Marked Successfully at ${timeOutStr}`);
+
+      window.dispatchEvent(new CustomEvent('app:data-sync'));
+      setSiteCheckoutNotes('');
+      fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to check out from site.');
     } finally {
       setActionLoading(false);
     }
@@ -278,23 +356,37 @@ export default function AttendancePage() {
 
       {/* Today's Active Submission Status Banner */}
       {todayAttendance && (
-        <div className="card-elevated animate-fade-in-up" style={{ marginBottom: 'var(--space-6)', borderLeft: '4px solid var(--color-primary)' }}>
+        <div className="card-elevated animate-fade-in-up" style={{
+          marginBottom: 'var(--space-6)',
+          borderLeft: todayAttendance.check_out_time ? '4px solid #10B981' : '4px solid var(--color-primary)'
+        }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Today's Active Submission
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: todayAttendance.check_out_time ? '#10B981' : 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {todayAttendance.check_out_time ? '✅ Attendance Completed for Today' : "Today's Active Submission"}
               </span>
               <h4 style={{ margin: '4px 0', fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                {todayAttendance.attendance_type === 'office' ? '🏢 Office Attendance' : '🏗️ Site Attendance'} - {todayAttendance.location_name || 'Head Office'}
+                {todayAttendance.attendance_type === 'office' ? '🏢 Office Attendance' : '🏗️ Site Attendance'} - {todayAttendance.location_name || todayAttendance.project_name || 'Head Office'}
               </h4>
               <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                Time: {new Date(todayAttendance.check_in_time).toLocaleTimeString()} • GPS: 📍 {todayAttendance.gps_status || 'Inside Radius'} ({todayAttendance.distance_meters || 0}m distance)
+                Check-In: {new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                {todayAttendance.check_out_time && (
+                  <> • Check-Out: {new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} (Duration: {todayAttendance.work_hours || 0} hrs)</>
+                )}
+                {' '}• GPS: 📍 {todayAttendance.gps_status || 'Inside Radius'} ({todayAttendance.distance_meters || 0}m distance)
               </p>
             </div>
 
-            <span className={`badge badge-${todayAttendance.approval_status === 'approved' ? 'green' : todayAttendance.approval_status === 'rejected' ? 'red' : 'yellow'}`}>
-              {todayAttendance.approval_status === 'approved' ? '✅ Approved' : todayAttendance.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending Manager Approval'}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {todayAttendance.check_out_time ? (
+                <span className="badge badge-green">✓ Checked Out</span>
+              ) : (
+                <span className="badge badge-blue">✓ Checked In (Active)</span>
+              )}
+              <span className={`badge badge-${todayAttendance.approval_status === 'approved' ? 'green' : todayAttendance.approval_status === 'rejected' ? 'red' : 'yellow'}`}>
+                {todayAttendance.approval_status === 'approved' ? '✅ Approved' : todayAttendance.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending Approval'}
+              </span>
+            </div>
           </div>
         </div>
       )}
@@ -308,22 +400,62 @@ export default function AttendancePage() {
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>Office Attendance</h3>
-              <p style={{ margin: '2px 0 0', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Head Office & Branch Office Check-In</p>
+              <p style={{ margin: '2px 0 0', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Head Office & Branch Office Check-In & Check-Out</p>
             </div>
           </div>
 
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-6)', lineHeight: 1.5 }}>
-            Scan the official Office QR code at Head Office or Branch Office to automatically capture your GPS location, verify radius compliance, and record daily office attendance for Manager review.
+            Scan the official Office QR code at Head Office or Branch Office to automatically capture your GPS location, verify radius compliance, and record daily office attendance.
           </p>
 
-          <button
-            className="btn btn-primary btn-lg"
-            onClick={() => handleStartScan('office')}
-            disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
-            style={{ width: '100%' }}
-          >
-            <Building2 size={18} /> Click Office Attendance & Scan QR
-          </button>
+          {!todayAttendance || todayAttendance.approval_status === 'rejected' ? (
+            <button
+              className="btn btn-primary btn-lg"
+              onClick={() => handleStartScan('office', 'checkin')}
+              disabled={actionLoading}
+              style={{ width: '100%' }}
+            >
+              <Building2 size={18} /> Click Office Attendance & Scan QR (Check-In)
+            </button>
+          ) : todayAttendance.attendance_type === 'office' && !todayAttendance.check_out_time ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ padding: 16, background: 'rgba(15, 110, 119, 0.08)', borderRadius: 12, border: '1px solid rgba(15, 110, 119, 0.2)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-deep-teal)' }}>Active Office Check-In</span>
+                    <h4 style={{ margin: '2px 0', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{todayAttendance.location_name || 'Head Office Faisalabad'}</h4>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                      Checked in at {new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                    </p>
+                  </div>
+                  <span className="badge badge-green">✓ Checked In</span>
+                </div>
+              </div>
+
+              <button
+                className="btn btn-danger btn-lg"
+                onClick={() => handleStartScan('office', 'checkout')}
+                disabled={actionLoading}
+                style={{ width: '100%', background: '#D42D56', borderColor: '#D42D56' }}
+              >
+                <Building2 size={18} /> Scan Office QR for Check-Out
+              </button>
+            </div>
+          ) : todayAttendance.attendance_type === 'office' && todayAttendance.check_out_time ? (
+            <div style={{ padding: 20, background: 'rgba(16, 185, 129, 0.08)', borderRadius: 12, border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center' }}>
+              <CheckCircle2 size={36} color="#10B981" style={{ margin: '0 auto 8px' }} />
+              <h4 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800, color: '#10B981' }}>Office Attendance Completed for Today</h4>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                Check-In: {new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} • Check-Out: {new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} • Duration: {todayAttendance.work_hours || 0} hrs
+              </p>
+            </div>
+          ) : (
+            <div style={{ padding: 16, background: 'var(--bg-secondary)', borderRadius: 12, textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                You have active Site Attendance recorded for today. Please switch to the Site Attendance tab to manage it.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -335,136 +467,220 @@ export default function AttendancePage() {
               <HardHat size={24} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>Site Attendance Check-In</h3>
-              <p style={{ margin: '2px 0 0', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Complete Project Site Verification & Check-In</p>
+              <h3 style={{ margin: 0, fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>Site Attendance</h3>
+              <p style={{ margin: '2px 0 0', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Complete Project Site Verification & Check-In / Check-Out</p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Step 1: Site Name & Site Location Inputs */}
-            <div className="form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div>
-                <label className="form-label" style={{ fontWeight: 700 }}>1a. Enter Site Name *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Al-Noor Plaza Roof Waterproofing"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
-                  style={{ width: '100%' }}
-                />
+          {!todayAttendance || todayAttendance.approval_status === 'rejected' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* Step 1: Site Name & Site Location Inputs */}
+              <div className="form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label className="form-label" style={{ fontWeight: 700 }}>1a. Enter Site Name *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Al-Noor Plaza Roof Waterproofing"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    disabled={actionLoading}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontWeight: 700 }}>1b. Enter Site Location *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Faisalabad, Pakistan"
+                    value={siteLocation}
+                    onChange={(e) => setSiteLocation(e.target.value)}
+                    disabled={actionLoading}
+                    style={{ width: '100%' }}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="form-label" style={{ fontWeight: 700 }}>1b. Enter Site Location *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Faisalabad, Pakistan"
-                  value={siteLocation}
-                  onChange={(e) => setSiteLocation(e.target.value)}
-                  disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
-                  style={{ width: '100%' }}
-                />
-              </div>
-            </div>
 
-            {/* Step 2: Verify GPS */}
-            <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
-              <label className="form-label" style={{ fontWeight: 700 }}>2. Verify GPS Location *</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={() => {
-                    getCurrentGps();
-                    setGpsVerified(true);
-                    toast.success('📍 Live GPS coordinates verified successfully!');
-                  }}
-                  disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
-                >
-                  <MapPin size={16} /> Verify Location
-                </button>
-                {gpsVerified && (
-                  <span style={{ fontSize: 13, color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    ✓ Verified: {userGps?.lat?.toFixed(5) || '31.4504'} , {userGps?.lng?.toFixed(5) || '73.1350'}
-                  </span>
+              {/* Step 2: Verify GPS */}
+              <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
+                <label className="form-label" style={{ fontWeight: 700 }}>2. Verify GPS Location *</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => {
+                      getCurrentGps();
+                      setGpsVerified(true);
+                      toast.success('📍 Live GPS coordinates verified successfully!');
+                    }}
+                    disabled={actionLoading}
+                  >
+                    <MapPin size={16} /> Verify Location
+                  </button>
+                  {gpsVerified && (
+                    <span style={{ fontSize: 13, color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      ✓ Verified: {userGps?.lat?.toFixed(5) || '31.4504'} , {userGps?.lng?.toFixed(5) || '73.1350'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Step 3: Selfie Capture */}
+              <div className="form-group" style={{ border: '1px solid var(--bg-tertiary)', padding: 16, borderRadius: 12 }}>
+                <label className="form-label" style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>3. Capture Live Selfie Photo *</label>
+                {selfiePreview ? (
+                  <div style={{ textAlign: 'center' }}>
+                    <img src={selfiePreview} alt="Selfie" style={{ width: '100%', maxWidth: 260, borderRadius: 8 }} />
+                    <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => { setSelfiePreview(null); setSelfieBlob(null); }}>
+                      🔄 Retake Selfie
+                    </button>
+                  </div>
+                ) : (
+                  <CameraCapture defaultFacing="user" onCapture={(blob, preview) => {
+                    setSelfieBlob(blob);
+                    setSelfiePreview(preview);
+                  }} />
                 )}
               </div>
-            </div>
 
-            {/* Step 3: Selfie Capture */}
-            <div className="form-group" style={{ border: '1px solid var(--bg-tertiary)', padding: 16, borderRadius: 12 }}>
-              <label className="form-label" style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>3. Capture Live Selfie Photo *</label>
-              {selfiePreview ? (
-                <div style={{ textAlign: 'center' }}>
-                  <img src={selfiePreview} alt="Selfie" style={{ width: '100%', maxWidth: 260, borderRadius: 8 }} />
-                  <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => { setSelfiePreview(null); setSelfieBlob(null); }}>
-                    🔄 Retake Selfie
-                  </button>
-                </div>
-              ) : (
-                <CameraCapture defaultFacing="user" onCapture={(blob, preview) => {
-                  setSelfieBlob(blob);
-                  setSelfiePreview(preview);
-                }} />
-              )}
-            </div>
+              {/* Step 4: Site Photo Capture */}
+              <div className="form-group" style={{ border: '1px solid var(--bg-tertiary)', padding: 16, borderRadius: 12 }}>
+                <label className="form-label" style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>4. Capture Site Photo (Work Status) *</label>
+                {sitePhotoPreview ? (
+                  <div style={{ textAlign: 'center' }}>
+                    <img src={sitePhotoPreview} alt="Site" style={{ width: '100%', maxWidth: 260, borderRadius: 8 }} />
+                    <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => { setSitePhotoPreview(null); setSitePhotoBlob(null); }}>
+                      🔄 Retake Site Photo
+                    </button>
+                  </div>
+                ) : (
+                  <CameraCapture defaultFacing="environment" onCapture={(blob, preview) => {
+                    setSitePhotoBlob(blob);
+                    setSitePhotoPreview(preview);
+                  }} />
+                )}
+              </div>
 
-            {/* Step 4: Site Photo Capture */}
-            <div className="form-group" style={{ border: '1px solid var(--bg-tertiary)', padding: 16, borderRadius: 12 }}>
-              <label className="form-label" style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>4. Capture Site Photo (Work Status) *</label>
-              {sitePhotoPreview ? (
-                <div style={{ textAlign: 'center' }}>
-                  <img src={sitePhotoPreview} alt="Site" style={{ width: '100%', maxWidth: 260, borderRadius: 8 }} />
-                  <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => { setSitePhotoPreview(null); setSitePhotoBlob(null); }}>
-                    🔄 Retake Site Photo
-                  </button>
+              {/* Step 5: Small Note */}
+              <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
+                <label className="form-label" style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>5. Write Small Note (Required) *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>Work Completed:</span>
+                    <input className="form-input" placeholder="e.g. Waterproofing slab" value={workCompleted} onChange={(e) => setWorkCompleted(e.target.value)} disabled={actionLoading} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>Issue Found (Optional):</span>
+                    <input className="form-input" placeholder="e.g. Rain delays, no issues" value={issueFound} onChange={(e) => setIssueFound(e.target.value)} disabled={actionLoading} />
+                  </div>
                 </div>
-              ) : (
-                <CameraCapture defaultFacing="environment" onCapture={(blob, preview) => {
-                  setSitePhotoBlob(blob);
-                  setSitePhotoPreview(preview);
-                }} />
-              )}
-            </div>
-
-            {/* Step 5: Small Note */}
-            <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
-              <label className="form-label" style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>5. Write Small Note (Required) *</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>Work Completed:</span>
-                  <input className="form-input" placeholder="e.g. Waterproofing slab" value={workCompleted} onChange={(e) => setWorkCompleted(e.target.value)} disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')} />
-                </div>
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>Issue Found (Optional):</span>
-                  <input className="form-input" placeholder="e.g. Rain delays, no issues" value={issueFound} onChange={(e) => setIssueFound(e.target.value)} disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>Weather Status:</span>
+                    <input className="form-input" placeholder="e.g. Clear skies, 32C" value={weather} onChange={(e) => setWeather(e.target.value)} disabled={actionLoading} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>General Summary:</span>
+                    <input className="form-input" placeholder="Site general summary..." value={notes} onChange={(e) => setNotes(e.target.value)} disabled={actionLoading} />
+                  </div>
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>Weather Status:</span>
-                  <input className="form-input" placeholder="e.g. Clear skies, 32C" value={weather} onChange={(e) => setWeather(e.target.value)} disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')} />
-                </div>
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>General Summary:</span>
-                  <input className="form-input" placeholder="Site general summary..." value={notes} onChange={(e) => setNotes(e.target.value)} disabled={actionLoading || (todayAttendance && todayAttendance.approval_status !== 'rejected')} />
+
+              {/* Submit Check-In */}
+              <button
+                type="button"
+                className="btn btn-danger btn-lg"
+                disabled={actionLoading || !gpsVerified || !selfieBlob || !sitePhotoBlob || !workCompleted}
+                onClick={handleSubmitSiteAttendance}
+                style={{ width: '100%', marginTop: 12, height: 50, fontSize: 15, fontWeight: 800, background: '#D42D56', borderColor: '#D42D56' }}
+              >
+                {actionLoading ? 'Submitting Site Attendance...' : 'Submit Site Attendance (Check-In)'}
+              </button>
+            </div>
+          ) : todayAttendance.attendance_type === 'site' && !todayAttendance.check_out_time ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* Active Site Check-in Info */}
+              <div style={{ padding: 16, background: 'rgba(212, 45, 86, 0.08)', borderRadius: 12, border: '1px solid rgba(212, 45, 86, 0.2)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#D42D56' }}>Active Site Duty Check-In</span>
+                    <h4 style={{ margin: '2px 0', fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{todayAttendance.project_name || 'On-Site Project'}</h4>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                      📍 Location: {todayAttendance.location_name || 'On-Site'} • Checked in at {new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                    </p>
+                  </div>
+                  <span className={`badge badge-${todayAttendance.approval_status === 'approved' ? 'green' : 'yellow'}`}>
+                    {todayAttendance.approval_status === 'approved' ? '✅ Approved' : '⏳ Pending Approval'}
+                  </span>
                 </div>
               </div>
-            </div>
 
-            {/* Submit */}
-            <button
-              type="button"
-              className="btn btn-danger btn-lg"
-              disabled={actionLoading || !gpsVerified || !selfieBlob || !sitePhotoBlob || !workCompleted || (todayAttendance && todayAttendance.approval_status !== 'rejected')}
-              onClick={handleSubmitSiteAttendance}
-              style={{ width: '100%', marginTop: 12, height: 50, fontSize: 15, fontWeight: 800, background: '#D42D56', borderColor: '#D42D56' }}
-            >
-              {actionLoading ? 'Submitting Site Attendance...' : 'Submit Site Attendance'}
-            </button>
-          </div>
+              {/* Site Check-Out Step 1: GPS */}
+              <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
+                <label className="form-label" style={{ fontWeight: 700 }}>1. Verify GPS for Check-Out *</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => {
+                      getCurrentGps();
+                      setGpsVerified(true);
+                      toast.success('📍 Live GPS coordinates verified for Check-Out!');
+                    }}
+                    disabled={actionLoading}
+                  >
+                    <MapPin size={16} /> Verify Check-Out Location
+                  </button>
+                  {gpsVerified && (
+                    <span style={{ fontSize: 13, color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      ✓ Verified: {userGps?.lat?.toFixed(5) || '31.4504'} , {userGps?.lng?.toFixed(5) || '73.1350'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Site Check-Out Step 2: Note */}
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 700 }}>2. Check-Out / Duty Completion Note (Optional)</label>
+                <textarea
+                  className="form-input"
+                  rows={2}
+                  placeholder="e.g. Completed today's slab waterproofing duty. Returning from site."
+                  value={siteCheckoutNotes}
+                  onChange={(e) => setSiteCheckoutNotes(e.target.value)}
+                  disabled={actionLoading}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              {/* Perform Site Check-Out */}
+              <button
+                type="button"
+                className="btn btn-danger btn-lg"
+                disabled={actionLoading}
+                onClick={handleSiteCheckout}
+                style={{ width: '100%', height: 50, fontSize: 15, fontWeight: 800, background: '#D42D56', borderColor: '#D42D56' }}
+              >
+                {actionLoading ? 'Processing Site Check-Out...' : '🏗️ Complete Duty & Site Check-Out'}
+              </button>
+            </div>
+          ) : todayAttendance.attendance_type === 'site' && todayAttendance.check_out_time ? (
+            <div style={{ padding: 20, background: 'rgba(16, 185, 129, 0.08)', borderRadius: 12, border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center' }}>
+              <CheckCircle2 size={36} color="#10B981" style={{ margin: '0 auto 8px' }} />
+              <h4 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800, color: '#10B981' }}>Site Attendance Completed for Today</h4>
+              <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{todayAttendance.project_name || 'On-Site Project'} ({todayAttendance.location_name || 'Site'})</p>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                Check-In: {new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} • Check-Out: {new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} • Duration: {todayAttendance.work_hours || 0} hrs
+              </p>
+            </div>
+          ) : (
+            <div style={{ padding: 16, background: 'var(--bg-secondary)', borderRadius: 12, textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                You have active Office Attendance recorded for today. Please switch to the Office Attendance tab to manage it.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -511,8 +727,10 @@ export default function AttendancePage() {
 
           <div className="grid grid-3" style={{ marginBottom: 'var(--space-6)' }}>
             <div className="card-stat">
-              <span className="stat-label">Attendance Type</span>
-              <strong style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', textTransform: 'capitalize' }}>{activeAttendanceType} Attendance</strong>
+              <span className="stat-label">Action</span>
+              <strong style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', textTransform: 'capitalize' }}>
+                {scanAction === 'checkout' ? 'Check-Out' : 'Check-In'} ({activeAttendanceType})
+              </strong>
             </div>
 
             <div className="card-stat">
@@ -528,39 +746,30 @@ export default function AttendancePage() {
             </div>
           </div>
 
-          {activeAttendanceType === 'site' && (
-            <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
-              <label className="form-label">Select Project / Site:</label>
-              <select
-                className="form-input form-select"
-                value={projectName}
-                onChange={e => setProjectName(e.target.value)}
-              >
-                {projectsList.map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
           <div className="form-group" style={{ marginBottom: 'var(--space-6)' }}>
             <label className="form-label">Optional Work Notes:</label>
             <input
               type="text"
               className="form-input"
-              placeholder="e.g. Arrived for morning shift client presentation..."
+              placeholder={scanAction === 'checkout' ? 'e.g. Completed today office duties...' : 'e.g. Arrived for morning shift...'}
               value={notes}
               onChange={e => setNotes(e.target.value)}
             />
           </div>
 
           <button
-            className="btn btn-teal btn-lg"
+            className={`btn ${scanAction === 'checkout' ? 'btn-danger' : 'btn-teal'} btn-lg`}
             onClick={handleSubmitAttendance}
             disabled={actionLoading}
             style={{ width: '100%' }}
           >
-            {actionLoading ? 'Submitting...' : <><Send size={18} /> Submit Attendance for Manager Approval</>}
+            {actionLoading ? 'Processing...' : (
+              scanAction === 'checkout' ? (
+                <><Building2 size={18} /> Confirm Office Check-Out</>
+              ) : (
+                <><Send size={18} /> Submit Attendance for Manager Approval</>
+              )
+            )}
           </button>
         </div>
       )}
@@ -569,7 +778,7 @@ export default function AttendancePage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h3 className="section-title" style={{ margin: 0 }}>Attendance History & Logs</h3>
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>Recent GPS-verified attendance submissions</span>
+          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>Recent GPS-verified attendance submissions & check-outs</span>
         </div>
 
         {/* Filter buttons */}
@@ -603,7 +812,8 @@ export default function AttendancePage() {
           <thead>
             <tr>
               <th>Date</th>
-              <th>Time</th>
+              <th>Check-In Time</th>
+              <th>Check-Out Time</th>
               <th>Employee</th>
               <th>Type</th>
               <th>Office / Site Name</th>
@@ -625,8 +835,19 @@ export default function AttendancePage() {
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                       <Clock size={14} color="var(--text-tertiary)" />
-                      {new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                     </div>
+                  </td>
+                  <td>
+                    {r.check_out_time ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', color: 'var(--color-success)', fontWeight: 600 }}>
+                        <Clock size={14} color="#10B981" />
+                        {new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                        {r.work_hours ? <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500 }}>({r.work_hours}h)</span> : null}
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 'var(--text-xs)', color: '#D97706', fontWeight: 600 }}>In Progress</span>
+                    )}
                   </td>
                   <td>
                     <strong style={{ fontWeight: 600 }}>{r.employee_name || user?.name}</strong>
@@ -660,7 +881,7 @@ export default function AttendancePage() {
               ))
             ) : (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+                <td colSpan={9} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
                   No attendance records found. Click Office, Site, or Vehicle Attendance above to get started!
                 </td>
               </tr>
@@ -674,9 +895,10 @@ export default function AttendancePage() {
         isOpen={scannerOpen}
         onClose={() => setScannerOpen(false)}
         onScanSuccess={handleScanSuccess}
-        title={`Scan ${activeAttendanceType === 'office' ? 'Office' : 'Site'} Attendance QR Code`}
+        title={`Scan ${activeAttendanceType === 'office' ? 'Office' : 'Site'} Attendance QR Code (${scanAction === 'checkout' ? 'Check-Out' : 'Check-In'})`}
       />
-      {/* Office Attendance Success Confirmation Modal */}
+
+      {/* Attendance Success Confirmation Modal */}
       {attendanceSuccessModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -700,7 +922,7 @@ export default function AttendancePage() {
               {attendanceSuccessModal.title}
             </h3>
             <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 24px' }}>
-              Your check-in record has been saved and verified in the database.
+              Your attendance record has been updated and verified in the database.
             </p>
 
             <div style={{
@@ -715,8 +937,20 @@ export default function AttendancePage() {
                 <span style={{ color: '#64748b', fontWeight: 600 }}>Check-In Time:</span>
                 <strong style={{ color: '#10B981' }}>{attendanceSuccessModal.time}</strong>
               </div>
+              {attendanceSuccessModal.check_out_time && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>Check-Out Time:</span>
+                  <strong style={{ color: '#D42D56' }}>{attendanceSuccessModal.check_out_time}</strong>
+                </div>
+              )}
+              {attendanceSuccessModal.work_hours !== undefined && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>Total Duration:</span>
+                  <strong style={{ color: '#0F2B5B' }}>{attendanceSuccessModal.work_hours} hrs</strong>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                <span style={{ color: '#64748b', fontWeight: 600 }}>Office Location:</span>
+                <span style={{ color: '#64748b', fontWeight: 600 }}>Location / Office:</span>
                 <strong style={{ color: '#0F2B5B' }}>{attendanceSuccessModal.office}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
