@@ -11,11 +11,17 @@ router.get('/', async (req, res, next) => {
       vehicle_attendance_enabled: true,
       employee_attendance_enabled: true,
       office_attendance_enabled: true,
-      site_attendance_enabled: true
+      site_attendance_enabled: true,
+      whatsapp_group_link: 'https://chat.whatsapp.com/DEbbiG4JnLkCRaNVrSIieK'
     };
 
+    const stringKeys = ['whatsapp_group_link'];
     rows.forEach(r => {
-      settings[r.setting_key] = r.setting_value === 'true';
+      if (stringKeys.includes(r.setting_key)) {
+        settings[r.setting_key] = r.setting_value;
+      } else {
+        settings[r.setting_key] = r.setting_value === 'true';
+      }
     });
 
     res.json({ settings });
@@ -26,7 +32,8 @@ router.get('/', async (req, res, next) => {
         vehicle_attendance_enabled: true,
         employee_attendance_enabled: true,
         office_attendance_enabled: true,
-        site_attendance_enabled: true
+        site_attendance_enabled: true,
+        whatsapp_group_link: 'https://chat.whatsapp.com/DEbbiG4JnLkCRaNVrSIieK'
       }
     });
   }
@@ -36,14 +43,15 @@ router.get('/', async (req, res, next) => {
 router.put('/', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const updates = req.body;
-    const allowedKeys = [
+    const booleanKeys = [
       'vehicle_attendance_enabled',
       'employee_attendance_enabled',
       'office_attendance_enabled',
       'site_attendance_enabled'
     ];
+    const stringKeys = ['whatsapp_group_link'];
 
-    for (const key of allowedKeys) {
+    for (const key of booleanKeys) {
       if (updates[key] !== undefined) {
         const strVal = String(updates[key] === true || updates[key] === 'true');
         await query(
@@ -56,16 +64,33 @@ router.put('/', authenticate, authorize('manager', 'controller', 'boss', 'admin'
       }
     }
 
+    for (const key of stringKeys) {
+      if (updates[key] !== undefined) {
+        await query(
+          `INSERT INTO system_settings (setting_key, setting_value, updated_by, updated_at)
+           VALUES ($1, $2, $3, NOW())
+           ON CONFLICT (setting_key) DO UPDATE
+           SET setting_value = EXCLUDED.setting_value, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
+          [key, String(updates[key]), req.user.id]
+        );
+      }
+    }
+
     const { rows } = await query('SELECT setting_key, setting_value FROM system_settings');
     const settings = {
       vehicle_attendance_enabled: true,
       employee_attendance_enabled: true,
       office_attendance_enabled: true,
-      site_attendance_enabled: true
+      site_attendance_enabled: true,
+      whatsapp_group_link: 'https://chat.whatsapp.com/DEbbiG4JnLkCRaNVrSIieK'
     };
 
     rows.forEach(r => {
-      settings[r.setting_key] = r.setting_value === 'true';
+      if (stringKeys.includes(r.setting_key)) {
+        settings[r.setting_key] = r.setting_value;
+      } else {
+        settings[r.setting_key] = r.setting_value === 'true';
+      }
     });
 
     res.json({ settings, message: 'System Settings updated successfully' });

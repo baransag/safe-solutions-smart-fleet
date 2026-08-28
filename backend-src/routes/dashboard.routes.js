@@ -142,7 +142,7 @@ router.get('/manager', authenticate, authorize('manager', 'controller', 'boss', 
 });
 
 // GET /api/dashboard/controller
-router.get('/controller', authenticate, authorize('controller', 'boss', 'admin'), async (req, res, next) => {
+router.get('/controller', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];

@@ -120,7 +120,7 @@ router.put('/:id', authenticate, authorize('admin', 'boss', 'controller', 'manag
 });
 
 // DELETE /api/employees/:id - Deactivate employee
-router.delete('/:id', authenticate, authorize('admin', 'boss', 'controller'), async (req, res, next) => {
+router.delete('/:id', authenticate, authorize('admin', 'boss', 'controller', 'manager'), async (req, res, next) => {
   try {
     const { rows } = await query(
       `UPDATE employees SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING id, name`,
