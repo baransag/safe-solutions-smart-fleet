@@ -16,7 +16,9 @@ export default function DashboardPage() {
   const { user, isEmployee, isManager, isController, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [myAttendance, setMyAttendance] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [nowTime, setNowTime] = useState(Date.now());
 
   useEffect(() => {
     fetchDashboard();
@@ -24,12 +26,16 @@ export default function DashboardPage() {
     // Auto-refresh interval for data synchronization (every 8s)
     const interval = setInterval(fetchDashboard, 8000);
 
+    // Live clock ticker for elapsed work timer (every 1s)
+    const clockInterval = setInterval(() => setNowTime(Date.now()), 1000);
+
     // Global custom event listener for immediate sync after user actions
     const handleSync = () => fetchDashboard();
     window.addEventListener('app:data-sync', handleSync);
 
     return () => {
       clearInterval(interval);
+      clearInterval(clockInterval);
       window.removeEventListener('app:data-sync', handleSync);
     };
   }, [isController, isManager]);
@@ -39,8 +45,18 @@ export default function DashboardPage() {
       let endpoint = '/dashboard/employee';
       if (isController || isAdmin || isManager) endpoint = '/dashboard/controller';
 
-      const result = await api.get(endpoint);
+      const [result, attRes] = await Promise.all([
+        api.get(endpoint),
+        api.get('/attendance/today').catch(() => null)
+      ]);
       setData(result);
+      if (attRes?.attendance) {
+        setMyAttendance(attRes.attendance);
+      } else if (result?.todayAttendance) {
+        setMyAttendance(result.todayAttendance);
+      } else {
+        setMyAttendance(null);
+      }
     } catch (err) {
       console.error('Dashboard fetch error:', err);
     } finally {
@@ -59,6 +75,24 @@ export default function DashboardPage() {
   const todayStr = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'short', day: 'numeric', year: 'numeric'
   });
+
+  // Calculate live work timer
+  let liveDurationStr = '00:00:00';
+  let completedDurationStr = '';
+  if (myAttendance?.check_in_time && !myAttendance?.check_out_time) {
+    const diffMs = Math.max(0, nowTime - new Date(myAttendance.check_in_time).getTime());
+    const totalSecs = Math.floor(diffMs / 1000);
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    liveDurationStr = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  } else if (myAttendance?.check_in_time && myAttendance?.check_out_time) {
+    const diffMs = Math.max(0, new Date(myAttendance.check_out_time).getTime() - new Date(myAttendance.check_in_time).getTime());
+    const totalSecs = Math.floor(diffMs / 1000);
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    completedDurationStr = `${hrs}h ${mins}m`;
+  }
 
   return (
     <div className="page dashboard-page">
@@ -93,8 +127,30 @@ export default function DashboardPage() {
             </div>
             <div style={{ width: 1, height: 36, background: 'var(--bg-tertiary)' }} />
             <div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-gold)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Current Shift</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>Morning Operations (08:00 AM - 05:00 PM)</div>
+              {!myAttendance || !myAttendance.check_in_time ? (
+                <div onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-gold)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>ATTENDANCE STATUS</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#3B82F6', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3B82F6' }} /> Ready to Check In
+                  </div>
+                </div>
+              ) : !myAttendance.check_out_time ? (
+                <div onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> 🟢 WORKING NOW
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
+                    {liveDurationStr}
+                  </div>
+                </div>
+              ) : (
+                <div onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.04em' }}>✓ COMPLETED</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
+                    Total Work: {completedDurationStr || `${myAttendance.work_hours || 0} hrs`}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
