@@ -37,8 +37,7 @@ export default function DashboardPage() {
   async function fetchDashboard() {
     try {
       let endpoint = '/dashboard/employee';
-      if (isController || isAdmin) endpoint = '/dashboard/controller';
-      else if (isManager) endpoint = '/dashboard/manager';
+      if (isController || isAdmin || isManager) endpoint = '/dashboard/controller';
 
       const result = await api.get(endpoint);
       setData(result);

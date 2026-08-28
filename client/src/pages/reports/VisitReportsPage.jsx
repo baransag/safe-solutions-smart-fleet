@@ -4,7 +4,6 @@ import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
 import { FileText, Send, Plus, Trash2, Calendar, User, MapPin, Building, Phone, Briefcase, Package, MessageSquare, CheckCircle2, Share2, Search, Printer, Download, Image as ImageIcon } from 'lucide-react';
 
-const CONTROLLER_PHONE = '923468760963'; // M. Husnain Farooq (Controller)
 
 export default function VisitReportsPage() {
   const { user, isAdmin, isController, isBoss, isManager } = useAuth();
@@ -17,6 +16,7 @@ export default function VisitReportsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
+  const [whatsappGroupLink, setWhatsappGroupLink] = useState('');
 
   // New Visit Report Form State
   const [salesPerson, setSalesPerson] = useState(user?.name || '');
@@ -37,7 +37,19 @@ export default function VisitReportsPage() {
 
   useEffect(() => {
     fetchReports();
+    fetchWhatsAppGroupLink();
   }, []);
+
+  async function fetchWhatsAppGroupLink() {
+    try {
+      const data = await api.get('/settings');
+      if (data.settings && data.settings.whatsapp_group_link) {
+        setWhatsappGroupLink(data.settings.whatsapp_group_link);
+      }
+    } catch {
+      // Quiet fail — default empty, will show warning if not set
+    }
+  }
 
   async function fetchReports() {
     setLoading(true);
@@ -239,33 +251,16 @@ export default function VisitReportsPage() {
     toast.success('📸 High-resolution Report Image generated & downloaded! You can now share it directly on WhatsApp.');
   };
 
-  // Generate clean formatted WhatsApp text message
-  const generateWhatsAppText = (items) => {
-    let msg = `📋 *SAFE SOLUTIONS — DAILY VISIT REPORT*\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `👤 *Sales Person:* ${salesPerson || user?.name}\n`;
-    msg += `📅 *Date:* ${visitDate}\n`;
-    msg += `🔢 *Total Visits:* ${items.length}\n`;
-    msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-
-    items.forEach((r, i) => {
-      msg += `*VISIT #${i + 1}*\n`;
-      msg += `📍 *Project/Location:* ${r.project_location || 'N/A'}\n`;
-      if (r.client_name) msg += `🏢 *Client:* ${r.client_name}\n`;
-      if (r.contractor_name) msg += `👷 *Contractor:* ${r.contractor_name}\n`;
-      if (r.architect_consultant) msg += `📐 *Architect/Consultant:* ${r.architect_consultant}\n`;
-      if (r.contact_number) msg += `📞 *Contact Person:* ${r.contact_number}\n`;
-      msg += `🎯 *Purpose:* ${r.purpose_of_visit || 'N/A'}\n`;
-      if (r.product_of_interest) msg += `📦 *Product of Interest:* ${r.product_of_interest}\n`;
-      if (r.remarks) msg += `💬 *Remarks:* ${r.remarks}\n`;
-      msg += `------------------------------------\n`;
-    });
-
-    msg += `\n_Generated via SAFE SOLUTIONS FleetOps_`;
-    return msg;
+  // Open WhatsApp Group link in new tab
+  const openWhatsAppGroup = () => {
+    if (!whatsappGroupLink) {
+      toast.warning('WhatsApp Group link is not configured. Please ask Admin to set it in System Settings.');
+      return;
+    }
+    window.open(whatsappGroupLink, '_blank');
   };
 
-  const handleSubmit = async (e, sendWhatsApp = false, downloadPic = false) => {
+  const handleSubmit = async (e, sharePNG = false) => {
     e?.preventDefault?.();
 
     const validRows = rows.filter(r => r.project_location.trim() && r.purpose_of_visit.trim());
@@ -285,15 +280,13 @@ export default function VisitReportsPage() {
       await api.post('/visit-reports', { reports: payload });
       toast.success(`✅ ${validRows.length} Daily Visit Report(s) saved to database!`);
 
-      // If user requested image download
-      if (downloadPic) {
+      // Always generate and download PNG when sharing
+      if (sharePNG) {
         generateAndDownloadReportImage(validRows, salesPerson, visitDate);
-      }
-
-      // If user clicked WhatsApp Share, open WhatsApp
-      if (sendWhatsApp) {
-        const waText = encodeURIComponent(generateWhatsAppText(validRows));
-        window.open(`https://wa.me/${CONTROLLER_PHONE}?text=${waText}`, '_blank');
+        // Open WhatsApp Group link after short delay for PNG download
+        setTimeout(() => {
+          openWhatsAppGroup();
+        }, 800);
       }
 
       // Reset form
@@ -319,12 +312,10 @@ export default function VisitReportsPage() {
   };
 
   const handleShareExistingToWhatsApp = (r) => {
-    const waText = encodeURIComponent(generateWhatsAppText([r]));
-    window.open(`https://wa.me/${CONTROLLER_PHONE}?text=${waText}`, '_blank');
-  };
-
-  const handleDownloadSingleImage = (r) => {
     generateAndDownloadReportImage([r], r.sales_person_name, new Date(r.visit_date).toISOString().split('T')[0]);
+    setTimeout(() => {
+      openWhatsAppGroup();
+    }, 800);
   };
 
   const filteredReports = reports.filter(r => {
@@ -560,7 +551,7 @@ export default function VisitReportsPage() {
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={(e) => handleSubmit(e, false, false)}
+                onClick={(e) => handleSubmit(e, false)}
                 disabled={submitting}
                 style={{ background: '#3B2621', fontWeight: 800, padding: '12px 24px', borderRadius: 12 }}
               >
@@ -570,11 +561,11 @@ export default function VisitReportsPage() {
               <button
                 type="button"
                 className="btn"
-                onClick={(e) => handleSubmit(e, true, true)}
+                onClick={(e) => handleSubmit(e, true)}
                 disabled={submitting}
                 style={{ background: '#25D366', color: '#fff', fontWeight: 800, padding: '12px 24px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 14px rgba(37, 211, 102, 0.3)' }}
               >
-                <Share2 size={18} /> Save & Send to Controller on WhatsApp
+                <Share2 size={18} /> Save, Download PNG & Open WhatsApp Group
               </button>
             </div>
           </div>
@@ -650,20 +641,20 @@ export default function VisitReportsPage() {
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"
-                          onClick={() => handleDownloadSingleImage(r)}
+                          onClick={() => generateAndDownloadReportImage([r], r.sales_person_name, new Date(r.visit_date).toISOString().split('T')[0])}
                           title="Download PNG Picture of this report"
                           style={{ color: '#006A71', fontWeight: 700, padding: '4px 8px' }}
                         >
-                          <Download size={13} /> Pic
+                          <Download size={13} /> PNG
                         </button>
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"
                           onClick={() => handleShareExistingToWhatsApp(r)}
-                          title="Send this report on WhatsApp"
+                          title="Download PNG and open WhatsApp Group"
                           style={{ color: '#25D366', fontWeight: 700, padding: '4px 8px' }}
                         >
-                          <Share2 size={13} /> WA
+                          <Share2 size={13} /> Share
                         </button>
                       </div>
                     </td>

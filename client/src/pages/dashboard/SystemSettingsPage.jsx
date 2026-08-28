@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
-import { Settings, Shield, ToggleLeft, ToggleRight, CheckCircle2, Car, Users, Building2, HardHat, Save, RefreshCw } from 'lucide-react';
+import { Settings, Shield, ToggleLeft, ToggleRight, CheckCircle2, Car, Users, Building2, HardHat, Save, RefreshCw, MessageSquare } from 'lucide-react';
 
 export default function SystemSettingsPage() {
   const { user, isAdmin, isController, isBoss } = useAuth();
@@ -12,7 +12,8 @@ export default function SystemSettingsPage() {
     vehicle_attendance_enabled: true,
     employee_attendance_enabled: true,
     office_attendance_enabled: true,
-    site_attendance_enabled: true
+    site_attendance_enabled: true,
+    whatsapp_group_link: 'https://chat.whatsapp.com/DEbbiG4JnLkCRaNVrSIieK'
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -310,6 +311,39 @@ export default function SystemSettingsPage() {
             <span style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Module Status</span>
             <span className={`badge badge-${settings.qr_management_enabled !== false ? 'green' : 'red'}`} style={{ fontWeight: 800 }}>
               {settings.qr_management_enabled !== false ? 'ENABLED (LIVE)' : 'DISABLED'}
+            </span>
+          </div>
+        </div>
+
+        {/* WhatsApp Reports Group */}
+        <div className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 22, border: '1px solid rgba(37, 211, 102, 0.2)', background: '#fff', gridColumn: '1 / -1' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+            <div style={{ padding: 10, borderRadius: 12, background: 'rgba(37, 211, 102, 0.1)', color: '#25D366' }}>
+              <MessageSquare size={24} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0F2B5B' }}>WhatsApp Reports Group</h4>
+              <span style={{ fontSize: 11, color: '#64748b' }}>WhatsApp Group Invite / Share Link for Report Sharing</span>
+              <div style={{ marginTop: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>WhatsApp Group Link</label>
+                <input
+                  type="url"
+                  className="form-input"
+                  value={settings.whatsapp_group_link || ''}
+                  onChange={e => setSettings(prev => ({ ...prev, whatsapp_group_link: e.target.value }))}
+                  placeholder="https://chat.whatsapp.com/your-group-invite-code"
+                  style={{ width: '100%', maxWidth: 600, fontWeight: 600 }}
+                />
+                <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                  Visit Reports will use this link to open the WhatsApp group for manual PNG sharing.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Group Status</span>
+            <span className={`badge badge-${settings.whatsapp_group_link ? 'green' : 'red'}`} style={{ fontWeight: 800 }}>
+              {settings.whatsapp_group_link ? 'CONFIGURED' : 'NOT SET'}
             </span>
           </div>
         </div>

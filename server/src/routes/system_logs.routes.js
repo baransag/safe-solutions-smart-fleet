@@ -4,7 +4,7 @@ const { query } = require('../config/db');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 
 // GET /api/system-logs - Get audit logs (admin, boss, controller)
-router.get('/', authenticate, authorize('admin', 'boss', 'controller'), async (req, res, next) => {
+router.get('/', authenticate, authorize('admin', 'boss', 'controller', 'manager'), async (req, res, next) => {
   try {
     const { level, module: mod, limit = 50, offset = 0 } = req.query;
     let sql = `

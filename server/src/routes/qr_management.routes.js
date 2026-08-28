@@ -38,7 +38,7 @@ router.get('/', authenticate, authorize('controller', 'manager', 'boss', 'admin'
 });
 
 // POST /api/employee-qr-codes/generate (Controller & Boss only)
-router.post('/generate', authenticate, authorize('controller', 'boss', 'admin'), async (req, res, next) => {
+router.post('/generate', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { name, type, project_name, category, lat, lng, allowed_radius_meters, expiry_minutes } = req.body;
 
@@ -110,7 +110,7 @@ router.post('/generate', authenticate, authorize('controller', 'boss', 'admin'),
 });
 
 // POST /api/employee-qr-codes/:id/regenerate (Office QR Replacement)
-router.post('/:id/regenerate', authenticate, authorize('controller', 'boss', 'admin'), async (req, res, next) => {
+router.post('/:id/regenerate', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const { rows: existing } = await query('SELECT * FROM employee_qr_codes WHERE id = $1', [id]);
@@ -155,7 +155,7 @@ router.post('/:id/regenerate', authenticate, authorize('controller', 'boss', 'ad
 });
 
 // DELETE /api/employee-qr-codes/:id
-router.delete('/:id', authenticate, authorize('controller', 'boss', 'admin'), async (req, res, next) => {
+router.delete('/:id', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM employee_qr_codes WHERE id = $1', [id]);

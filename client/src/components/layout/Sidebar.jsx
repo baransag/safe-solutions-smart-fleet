@@ -9,7 +9,7 @@ import {
 import { getEmployeeAvatar } from '../../utils/avatarHelper';
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { user, logout, isAdmin, isController, isSuperAdmin } = useAuth();
+  const { user, logout, isAdmin, isController, isManager, isSuperAdmin } = useAuth();
   const location = useLocation();
 
   const navItems = [
@@ -39,7 +39,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/alerts', icon: AlertTriangle, label: 'Alerts', adminOnly: true },
     { to: '/services', icon: Wrench, label: 'Vehicle Services', adminOnly: true },
     { to: '/reports', icon: FileText, label: 'Reports', adminOnly: true },
-    { to: '/system-logs', icon: Shield, label: 'System Audit Logs', superAdminOnly: true },
+    { to: '/system-logs', icon: Shield, label: 'System Audit Logs', controllerOnly: true },
     { to: '/settings', icon: Settings, label: 'System Settings', superAdminOnly: true },
   ];
 
@@ -73,7 +73,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
             if (item.adminOnly && !isAdmin) return null;
             if (item.superAdminOnly && !isSuperAdmin) return null;
-            if (item.controllerOnly && !isController) return null;
+            if (item.controllerOnly && !isController && !isManager) return null;
 
             const Icon = item.icon;
             return (
