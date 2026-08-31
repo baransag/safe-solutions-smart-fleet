@@ -537,7 +537,7 @@ router.get('/monthly-report', authenticate, authorize('manager', 'controller', '
       return res.json({ months: monthRows, summary: [], records: [] });
     }
 
-    // 2. Employee-wise summary for selected month
+    // 2. Employee-wise summary for selected month (LEFT JOIN to ensure all active employees appear)
     let summarySQL = `
       SELECT
         e.id as employee_id,
@@ -549,17 +549,17 @@ router.get('/monthly-report', authenticate, authorize('manager', 'controller', '
         COUNT(CASE WHEN ar.attendance_type = 'office' THEN 1 END) as office_checkins,
         COUNT(CASE WHEN ar.attendance_type = 'site' THEN 1 END) as site_checkins,
         COUNT(CASE WHEN ar.check_out_time IS NOT NULL THEN 1 END) as checkouts,
-        COUNT(CASE WHEN ar.check_out_time IS NULL THEN 1 END) as missing_checkouts,
+        COUNT(CASE WHEN ar.id IS NOT NULL AND ar.check_out_time IS NULL THEN 1 END) as missing_checkouts,
         COALESCE(SUM(ar.work_hours), 0) as total_work_hours
-      FROM attendance_records ar
-      JOIN employees e ON e.id = ar.employee_id
-      WHERE TO_CHAR(ar.check_in_time, 'YYYY-MM') = $1
+      FROM employees e
+      LEFT JOIN attendance_records ar ON ar.employee_id = e.id AND TO_CHAR(ar.check_in_time, 'YYYY-MM') = $1
+      WHERE e.is_active = true
     `;
     const summaryParams = [month];
 
     if (employee_id && employee_id !== 'all') {
       summaryParams.push(employee_id);
-      summarySQL += ` AND (ar.employee_id::text = $${summaryParams.length} OR e.employee_id = $${summaryParams.length})`;
+      summarySQL += ` AND (e.id::text = $${summaryParams.length} OR e.employee_id = $${summaryParams.length})`;
     }
 
     summarySQL += ` GROUP BY e.id, e.name, e.employee_id, e.designation ORDER BY e.name`;
