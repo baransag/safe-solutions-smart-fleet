@@ -40,7 +40,7 @@ async function seed() {
         department: 'Executive',
         role: 'boss',
         password_hash: bossPassword,
-        avatar_url: '/assets/images/logo.jpeg'
+        avatar_url: '/assets/images/Asif.jpeg'
       },
       {
         employee_id: 'EMP001',

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
+import { getEmployeeAvatar, getAvatarByName } from '../../utils/avatarHelper';
 import { User, Mail, Phone, Shield, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function ProfilePage() {
@@ -48,8 +49,13 @@ export default function ProfilePage() {
         {/* Account Details Card */}
         <div className="card-elevated" style={{ padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-            <div className="avatar avatar-lg" style={{ width: 64, height: 64, fontSize: '1.5rem', background: 'var(--color-primary-soft)', color: 'var(--color-primary)' }}>
-              {user?.name ? user.name.charAt(0) : 'U'}
+            <div className="avatar avatar-lg" style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--border-color)' }}>
+              <img 
+                src={getEmployeeAvatar(user?.employee_id) || getAvatarByName(user?.name)} 
+                alt={user?.name || 'User'} 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => { e.currentTarget.src = '/assets/images/logo.jpeg'; }}
+              />
             </div>
             <div>
               <h3 style={{ margin: 0, fontWeight: 700 }}>{user?.name}</h3>

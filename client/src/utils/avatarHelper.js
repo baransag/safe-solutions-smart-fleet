@@ -11,7 +11,8 @@ export function getEmployeeAvatar(employeeId) {
     'EMP009': 'Muneeb.jpeg',
     'EMP010': 'Zahid.jpeg',
     'EMP011': 'Tajammul.jpeg',
-    'ADMIN001': 'logo.jpeg',
+    'ADMIN001': 'Asif.jpeg',
+    'BOSS': 'Asif.jpeg',
     'SYSADMIN001': 'logo.jpeg'
   };
   const filename = mapping[String(employeeId || '').trim().toUpperCase()];
@@ -20,6 +21,7 @@ export function getEmployeeAvatar(employeeId) {
 
 export function getAvatarByName(name) {
   const clean = String(name || '').toLowerCase().trim();
+  if (clean.includes('asif') || clean.includes('boss')) return '/assets/images/Asif.jpeg';
   if (clean.includes('husnain')) return '/assets/images/Husnain.jpeg';
   if (clean.includes('samaira')) return '/assets/images/Samaira.jpeg';
   if (clean.includes('shahzaib')) return '/assets/images/Shahzaib.jpeg';
@@ -33,3 +35,4 @@ export function getAvatarByName(name) {
   if (clean.includes('tajammul')) return '/assets/images/Tajammul.jpeg';
   return '/assets/images/logo.jpeg';
 }
+
