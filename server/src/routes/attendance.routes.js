@@ -503,5 +503,82 @@ router.get('/reports', authenticate, authorize('manager', 'controller', 'boss', 
     res.status(500).json({ error: 'Failed to retrieve attendance reports from database' });
   }
 });
+// GET /api/attendance/monthly-report (Monthly attendance report — READ-ONLY, SELECT queries only)
+router.get('/monthly-report', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
+  try {
+    const { month, employee_id } = req.query;
+
+    // 1. Get all distinct months that have attendance data (for the month selector)
+    const { rows: monthRows } = await query(`
+      SELECT DISTINCT TO_CHAR(check_in_time, 'YYYY-MM') as month_key,
+             TO_CHAR(check_in_time, 'Month YYYY') as month_label,
+             MIN(check_in_time::date) as first_date,
+             MAX(check_in_time::date) as last_date
+      FROM attendance_records
+      GROUP BY TO_CHAR(check_in_time, 'YYYY-MM'), TO_CHAR(check_in_time, 'Month YYYY')
+      ORDER BY month_key DESC
+    `);
+
+    // If no month selected, return just the available months
+    if (!month) {
+      return res.json({ months: monthRows, summary: [], records: [] });
+    }
+
+    // 2. Employee-wise summary for selected month
+    let summarySQL = `
+      SELECT
+        e.id as employee_id,
+        e.name as employee_name,
+        e.employee_id as emp_id,
+        e.designation,
+        COUNT(ar.id) as total_records,
+        COUNT(DISTINCT ar.check_in_time::date) as present_days,
+        COUNT(CASE WHEN ar.check_out_time IS NOT NULL THEN 1 END) as checkouts,
+        COALESCE(SUM(ar.work_hours), 0) as total_work_hours
+      FROM attendance_records ar
+      JOIN employees e ON e.id = ar.employee_id
+      WHERE TO_CHAR(ar.check_in_time, 'YYYY-MM') = $1
+    `;
+    const summaryParams = [month];
+
+    if (employee_id) {
+      summaryParams.push(employee_id);
+      summarySQL += ` AND ar.employee_id = $${summaryParams.length}`;
+    }
+
+    summarySQL += ` GROUP BY e.id, e.name, e.employee_id, e.designation ORDER BY e.name`;
+
+    const { rows: summaryRows } = await query(summarySQL, summaryParams);
+
+    // 3. Detailed records for selected month
+    let recordsSQL = `
+      SELECT ar.*, e.name as employee_name, e.employee_id as emp_id, e.designation,
+             app.name as approved_by_name
+      FROM attendance_records ar
+      JOIN employees e ON e.id = ar.employee_id
+      LEFT JOIN employees app ON app.id = ar.approved_by
+      WHERE TO_CHAR(ar.check_in_time, 'YYYY-MM') = $1
+    `;
+    const recordsParams = [month];
+
+    if (employee_id) {
+      recordsParams.push(employee_id);
+      recordsSQL += ` AND ar.employee_id = $${recordsParams.length}`;
+    }
+
+    recordsSQL += ` ORDER BY ar.check_in_time DESC`;
+
+    const { rows: recordRows } = await query(recordsSQL, recordsParams);
+
+    res.json({
+      months: monthRows,
+      summary: summaryRows,
+      records: recordRows
+    });
+  } catch (err) {
+    console.error('Monthly report fetch error:', err.message);
+    res.status(500).json({ error: 'Failed to retrieve monthly attendance report from database' });
+  }
+});
 
 module.exports = router;

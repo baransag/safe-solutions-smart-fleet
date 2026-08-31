@@ -1,0 +1,17 @@
+{
+  "name": "SAFE SOLUTIONS FleetOps",
+  "short_name": "SAFE FleetOps",
+  "description": "SAFE SOLUTIONS — Enterprise Fleet, Attendance & Site Operations",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A14",
+  "theme_color": "#0A0A14",
+  "icons": [
+    {
+      "src": "/assets/images/logo.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

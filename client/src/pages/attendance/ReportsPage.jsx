@@ -86,24 +86,54 @@ export default function ReportsPage() {
   };
 
   const exportPDF = () => {
+    // Load logo as base64 for the print window
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = logoImg.naturalWidth;
+      canvas.height = logoImg.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(logoImg, 0, 0);
+      const logoBase64 = canvas.toDataURL('image/jpeg', 0.9);
+      openPrintWindow(logoBase64);
+    };
+    logoImg.onerror = () => {
+      // Fallback: open without logo if image fails to load
+      openPrintWindow(null);
+    };
+    logoImg.src = '/assets/images/logo.jpeg';
+  };
+
+  const openPrintWindow = (logoBase64) => {
     const printWin = window.open('', '_blank');
     printWin.document.write(`
       <html>
         <head>
           <title>Attendance Report - ${activeTab.toUpperCase()}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h2 { color: #0F2B5B; margin-bottom: 5px; }
+            body { font-family: Arial, sans-serif; padding: 20px; margin: 0; }
+            .report-header { text-align: center; padding: 20px 0 16px; border-bottom: 3px solid #0F2B5B; margin-bottom: 20px; }
+            .report-header img { width: 80px; height: 80px; object-fit: contain; margin-bottom: 8px; }
+            .report-header h1 { color: #0F2B5B; margin: 0; font-size: 24px; font-weight: 900; letter-spacing: 0.04em; }
+            .report-header .tagline { color: #64748b; font-size: 13px; margin: 4px 0 12px; font-weight: 600; }
+            .report-header .report-title { color: #D42D56; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; margin: 0; }
+            .header-info { margin-bottom: 15px; font-size: 13px; color: #555; }
             table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
             th { background-color: #0F2B5B; color: white; }
-            .header-info { margin-bottom: 15px; font-size: 13px; color: #555; }
+            .report-footer { text-align: center; margin-top: 30px; padding-top: 16px; border-top: 2px solid #e2e8f0; font-size: 11px; color: #94a3b8; }
           </style>
         </head>
         <body>
-          <h2>SAFE SOLUTIONS OPS - Attendance Report</h2>
+          <div class="report-header">
+            ${logoBase64 ? `<img src="${logoBase64}" alt="SAFE SOLUTIONS Logo" />` : ''}
+            <h1>SAFE SOLUTIONS</h1>
+            <div class="tagline">House of Construction Solutions</div>
+            <p class="report-title">${activeTab.toUpperCase()} ATTENDANCE REPORT</p>
+          </div>
           <div class="header-info">
-            Report Type: <strong>${activeTab.toUpperCase()} ATTENDANCE</strong> | Date: <strong>${selectedDate}</strong>
+            Report Type: <strong>${activeTab.toUpperCase()} ATTENDANCE</strong> | Date: <strong>${selectedDate}</strong> | Generated: <strong>${new Date().toLocaleString()}</strong>
           </div>
           <table>
             <thead>
@@ -131,6 +161,10 @@ export default function ReportsPage() {
               `).join('')}
             </tbody>
           </table>
+          <div class="report-footer">
+            SAFE SOLUTIONS FLEETOPS — Enterprise Fleet, Attendance & Site Operations Platform • Faisalabad HQ<br/>
+            Report generated on ${new Date().toLocaleString()}
+          </div>
           <script>window.print(); setTimeout(() => window.close(), 1000);</script>
         </body>
       </html>

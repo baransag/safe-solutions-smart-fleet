@@ -12,6 +12,7 @@ import FuelPage from './pages/vehicles/FuelPage';
 import AttendancePage from './pages/attendance/AttendancePage';
 import EmployeeQRCodesPage from './pages/attendance/EmployeeQRCodesPage';
 import ReportsPage from './pages/attendance/ReportsPage';
+import MonthlyReportsPage from './pages/attendance/MonthlyReportsPage';
 import AlertsPage from './pages/vehicles/AlertsPage';
 import ServicesPage from './pages/vehicles/ServicesPage';
 import AnalyticsPage from './pages/vehicles/AnalyticsPage';
@@ -97,6 +98,7 @@ export default function AppRouter() {
           <Route path="/alerts" element={<AdminRoute><AlertsPage /></AdminRoute>} />
           <Route path="/services" element={<AdminRoute><ServicesPage /></AdminRoute>} />
           <Route path="/reports" element={<AdminRoute><ReportsPage /></AdminRoute>} />
+          <Route path="/monthly-reports" element={<AdminRoute><MonthlyReportsPage /></AdminRoute>} />
           <Route path="/settings" element={<AdminRoute><SystemSettingsPage /></AdminRoute>} />
         </Route>
 
