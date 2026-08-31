@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
 import EmployeeQRScanner from '../../components/attendance/EmployeeQRScanner';
-import { Building2, HardHat, CheckCircle2, MapPin, Navigation, Clock, Calendar, RefreshCw, Send, Car, Route, ClipboardCheck, ArrowRight, ShieldCheck, Filter, Camera } from 'lucide-react';
+import { Building2, HardHat, CheckCircle2, MapPin, Navigation, Clock, Calendar, RefreshCw, Send, Car, Route, ClipboardCheck, ArrowRight, ShieldCheck, Filter, Camera, Search, Users } from 'lucide-react';
 
 export default function AttendancePage() {
   const { user, isController, isAdmin } = useAuth();
@@ -44,7 +44,8 @@ export default function AttendancePage() {
 
   // Filters for History table
   const [filterType, setFilterType] = useState('all'); // 'all' | 'office' | 'site'
-  const [selectedEmployee, setSelectedEmployee] = useState('all'); // 'all' | employee_id number
+  const [selectedEmployee, setSelectedEmployee] = useState('all'); // 'all' | employee_id
+  const [employeeSearch, setEmployeeSearch] = useState('');
   const [attendanceSuccessModal, setAttendanceSuccessModal] = useState(null);
 
   useEffect(() => {
@@ -328,7 +329,14 @@ export default function AttendancePage() {
 
   const filteredHistory = history.filter(r => {
     if (filterType !== 'all' && r.attendance_type !== filterType) return false;
-    if (selectedEmployee !== 'all' && String(r.employee_id) !== String(selectedEmployee)) return false;
+    if (selectedEmployee !== 'all' && String(r.employee_id) !== String(selectedEmployee) && String(r.emp_id) !== String(selectedEmployee)) return false;
+    if (employeeSearch.trim()) {
+      const q = employeeSearch.toLowerCase().trim();
+      const matchName = (r.employee_name || '').toLowerCase().includes(q);
+      const matchEmpId = (r.emp_id || '').toLowerCase().includes(q);
+      const matchLocation = (r.location_name || r.project_name || '').toLowerCase().includes(q);
+      if (!matchName && !matchEmpId && !matchLocation) return false;
+    }
     return true;
   });
 
@@ -340,6 +348,23 @@ export default function AttendancePage() {
     }
     return acc;
   }, []);
+
+  // Group filtered records by employee for clean employee-wise view
+  const groupedByEmployee = filteredHistory.reduce((acc, r) => {
+    const key = r.employee_id || r.emp_id || 'unknown';
+    if (!acc[key]) {
+      acc[key] = {
+        employee_id: r.employee_id,
+        emp_id: r.emp_id,
+        employee_name: r.employee_name || user?.name || 'Employee',
+        records: []
+      };
+    }
+    acc[key].records.push(r);
+    return acc;
+  }, {});
+
+  const employeeGroups = Object.values(groupedByEmployee);
 
   const getWorkDuration = (checkIn, checkOut, workHours) => {
     if (checkIn && checkOut) {
@@ -429,7 +454,7 @@ export default function AttendancePage() {
                 <div style={{ textAlign: 'right', padding: '6px 12px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 10, border: '1px solid rgba(16, 185, 129, 0.25)' }}>
                   <div style={{ fontSize: 10, fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em' }}>🟢 WORKING NOW</div>
                   <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
-                    {getLiveWorkTimer(todayAttendance.check_in_time)}
+                    {new Date(nowTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                   </div>
                 </div>
               ) : (
@@ -844,22 +869,34 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {/* ATTENDANCE HISTORY TABLE */}
+      {/* ATTENDANCE HISTORY & LOGS — PROFESSIONAL EMPLOYEE-WISE VIEW */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h3 className="section-title" style={{ margin: 0 }}>Attendance History & Logs</h3>
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>Recent GPS-verified attendance submissions & check-outs</span>
+          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>Employee-wise GPS-verified attendance submissions & check-outs</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          {/* Employee Selector */}
+          {/* Employee Search Box */}
+          <div style={{ position: 'relative', minWidth: 200 }}>
+            <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            <input
+              type="text"
+              placeholder="Search employee or ID..."
+              value={employeeSearch}
+              onChange={e => setEmployeeSearch(e.target.value)}
+              style={{ padding: '6px 12px 6px 30px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, background: '#fff', color: '#0F2B5B', width: '100%' }}
+            />
+          </div>
+
+          {/* Employee Selector Dropdown */}
           {(isController || isAdmin) && uniqueEmployees.length > 1 && (
             <select
               value={selectedEmployee}
               onChange={e => setSelectedEmployee(e.target.value)}
               style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, fontWeight: 600, background: '#fff', color: '#0F2B5B', minWidth: 200 }}
             >
-              <option value="all">👥 All Employees</option>
+              <option value="all">👥 All Employees ({uniqueEmployees.length})</option>
               {uniqueEmployees.map(emp => (
                 <option key={emp.employee_id} value={emp.employee_id}>
                   {emp.employee_name} ({emp.emp_id})
@@ -868,7 +905,7 @@ export default function AttendancePage() {
             </select>
           )}
 
-          {/* Filter buttons */}
+          {/* Filter buttons (Office / Site) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-primary)', padding: 4, borderRadius: 'var(--radius-md)', border: 'var(--border-subtle)' }}>
             <button
               onClick={() => setFilterType('all')}
@@ -895,113 +932,131 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      {/* Selected Employee Header Card */}
-      {selectedEmployee !== 'all' && (() => {
-        const emp = uniqueEmployees.find(e => String(e.employee_id) === String(selectedEmployee));
-        return emp ? (
-          <div className="card-elevated" style={{ marginBottom: 16, padding: 16, borderLeft: '4px solid #0F2B5B', display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: '#0F2B5B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16 }}>
-              {(emp.employee_name || '?')[0]}
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>{emp.employee_name}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600 }}>Employee ID: {emp.emp_id} • {filteredHistory.length} record{filteredHistory.length !== 1 ? 's' : ''}</div>
-            </div>
-          </div>
-        ) : null;
-      })()}
+      {/* RENDER EMPLOYEE-WISE VIEW */}
+      {employeeGroups.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {employeeGroups.map(group => (
+            <div key={`group-${group.employee_id || group.emp_id}`} className="card-glass animate-fade-in-up" style={{ padding: 0, overflow: 'hidden', borderRadius: 16, border: '1px solid rgba(15, 43, 91, 0.12)' }}>
+              {/* Employee Section Header Banner */}
+              <div style={{ padding: '14px 20px', background: 'linear-gradient(90deg, #0F2B5B 0%, #1e3a8a 100%)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fff', color: '#0F2B5B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                    {(group.employee_name || '?')[0]}
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#fff' }}>
+                      {group.employee_name}
+                    </h4>
+                    <span style={{ fontSize: 12, color: '#93c5fd', fontWeight: 600 }}>
+                      Employee ID: {group.emp_id || 'EMP'} • {group.records.length} record{group.records.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
 
-      <div className="table-container animate-fade-in-up">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Check-In Time</th>
-              <th>Check-Out Time</th>
-              <th>Employee</th>
-              <th>Type</th>
-              <th>Office / Site Name</th>
-              <th>GPS Status</th>
-              <th>Status</th>
-              <th>Work Duration</th>
-              <th>Approved By</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredHistory.length > 0 ? (
-              filteredHistory.map(r => (
-                <tr key={r.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}>
-                      <Calendar size={14} color="var(--text-tertiary)" />
-                      {new Date(r.check_in_time).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                      <Clock size={14} color="var(--text-tertiary)" />
-                      {new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                    </div>
-                  </td>
-                  <td>
-                    {r.check_out_time ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', color: 'var(--color-success)', fontWeight: 600 }}>
-                        <Clock size={14} color="#10B981" />
-                        {new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: 'var(--text-xs)', color: '#D97706', fontWeight: 600 }}>In Progress</span>
-                    )}
-                  </td>
-                  <td>
-                    <strong style={{ fontWeight: 600 }}>{r.employee_name || user?.name}</strong>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>ID: {r.emp_id || user?.employee_id}</div>
-                  </td>
-                  <td>
-                    <span className={`badge badge-${r.attendance_type === 'site' ? 'red' : 'blue'}`}>
-                      {r.attendance_type === 'site' ? '🏗️ Site' : '🏢 Office'}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{r.location_name || 'Head Office'}</div>
-                    {r.project_name && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{r.project_name}</div>}
-                  </td>
-                  <td>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-info)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Navigation size={12} /> {r.gps_status || 'Inside Office'} ({r.distance_meters || 0}m)
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`badge badge-${r.approval_status === 'approved' ? 'green' : r.approval_status === 'rejected' ? 'red' : 'yellow'}`}>
-                      {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
-                    </span>
-                  </td>
-                  <td>
-                    {r.check_out_time ? (
-                      <span style={{ fontSize: 'var(--text-xs)', color: '#0F2B5B', fontWeight: 700 }}>
-                        {getWorkDuration(r.check_in_time, r.check_out_time, r.work_hours)}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: 'var(--text-xs)', color: '#D97706', fontWeight: 600 }}>🟢 Working</span>
-                    )}
-                  </td>
-                  <td>
-                    <span style={{ fontSize: 'var(--text-xs)', color: r.approved_by_name ? 'var(--color-success)' : 'var(--text-tertiary)', fontWeight: 500 }}>
-                      {r.approved_by_name ? `Approved by ${r.approved_by_name}` : 'Awaiting Review'}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={10} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
-                  No attendance records found. Click Office, Site, or Vehicle Attendance above to get started!
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ padding: '3px 10px', borderRadius: 12, background: 'rgba(255,255,255,0.15)', fontSize: 11, fontWeight: 700 }}>
+                    🏢 {group.records.filter(r => r.attendance_type === 'office').length} Office
+                  </span>
+                  <span style={{ padding: '3px 10px', borderRadius: 12, background: 'rgba(255,255,255,0.15)', fontSize: 11, fontWeight: 700 }}>
+                    🏗️ {group.records.filter(r => r.attendance_type === 'site').length} Site
+                  </span>
+                  <span style={{ padding: '3px 10px', borderRadius: 12, background: 'rgba(16,185,129,0.3)', color: '#6ee7b7', fontSize: 11, fontWeight: 700 }}>
+                    ✅ {group.records.filter(r => r.approval_status === 'approved').length} Approved
+                  </span>
+                </div>
+              </div>
+
+              {/* Records Table for this Employee */}
+              <div className="table-container" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
+                <table className="table" style={{ margin: 0 }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc' }}>
+                      <th style={{ width: 110 }}>Date</th>
+                      <th style={{ width: 110 }}>Check-In</th>
+                      <th style={{ width: 110 }}>Check-Out</th>
+                      <th style={{ width: 100 }}>Type</th>
+                      <th>Office / Site Name</th>
+                      <th>GPS Status</th>
+                      <th style={{ width: 110 }}>Status</th>
+                      <th style={{ width: 120 }}>Work Duration</th>
+                      <th>Approved By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.records.map(r => (
+                      <tr key={r.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 12 }}>
+                            <Calendar size={13} color="var(--text-tertiary)" />
+                            {new Date(r.check_in_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#047857', fontWeight: 600 }}>
+                            <Clock size={13} color="#047857" />
+                            {new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                          </div>
+                        </td>
+                        <td>
+                          {r.check_out_time ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#D42D56', fontWeight: 600 }}>
+                              <Clock size={13} color="#D42D56" />
+                              {new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: 11, color: '#D97706', fontWeight: 700, background: '#fef3c7', padding: '2px 8px', borderRadius: 6 }}>
+                              In Progress
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`badge badge-${r.attendance_type === 'site' ? 'red' : 'blue'}`} style={{ fontSize: 11 }}>
+                            {r.attendance_type === 'site' ? '🏗️ Site' : '🏢 Office'}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>{r.location_name || r.project_name || 'Head Office'}</div>
+                          {r.project_name && r.location_name && r.project_name !== r.location_name && (
+                            <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{r.project_name}</div>
+                          )}
+                        </td>
+                        <td>
+                          <span style={{ fontSize: 11, color: 'var(--color-info)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Navigation size={12} /> {r.gps_status || 'Inside Office'} ({r.distance_meters || 0}m)
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge badge-${r.approval_status === 'approved' ? 'green' : r.approval_status === 'rejected' ? 'red' : 'yellow'}`} style={{ fontSize: 11 }}>
+                            {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
+                          </span>
+                        </td>
+                        <td>
+                          {r.check_out_time ? (
+                            <span style={{ fontSize: 12, color: '#0F2B5B', fontWeight: 800 }}>
+                              {getWorkDuration(r.check_in_time, r.check_out_time, r.work_hours)}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 11, color: '#059669', fontWeight: 700 }}>🟢 Working</span>
+                          )}
+                        </td>
+                        <td>
+                          <span style={{ fontSize: 11, color: r.approved_by_name ? 'var(--color-success)' : 'var(--text-tertiary)', fontWeight: 500 }}>
+                            {r.approved_by_name ? `Approved by ${r.approved_by_name}` : 'Awaiting Review'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="card-elevated" style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>
+          No attendance records found matching the current filters.
+        </div>
+      )}
 
       {/* QR Scanner Camera Modal */}
       <EmployeeQRScanner

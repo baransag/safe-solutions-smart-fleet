@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
-import { Calendar, Download, Users, Clock, ChevronDown, ChevronUp, FileText, RefreshCw } from 'lucide-react';
+import { Calendar, Download, Users, Clock, ChevronDown, ChevronUp, FileText, RefreshCw, Search } from 'lucide-react';
 
 export default function MonthlyReportsPage() {
   const { user } = useAuth();
@@ -10,6 +10,8 @@ export default function MonthlyReportsPage() {
 
   const [months, setMonths] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState('all'); // 'all' | employee_id string
+  const [searchQuery, setSearchQuery] = useState('');
   const [summary, setSummary] = useState([]);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,16 +24,16 @@ export default function MonthlyReportsPage() {
 
   useEffect(() => {
     if (selectedMonth) {
-      fetchMonthlyData(selectedMonth);
+      fetchMonthlyData(selectedMonth, selectedEmployee);
     }
-  }, [selectedMonth]);
+  }, [selectedMonth, selectedEmployee]);
 
   async function fetchAvailableMonths() {
     try {
       setLoading(true);
       const res = await api.get('/attendance/monthly-report');
       setMonths(res.months || []);
-      // Auto-select the most recent month
+      // Default to the current/first month
       if (res.months && res.months.length > 0) {
         setSelectedMonth(res.months[0].month_key);
       }
@@ -42,10 +44,14 @@ export default function MonthlyReportsPage() {
     }
   }
 
-  async function fetchMonthlyData(month) {
+  async function fetchMonthlyData(month, empId) {
     try {
       setLoading(true);
-      const res = await api.get(`/attendance/monthly-report?month=${month}`);
+      let url = `/attendance/monthly-report?month=${month}`;
+      if (empId && empId !== 'all') {
+        url += `&employee_id=${empId}`;
+      }
+      const res = await api.get(url);
       setSummary(res.summary || []);
       setRecords(res.records || []);
     } catch (err) {
@@ -85,9 +91,25 @@ export default function MonthlyReportsPage() {
     return '—';
   };
 
-  // PNG Report Generation (Canvas-based, same pattern as VisitReportsPage)
+  // Filter summary items based on search query
+  const filteredSummary = summary.filter(emp => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      (emp.employee_name && emp.employee_name.toLowerCase().includes(q)) ||
+      (emp.emp_id && emp.emp_id.toLowerCase().includes(q)) ||
+      (emp.designation && emp.designation.toLowerCase().includes(q))
+    );
+  });
+
+  // Selected single employee object if one is chosen
+  const singleSelectedEmp = selectedEmployee !== 'all'
+    ? summary.find(e => String(e.employee_id) === String(selectedEmployee) || String(e.emp_id) === String(selectedEmployee))
+    : null;
+
+  // PNG Report Generation (Canvas-based)
   const generateMonthlyPNG = () => {
-    if (summary.length === 0) {
+    if (filteredSummary.length === 0) {
       toast.warning('No data available for the selected month to export.');
       return;
     }
@@ -112,14 +134,29 @@ export default function MonthlyReportsPage() {
     const ctx = canvas.getContext('2d');
 
     const width = 1200;
-    const headerHeight = 240;
-    const summaryRowHeight = 44;
-    const tableHeaderHeight = 40;
-    const footerHeight = 80;
     const padding = 50;
+    const isSingle = !!singleSelectedEmp;
+    const targetEmpRecords = isSingle ? getEmployeeRecords(singleSelectedEmp.employee_id) : [];
 
-    const totalHeight = headerHeight + tableHeaderHeight + (summary.length * summaryRowHeight) + footerHeight + 60;
+    // Calculate dimensions
+    const headerHeight = 250;
+    const footerHeight = 80;
+    let contentHeight = 0;
 
+    if (isSingle) {
+      // Single Employee view: KPI Summary Cards (100px) + Records Table
+      const kpiHeight = 110;
+      const tableHeaderHeight = 40;
+      const rowHeight = 36;
+      contentHeight = kpiHeight + tableHeaderHeight + (Math.max(1, targetEmpRecords.length) * rowHeight) + 60;
+    } else {
+      // All Employees Summary Table
+      const tableHeaderHeight = 40;
+      const summaryRowHeight = 40;
+      contentHeight = tableHeaderHeight + (filteredSummary.length * summaryRowHeight) + 80;
+    }
+
+    const totalHeight = headerHeight + contentHeight + footerHeight;
     canvas.width = width;
     canvas.height = totalHeight;
 
@@ -127,14 +164,14 @@ export default function MonthlyReportsPage() {
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, width, totalHeight);
 
-    // Top accent line
+    // Top Brand Accent
     ctx.fillStyle = '#0F2B5B';
-    ctx.fillRect(0, 0, width, 6);
+    ctx.fillRect(0, 0, width, 8);
 
     // Draw logo
-    let currentY = 30;
+    let currentY = 32;
     if (logoImg) {
-      const logoSize = 70;
+      const logoSize = 64;
       const logoX = (width - logoSize) / 2;
       ctx.drawImage(logoImg, logoX, currentY, logoSize, logoSize);
       currentY += logoSize + 12;
@@ -142,157 +179,281 @@ export default function MonthlyReportsPage() {
 
     // Company Name
     ctx.fillStyle = '#0F2B5B';
-    ctx.font = 'bold 28px Arial, sans-serif';
+    ctx.font = 'bold 26px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('SAFE SOLUTIONS', width / 2, currentY + 6);
     currentY += 24;
 
     // Tagline
     ctx.fillStyle = '#64748b';
-    ctx.font = '14px Arial, sans-serif';
-    ctx.fillText('House of Construction Solutions', width / 2, currentY + 6);
-    currentY += 30;
+    ctx.font = '13px Arial, sans-serif';
+    ctx.fillText('House of Construction Solutions', width / 2, currentY + 4);
+    currentY += 28;
 
     // Report Title
     ctx.fillStyle = '#D42D56';
-    ctx.font = 'bold 20px Arial, sans-serif';
-    ctx.fillText('MONTHLY ATTENDANCE REPORT', width / 2, currentY + 6);
+    ctx.font = 'bold 18px Arial, sans-serif';
+    ctx.fillText('MONTHLY ATTENDANCE REPORT', width / 2, currentY + 4);
+    currentY += 24;
+
+    // Month & Target (e.g., AUGUST 2026 — ALL EMPLOYEES or AUGUST 2026 — M. HUSNAIN FAROOQ (EMP001))
+    ctx.fillStyle = '#0F2B5B';
+    ctx.font = 'bold 15px Arial, sans-serif';
+    const monthHeader = isSingle
+      ? `${getMonthLabel(selectedMonth).toUpperCase()} — ${(singleSelectedEmp.employee_name || '').toUpperCase()} (${singleSelectedEmp.emp_id || ''})`
+      : `${getMonthLabel(selectedMonth).toUpperCase()} — ALL EMPLOYEES`;
+    ctx.fillText(monthHeader, width / 2, currentY + 4);
+    currentY += 20;
+
+    // Date range
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px Arial, sans-serif';
+    ctx.fillText(getMonthDateRange(selectedMonth), width / 2, currentY + 2);
     currentY += 26;
 
-    // Month & Date Range
-    ctx.fillStyle = '#0F2B5B';
-    ctx.font = 'bold 16px Arial, sans-serif';
-    ctx.fillText(getMonthLabel(selectedMonth), width / 2, currentY + 6);
-    currentY += 22;
-
-    ctx.fillStyle = '#64748b';
-    ctx.font = '13px Arial, sans-serif';
-    ctx.fillText(getMonthDateRange(selectedMonth), width / 2, currentY + 4);
-    currentY += 30;
-
-    // Divider
+    // Divider line
     ctx.strokeStyle = '#0F2B5B';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(padding, currentY);
     ctx.lineTo(width - padding, currentY);
     ctx.stroke();
-    currentY += 16;
-
-    // Table Header
-    const cols = [
-      { name: '#', w: 40 },
-      { name: 'Employee Name', w: 220 },
-      { name: 'Employee ID', w: 120 },
-      { name: 'Designation', w: 150 },
-      { name: 'Present Days', w: 110 },
-      { name: 'Records', w: 90 },
-      { name: 'Check-Outs', w: 100 },
-      { name: 'Total Work Hours', w: 140 }
-    ];
+    currentY += 20;
 
     const tableStartX = padding;
     const tableWidth = width - (padding * 2);
 
-    // Scale columns to fit
-    const totalColW = cols.reduce((s, c) => s + c.w, 0);
-    const scale = tableWidth / totalColW;
-    cols.forEach(c => { c.w = Math.floor(c.w * scale); });
-
-    // Draw header row
-    ctx.fillStyle = '#0F2B5B';
-    ctx.fillRect(tableStartX, currentY, tableWidth, tableHeaderHeight);
-
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 12px Arial, sans-serif';
-    ctx.textAlign = 'center';
-
-    let hx = tableStartX;
-    cols.forEach(col => {
-      ctx.fillText(col.name, hx + col.w / 2, currentY + 25);
-      hx += col.w;
-    });
-    currentY += tableHeaderHeight;
-
-    // Draw summary rows
-    summary.forEach((emp, idx) => {
-      ctx.fillStyle = idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
-      ctx.fillRect(tableStartX, currentY, tableWidth, summaryRowHeight);
-
+    if (isSingle) {
+      // ─── SINGLE EMPLOYEE PNG LAYOUT ───
+      // Draw KPI Summary Box
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fillRect(tableStartX, currentY, tableWidth, 80);
       ctx.strokeStyle = '#E2E8F0';
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(tableStartX, currentY, tableWidth, summaryRowHeight);
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tableStartX, currentY, tableWidth, 80);
 
-      ctx.fillStyle = '#1e293b';
-      ctx.font = '12px Arial, sans-serif';
-      ctx.textAlign = 'center';
-
-      const rowValues = [
-        String(idx + 1),
-        emp.employee_name || '—',
-        emp.emp_id || '—',
-        emp.designation || 'Staff',
-        String(emp.present_days || 0),
-        String(emp.total_records || 0),
-        String(emp.checkouts || 0),
-        `${Number(emp.total_work_hours || 0).toFixed(1)}h`
+      const kpis = [
+        { label: 'Present Days', val: singleSelectedEmp.present_days || 0, color: '#10B981' },
+        { label: 'Total Records', val: singleSelectedEmp.total_records || 0, color: '#0284c7' },
+        { label: 'Office Check-Ins', val: singleSelectedEmp.office_checkins || 0, color: '#0F2B5B' },
+        { label: 'Site Check-Ins', val: singleSelectedEmp.site_checkins || 0, color: '#D42D56' },
+        { label: 'Check-Outs', val: singleSelectedEmp.checkouts || 0, color: '#7c3aed' },
+        { label: 'Missing Check-Outs', val: singleSelectedEmp.missing_checkouts || 0, color: '#f59e0b' },
+        { label: 'Total Work Hours', val: `${Number(singleSelectedEmp.total_work_hours || 0).toFixed(1)}h`, color: '#0F2B5B' }
       ];
 
-      let rx = tableStartX;
-      cols.forEach((col, cIdx) => {
-        const val = rowValues[cIdx];
-        if (cIdx === 1) {
-          ctx.font = 'bold 12px Arial, sans-serif';
-          ctx.fillStyle = '#0F2B5B';
-          ctx.textAlign = 'left';
-          ctx.fillText(val.length > 28 ? val.substring(0, 26) + '...' : val, rx + 8, currentY + 28);
-          ctx.fillStyle = '#1e293b';
-          ctx.font = '12px Arial, sans-serif';
-          ctx.textAlign = 'center';
-        } else {
-          ctx.fillText(val.length > 20 ? val.substring(0, 18) + '...' : val, rx + col.w / 2, currentY + 28);
-        }
+      const kpiW = tableWidth / kpis.length;
+      kpis.forEach((k, idx) => {
+        const kx = tableStartX + (idx * kpiW);
+        ctx.fillStyle = '#64748b';
+        ctx.font = 'bold 10px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(k.label.toUpperCase(), kx + kpiW / 2, currentY + 28);
 
-        // Column divider
-        if (cIdx < cols.length - 1) {
-          ctx.beginPath();
-          ctx.moveTo(rx + col.w, currentY);
-          ctx.lineTo(rx + col.w, currentY + summaryRowHeight);
+        ctx.fillStyle = k.color;
+        ctx.font = 'bold 18px Arial, sans-serif';
+        ctx.fillText(String(k.val), kx + kpiW / 2, currentY + 56);
+
+        if (idx < kpis.length - 1) {
           ctx.strokeStyle = '#E2E8F0';
+          ctx.beginPath();
+          ctx.moveTo(kx + kpiW, currentY + 12);
+          ctx.lineTo(kx + kpiW, currentY + 68);
           ctx.stroke();
         }
-
-        rx += col.w;
       });
 
-      currentY += summaryRowHeight;
-    });
+      currentY += 100;
 
-    // Bottom border of table
-    ctx.strokeStyle = '#0F2B5B';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(tableStartX, currentY);
-    ctx.lineTo(tableStartX + tableWidth, currentY);
-    ctx.stroke();
+      // Table Header for single employee detailed records
+      const detailCols = [
+        { name: '#', w: 40 },
+        { name: 'Date', w: 120 },
+        { name: 'Type', w: 100 },
+        { name: 'Check-In', w: 120 },
+        { name: 'Check-Out', w: 120 },
+        { name: 'Office / Site', w: 220 },
+        { name: 'GPS Status', w: 140 },
+        { name: 'Status', w: 110 },
+        { name: 'Work Duration', w: 130 }
+      ];
 
-    currentY += 20;
+      const dScale = tableWidth / detailCols.reduce((s, c) => s + c.w, 0);
+      detailCols.forEach(c => { c.w = Math.floor(c.w * dScale); });
 
-    // Summary totals
-    const totalPresent = summary.reduce((s, e) => s + parseInt(e.present_days || 0), 0);
-    const totalRecords = summary.reduce((s, e) => s + parseInt(e.total_records || 0), 0);
-    const totalHours = summary.reduce((s, e) => s + parseFloat(e.total_work_hours || 0), 0);
+      ctx.fillStyle = '#0F2B5B';
+      ctx.fillRect(tableStartX, currentY, tableWidth, 36);
 
-    ctx.fillStyle = '#64748b';
-    ctx.font = '12px Arial, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(
-      `Total Employees: ${summary.length}  |  Total Present Days: ${totalPresent}  |  Total Records: ${totalRecords}  |  Total Work Hours: ${totalHours.toFixed(1)}h`,
-      width / 2, currentY
-    );
-    currentY += 30;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 11px Arial, sans-serif';
+      ctx.textAlign = 'center';
 
-    // Footer
+      let hx = tableStartX;
+      detailCols.forEach(col => {
+        ctx.fillText(col.name, hx + col.w / 2, currentY + 23);
+        hx += col.w;
+      });
+      currentY += 36;
+
+      // Table Rows
+      if (targetEmpRecords.length === 0) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px Arial, sans-serif';
+        ctx.fillText('No attendance records found for this employee in the selected month.', width / 2, currentY + 25);
+        currentY += 36;
+      } else {
+        targetEmpRecords.forEach((r, idx) => {
+          ctx.fillStyle = idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
+          ctx.fillRect(tableStartX, currentY, tableWidth, 36);
+
+          ctx.strokeStyle = '#E2E8F0';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(tableStartX, currentY, tableWidth, 36);
+
+          const timeInStr = r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '—';
+          const timeOutStr = r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : 'In Progress';
+          const durationStr = getWorkDuration(r.check_in_time, r.check_out_time, r.work_hours);
+          const dateStr = new Date(r.check_in_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+          const rowValues = [
+            String(idx + 1),
+            dateStr,
+            r.attendance_type === 'site' ? 'Site' : 'Office',
+            timeInStr,
+            timeOutStr,
+            r.location_name || r.project_name || 'Head Office',
+            r.gps_status || 'Inside Office',
+            r.approval_status ? r.approval_status.toUpperCase() : 'APPROVED',
+            durationStr
+          ];
+
+          let rx = tableStartX;
+          detailCols.forEach((col, cIdx) => {
+            const val = rowValues[cIdx];
+            ctx.fillStyle = '#1e293b';
+            ctx.font = '11px Arial, sans-serif';
+            ctx.textAlign = 'center';
+
+            if (cIdx === 5) {
+              ctx.textAlign = 'left';
+              ctx.fillText(val.length > 28 ? val.substring(0, 26) + '...' : val, rx + 10, currentY + 23);
+            } else {
+              ctx.fillText(val, rx + col.w / 2, currentY + 23);
+            }
+
+            if (cIdx < detailCols.length - 1) {
+              ctx.beginPath();
+              ctx.moveTo(rx + col.w, currentY);
+              ctx.lineTo(rx + col.w, currentY + 36);
+              ctx.strokeStyle = '#E2E8F0';
+              ctx.stroke();
+            }
+            rx += col.w;
+          });
+
+          currentY += 36;
+        });
+      }
+    } else {
+      // ─── ALL EMPLOYEES PNG SUMMARY LAYOUT ───
+      const cols = [
+        { name: '#', w: 40 },
+        { name: 'Employee Name', w: 200 },
+        { name: 'Employee ID', w: 100 },
+        { name: 'Present Days', w: 90 },
+        { name: 'Records', w: 80 },
+        { name: 'Office', w: 75 },
+        { name: 'Site', w: 75 },
+        { name: 'Check-Outs', w: 90 },
+        { name: 'Missing', w: 80 },
+        { name: 'Work Hours', w: 100 }
+      ];
+
+      const scale = tableWidth / cols.reduce((s, c) => s + c.w, 0);
+      cols.forEach(c => { c.w = Math.floor(c.w * scale); });
+
+      // Draw header row
+      ctx.fillStyle = '#0F2B5B';
+      ctx.fillRect(tableStartX, currentY, tableWidth, 38);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 11px Arial, sans-serif';
+      ctx.textAlign = 'center';
+
+      let hx = tableStartX;
+      cols.forEach(col => {
+        ctx.fillText(col.name, hx + col.w / 2, currentY + 24);
+        hx += col.w;
+      });
+      currentY += 38;
+
+      // Draw summary rows
+      filteredSummary.forEach((emp, idx) => {
+        ctx.fillStyle = idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
+        ctx.fillRect(tableStartX, currentY, tableWidth, 40);
+
+        ctx.strokeStyle = '#E2E8F0';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(tableStartX, currentY, tableWidth, 40);
+
+        const rowValues = [
+          String(idx + 1),
+          emp.employee_name || '—',
+          emp.emp_id || '—',
+          String(emp.present_days || 0),
+          String(emp.total_records || 0),
+          String(emp.office_checkins || 0),
+          String(emp.site_checkins || 0),
+          String(emp.checkouts || 0),
+          String(emp.missing_checkouts || 0),
+          `${Number(emp.total_work_hours || 0).toFixed(1)}h`
+        ];
+
+        let rx = tableStartX;
+        cols.forEach((col, cIdx) => {
+          const val = rowValues[cIdx];
+          ctx.fillStyle = '#1e293b';
+          ctx.font = '11px Arial, sans-serif';
+          ctx.textAlign = 'center';
+
+          if (cIdx === 1) {
+            ctx.font = 'bold 11px Arial, sans-serif';
+            ctx.fillStyle = '#0F2B5B';
+            ctx.textAlign = 'left';
+            ctx.fillText(val.length > 24 ? val.substring(0, 22) + '...' : val, rx + 10, currentY + 25);
+          } else {
+            ctx.fillText(val, rx + col.w / 2, currentY + 25);
+          }
+
+          if (cIdx < cols.length - 1) {
+            ctx.beginPath();
+            ctx.moveTo(rx + col.w, currentY);
+            ctx.lineTo(rx + col.w, currentY + 40);
+            ctx.strokeStyle = '#E2E8F0';
+            ctx.stroke();
+          }
+          rx += col.w;
+        });
+
+        currentY += 40;
+      });
+
+      // Bottom totals line
+      const totalPresent = filteredSummary.reduce((s, e) => s + parseInt(e.present_days || 0), 0);
+      const totalRecords = filteredSummary.reduce((s, e) => s + parseInt(e.total_records || 0), 0);
+      const totalHours = filteredSummary.reduce((s, e) => s + parseFloat(e.total_work_hours || 0), 0);
+
+      currentY += 16;
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        `Total Employees: ${filteredSummary.length}  |  Total Present Days: ${totalPresent}  |  Total Records: ${totalRecords}  |  Total Work Hours: ${totalHours.toFixed(1)}h`,
+        width / 2, currentY
+      );
+    }
+
+    // ─── FOOTER ───
     ctx.fillStyle = '#F8FAFC';
     ctx.fillRect(0, totalHeight - 50, width, 50);
     ctx.fillStyle = '#94a3b8';
@@ -307,13 +468,17 @@ export default function MonthlyReportsPage() {
       width / 2, totalHeight - 14
     );
 
-    // Download
+    // Download PNG
+    const filename = isSingle
+      ? `Safe_Solutions_Monthly_Report_${selectedMonth}_${(singleSelectedEmp.emp_id || 'employee').replace(/\s+/g, '_')}.png`
+      : `Safe_Solutions_Monthly_Report_${selectedMonth}_All_Employees.png`;
+
     const link = document.createElement('a');
-    link.download = `Safe_Solutions_Monthly_Report_${selectedMonth}.png`;
+    link.download = filename;
     link.href = canvas.toDataURL('image/png');
     link.click();
 
-    toast.success('📸 Monthly Report PNG generated & downloaded! Share it on WhatsApp.');
+    toast.success('📸 Professional Monthly Report PNG generated & downloaded! Share it on WhatsApp.');
   };
 
   if (loading && months.length === 0) {
@@ -335,7 +500,7 @@ export default function MonthlyReportsPage() {
             </div>
             <div>
               <h1 className="page-title">Monthly Attendance Reports</h1>
-              <p className="page-description">Employee-wise monthly attendance summary & detailed records from database</p>
+              <p className="page-description">Employee-wise monthly attendance summary & detailed records from PostgreSQL database</p>
             </div>
           </div>
         </div>
@@ -343,7 +508,7 @@ export default function MonthlyReportsPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             className="btn btn-secondary"
-            onClick={() => selectedMonth && fetchMonthlyData(selectedMonth)}
+            onClick={() => selectedMonth && fetchMonthlyData(selectedMonth, selectedEmployee)}
             disabled={loading}
             style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
           >
@@ -352,7 +517,7 @@ export default function MonthlyReportsPage() {
           <button
             className="btn btn-primary"
             onClick={generateMonthlyPNG}
-            disabled={pngGenerating || summary.length === 0}
+            disabled={pngGenerating || filteredSummary.length === 0}
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#0F2B5B', fontWeight: 700 }}
           >
             <Download size={16} /> {pngGenerating ? 'Generating...' : 'Export PNG Report'}
@@ -360,25 +525,56 @@ export default function MonthlyReportsPage() {
         </div>
       </div>
 
-      {/* Month Selector */}
+      {/* Report Filter Controls Card */}
       <div className="card-elevated" style={{ marginBottom: 24, padding: 20, borderLeft: '4px solid #0F2B5B' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          {/* Month Selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Calendar size={18} color="#0F2B5B" />
-            <label style={{ fontSize: 14, fontWeight: 700, color: '#0F2B5B' }}>Select Month:</label>
+            <label style={{ fontSize: 13, fontWeight: 700, color: '#0F2B5B' }}>Month:</label>
+            <select
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              style={{ padding: '8px 14px', borderRadius: 10, border: '2px solid #0F2B5B', fontSize: 13, fontWeight: 700, color: '#0F2B5B', background: '#fff', minWidth: 200 }}
+            >
+              {months.length === 0 && <option value="">No months available</option>}
+              {months.map(m => (
+                <option key={m.month_key} value={m.month_key}>
+                  {getMonthLabel(m.month_key)}
+                </option>
+              ))}
+            </select>
           </div>
-          <select
-            value={selectedMonth}
-            onChange={e => setSelectedMonth(e.target.value)}
-            style={{ padding: '8px 16px', borderRadius: 10, border: '2px solid #0F2B5B', fontSize: 14, fontWeight: 700, color: '#0F2B5B', background: '#fff', minWidth: 240 }}
-          >
-            {months.length === 0 && <option value="">No months available</option>}
-            {months.map(m => (
-              <option key={m.month_key} value={m.month_key}>
-                {getMonthLabel(m.month_key)}
-              </option>
-            ))}
-          </select>
+
+          {/* Employee Selector Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Users size={18} color="#0F2B5B" />
+            <label style={{ fontSize: 13, fontWeight: 700, color: '#0F2B5B' }}>Employee:</label>
+            <select
+              value={selectedEmployee}
+              onChange={e => setSelectedEmployee(e.target.value)}
+              style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 13, fontWeight: 700, color: '#0F2B5B', background: '#fff', minWidth: 220 }}
+            >
+              <option value="all">👥 All Employees</option>
+              {summary.map(emp => (
+                <option key={emp.employee_id} value={emp.employee_id}>
+                  {emp.employee_name} ({emp.emp_id})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Search Box */}
+          <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+            <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            <input
+              type="text"
+              placeholder="Filter by employee name or ID..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{ padding: '8px 14px 8px 34px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 13, width: '100%', background: '#fff' }}
+            />
+          </div>
 
           {selectedMonth && (
             <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>
@@ -394,36 +590,40 @@ export default function MonthlyReportsPage() {
         </div>
       ) : (
         <>
-          {/* Summary Metric Cards */}
-          {summary.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
-              <div className="card-elevated" style={{ padding: 16, borderRadius: 12, borderLeft: '4px solid #0F2B5B' }}>
+          {/* Summary Metric KPI Cards */}
+          {filteredSummary.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 14, marginBottom: 24 }}>
+              <div className="card-elevated" style={{ padding: 14, borderRadius: 12, borderLeft: '4px solid #0F2B5B' }}>
                 <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Total Employees</span>
-                <h3 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, color: '#0F2B5B' }}>{summary.length}</h3>
+                <h3 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 800, color: '#0F2B5B' }}>{filteredSummary.length}</h3>
               </div>
-              <div className="card-elevated" style={{ padding: 16, borderRadius: 12, borderLeft: '4px solid #0284c7' }}>
+              <div className="card-elevated" style={{ padding: 14, borderRadius: 12, borderLeft: '4px solid #0284c7' }}>
                 <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Total Records</span>
-                <h3 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, color: '#0284c7' }}>{summary.reduce((s, e) => s + parseInt(e.total_records || 0), 0)}</h3>
+                <h3 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 800, color: '#0284c7' }}>{filteredSummary.reduce((s, e) => s + parseInt(e.total_records || 0), 0)}</h3>
               </div>
-              <div className="card-elevated" style={{ padding: 16, borderRadius: 12, borderLeft: '4px solid #10B981' }}>
+              <div className="card-elevated" style={{ padding: 14, borderRadius: 12, borderLeft: '4px solid #10B981' }}>
                 <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Total Present Days</span>
-                <h3 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, color: '#10B981' }}>{summary.reduce((s, e) => s + parseInt(e.present_days || 0), 0)}</h3>
+                <h3 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 800, color: '#10B981' }}>{filteredSummary.reduce((s, e) => s + parseInt(e.present_days || 0), 0)}</h3>
               </div>
-              <div className="card-elevated" style={{ padding: 16, borderRadius: 12, borderLeft: '4px solid #D97706' }}>
+              <div className="card-elevated" style={{ padding: 14, borderRadius: 12, borderLeft: '4px solid #7c3aed' }}>
+                <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Total Check-Outs</span>
+                <h3 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 800, color: '#7c3aed' }}>{filteredSummary.reduce((s, e) => s + parseInt(e.checkouts || 0), 0)}</h3>
+              </div>
+              <div className="card-elevated" style={{ padding: 14, borderRadius: 12, borderLeft: '4px solid #D97706' }}>
                 <span style={{ fontSize: 11, color: '#64748b', fontWeight: 700 }}>Total Work Hours</span>
-                <h3 style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, color: '#D97706' }}>{summary.reduce((s, e) => s + parseFloat(e.total_work_hours || 0), 0).toFixed(1)}h</h3>
+                <h3 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 800, color: '#D97706' }}>{filteredSummary.reduce((s, e) => s + parseFloat(e.total_work_hours || 0), 0).toFixed(1)}h</h3>
               </div>
             </div>
           )}
 
-          {/* Monthly Report Header */}
+          {/* Monthly Report Header Banner */}
           {selectedMonth && (
             <div style={{ textAlign: 'center', marginBottom: 20, padding: '16px 0', borderBottom: '2px solid #e2e8f0' }}>
               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0F2B5B' }}>
-                {getMonthLabel(selectedMonth)} — Employee Attendance Summary
+                {getMonthLabel(selectedMonth)} — {selectedEmployee !== 'all' && singleSelectedEmp ? `${singleSelectedEmp.employee_name} (${singleSelectedEmp.emp_id})` : 'All Employees Monthly Attendance Report'}
               </h2>
               <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>
-                Data from SAFE SOLUTIONS FleetOps PostgreSQL Database • {summary.length} employee{summary.length !== 1 ? 's' : ''}
+                SAFE SOLUTIONS FleetOps Real-Time Database • {filteredSummary.length} employee{filteredSummary.length !== 1 ? 's' : ''} shown
               </p>
             </div>
           )}
@@ -434,25 +634,28 @@ export default function MonthlyReportsPage() {
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Employee</th>
+                  <th>Employee Name</th>
                   <th>Employee ID</th>
                   <th>Designation</th>
                   <th>Present Days</th>
                   <th>Total Records</th>
+                  <th>Office</th>
+                  <th>Site</th>
                   <th>Check-Outs</th>
+                  <th>Missing</th>
                   <th>Total Work Hours</th>
                   <th>Details</th>
                 </tr>
               </thead>
               <tbody>
-                {summary.length > 0 ? (
-                  summary.map((emp, idx) => {
-                    const isExpanded = expandedEmployee === emp.employee_id;
-                    const empRecords = isExpanded ? getEmployeeRecords(emp.employee_id) : [];
+                {filteredSummary.length > 0 ? (
+                  filteredSummary.map((emp, idx) => {
+                    const isExpanded = expandedEmployee === emp.employee_id || selectedEmployee !== 'all';
+                    const empRecords = getEmployeeRecords(emp.employee_id);
 
                     return (
-                      <>
-                        <tr key={`summary-${emp.employee_id}`} style={{ cursor: 'pointer' }} onClick={() => setExpandedEmployee(isExpanded ? null : emp.employee_id)}>
+                      <React.Fragment key={`summary-row-${emp.employee_id}`}>
+                        <tr style={{ cursor: 'pointer' }} onClick={() => setExpandedEmployee(expandedEmployee === emp.employee_id ? null : emp.employee_id)}>
                           <td style={{ fontWeight: 700, color: '#0F2B5B' }}>{idx + 1}</td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -466,23 +669,38 @@ export default function MonthlyReportsPage() {
                           <td>{emp.designation || 'Staff'}</td>
                           <td><span style={{ fontWeight: 700, color: '#10B981' }}>{emp.present_days}</span></td>
                           <td><span style={{ fontWeight: 700, color: '#0284c7' }}>{emp.total_records}</span></td>
-                          <td><span style={{ fontWeight: 700, color: '#7c3aed' }}>{emp.checkouts}</span></td>
+                          <td><span style={{ fontWeight: 700, color: '#0F2B5B' }}>{emp.office_checkins || 0}</span></td>
+                          <td><span style={{ fontWeight: 700, color: '#D42D56' }}>{emp.site_checkins || 0}</span></td>
+                          <td><span style={{ fontWeight: 700, color: '#7c3aed' }}>{emp.checkouts || 0}</span></td>
+                          <td>
+                            <span style={{ fontWeight: 700, color: emp.missing_checkouts > 0 ? '#ea580c' : '#64748b' }}>
+                              {emp.missing_checkouts || 0}
+                            </span>
+                          </td>
                           <td><span style={{ fontWeight: 800, color: '#D97706' }}>{Number(emp.total_work_hours || 0).toFixed(1)}h</span></td>
                           <td>
-                            <button className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: '#0F2B5B' }}>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedEmployee(expandedEmployee === emp.employee_id ? null : emp.employee_id);
+                              }}
+                              style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: '#0F2B5B' }}
+                            >
                               {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                               {isExpanded ? 'Hide' : 'View'}
                             </button>
                           </td>
                         </tr>
 
-                        {/* Expanded Employee Detail Rows */}
-                        {isExpanded && empRecords.length > 0 && (
+                        {/* Detailed Daily Attendance Records Sub-table */}
+                        {isExpanded && (
                           <tr key={`detail-${emp.employee_id}`}>
-                            <td colSpan={9} style={{ padding: 0, background: '#f8fafc' }}>
-                              <div style={{ padding: '12px 20px' }}>
+                            <td colSpan={12} style={{ padding: 0, background: '#f8fafc' }}>
+                              <div style={{ padding: '14px 20px' }}>
                                 <div style={{ fontSize: 12, fontWeight: 700, color: '#0F2B5B', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <FileText size={14} /> Detailed Attendance Records — {emp.employee_name} ({emp.emp_id})
+                                  <FileText size={14} /> Detailed Daily Attendance Records — {emp.employee_name} ({emp.emp_id})
                                 </div>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                                   <thead>
@@ -498,58 +716,66 @@ export default function MonthlyReportsPage() {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {empRecords.map(r => (
-                                      <tr key={r.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                        <td style={{ padding: '6px 10px', fontWeight: 600 }}>
-                                          {new Date(r.check_in_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                        </td>
-                                        <td style={{ padding: '6px 10px' }}>
-                                          <span style={{
-                                            padding: '2px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                                            background: r.attendance_type === 'site' ? '#fff1f2' : '#eff6ff',
-                                            color: r.attendance_type === 'site' ? '#d42d56' : '#0f2b5b'
-                                          }}>
-                                            {r.attendance_type === 'site' ? '🏗️ Site' : '🏢 Office'}
-                                          </span>
-                                        </td>
-                                        <td style={{ padding: '6px 10px', color: '#047857', fontWeight: 600 }}>
-                                          {new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                                        </td>
-                                        <td style={{ padding: '6px 10px', color: r.check_out_time ? '#D42D56' : '#D97706', fontWeight: 600 }}>
-                                          {r.check_out_time
-                                            ? new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-                                            : 'In Progress'}
-                                        </td>
-                                        <td style={{ padding: '6px 10px' }}>{r.location_name || r.project_name || 'Head Office'}</td>
-                                        <td style={{ padding: '6px 10px', fontSize: 11 }}>📍 {r.gps_status || 'Inside Office'}</td>
-                                        <td style={{ padding: '6px 10px' }}>
-                                          <span style={{
-                                            padding: '2px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700,
-                                            background: r.approval_status === 'approved' ? '#dcfce7' : r.approval_status === 'rejected' ? '#fef2f2' : '#fefce8',
-                                            color: r.approval_status === 'approved' ? '#166534' : r.approval_status === 'rejected' ? '#991b1b' : '#854d0e'
-                                          }}>
-                                            {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
-                                          </span>
-                                        </td>
-                                        <td style={{ padding: '6px 10px', fontWeight: 700, color: '#0F2B5B' }}>
-                                          {getWorkDuration(r.check_in_time, r.check_out_time, r.work_hours)}
+                                    {empRecords.length > 0 ? (
+                                      empRecords.map(r => (
+                                        <tr key={r.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                          <td style={{ padding: '6px 10px', fontWeight: 600 }}>
+                                            {new Date(r.check_in_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                          </td>
+                                          <td style={{ padding: '6px 10px' }}>
+                                            <span style={{
+                                              padding: '2px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                                              background: r.attendance_type === 'site' ? '#fff1f2' : '#eff6ff',
+                                              color: r.attendance_type === 'site' ? '#d42d56' : '#0f2b5b'
+                                            }}>
+                                              {r.attendance_type === 'site' ? '🏗️ Site' : '🏢 Office'}
+                                            </span>
+                                          </td>
+                                          <td style={{ padding: '6px 10px', color: '#047857', fontWeight: 600 }}>
+                                            {new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                          </td>
+                                          <td style={{ padding: '6px 10px', color: r.check_out_time ? '#D42D56' : '#D97706', fontWeight: 600 }}>
+                                            {r.check_out_time
+                                              ? new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+                                              : 'In Progress'}
+                                          </td>
+                                          <td style={{ padding: '6px 10px' }}>{r.location_name || r.project_name || 'Head Office'}</td>
+                                          <td style={{ padding: '6px 10px', fontSize: 11 }}>📍 {r.gps_status || 'Inside Office'}</td>
+                                          <td style={{ padding: '6px 10px' }}>
+                                            <span style={{
+                                              padding: '2px 8px', borderRadius: 8, fontSize: 11, fontWeight: 700,
+                                              background: r.approval_status === 'approved' ? '#dcfce7' : r.approval_status === 'rejected' ? '#fef2f2' : '#fefce8',
+                                              color: r.approval_status === 'approved' ? '#166534' : r.approval_status === 'rejected' ? '#991b1b' : '#854d0e'
+                                            }}>
+                                              {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
+                                            </span>
+                                          </td>
+                                          <td style={{ padding: '6px 10px', fontWeight: 700, color: '#0F2B5B' }}>
+                                            {getWorkDuration(r.check_in_time, r.check_out_time, r.work_hours)}
+                                          </td>
+                                        </tr>
+                                      ))
+                                    ) : (
+                                      <tr>
+                                        <td colSpan={8} style={{ padding: 12, textAlign: 'center', color: '#94a3b8' }}>
+                                          No detailed records found for this employee.
                                         </td>
                                       </tr>
-                                    ))}
+                                    )}
                                   </tbody>
                                 </table>
                               </div>
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
+                    <td colSpan={12} style={{ textAlign: 'center', padding: 32, color: '#64748b' }}>
                       {selectedMonth
-                        ? 'No attendance records found for the selected month.'
+                        ? 'No attendance records found for the selected filter.'
                         : 'Please select a month to view the attendance report.'}
                     </td>
                   </tr>

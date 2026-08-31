@@ -519,6 +519,19 @@ router.get('/monthly-report', authenticate, authorize('manager', 'controller', '
       ORDER BY month_key DESC
     `);
 
+    // Ensure current calendar month is always present at top of available months
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (!monthRows.some(m => m.month_key === currentMonthKey)) {
+      const monthLabel = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+      monthRows.unshift({
+        month_key: currentMonthKey,
+        month_label: monthLabel,
+        first_date: `${currentMonthKey}-01`,
+        last_date: null
+      });
+    }
+
     // If no month selected, return just the available months
     if (!month) {
       return res.json({ months: monthRows, summary: [], records: [] });
@@ -533,7 +546,10 @@ router.get('/monthly-report', authenticate, authorize('manager', 'controller', '
         e.designation,
         COUNT(ar.id) as total_records,
         COUNT(DISTINCT ar.check_in_time::date) as present_days,
+        COUNT(CASE WHEN ar.attendance_type = 'office' THEN 1 END) as office_checkins,
+        COUNT(CASE WHEN ar.attendance_type = 'site' THEN 1 END) as site_checkins,
         COUNT(CASE WHEN ar.check_out_time IS NOT NULL THEN 1 END) as checkouts,
+        COUNT(CASE WHEN ar.check_out_time IS NULL THEN 1 END) as missing_checkouts,
         COALESCE(SUM(ar.work_hours), 0) as total_work_hours
       FROM attendance_records ar
       JOIN employees e ON e.id = ar.employee_id
@@ -541,9 +557,9 @@ router.get('/monthly-report', authenticate, authorize('manager', 'controller', '
     `;
     const summaryParams = [month];
 
-    if (employee_id) {
+    if (employee_id && employee_id !== 'all') {
       summaryParams.push(employee_id);
-      summarySQL += ` AND ar.employee_id = $${summaryParams.length}`;
+      summarySQL += ` AND (ar.employee_id::text = $${summaryParams.length} OR e.employee_id = $${summaryParams.length})`;
     }
 
     summarySQL += ` GROUP BY e.id, e.name, e.employee_id, e.designation ORDER BY e.name`;
@@ -561,9 +577,9 @@ router.get('/monthly-report', authenticate, authorize('manager', 'controller', '
     `;
     const recordsParams = [month];
 
-    if (employee_id) {
+    if (employee_id && employee_id !== 'all') {
       recordsParams.push(employee_id);
-      recordsSQL += ` AND ar.employee_id = $${recordsParams.length}`;
+      recordsSQL += ` AND (ar.employee_id::text = $${recordsParams.length} OR e.employee_id = $${recordsParams.length})`;
     }
 
     recordsSQL += ` ORDER BY ar.check_in_time DESC`;

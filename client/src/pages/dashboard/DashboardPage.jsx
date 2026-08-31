@@ -76,23 +76,18 @@ export default function DashboardPage() {
     weekday: 'long', month: 'short', day: 'numeric', year: 'numeric'
   });
 
-  // Calculate live work timer
-  let liveDurationStr = '00:00:00';
   let completedDurationStr = '';
-  if (myAttendance?.check_in_time && !myAttendance?.check_out_time) {
-    const diffMs = Math.max(0, nowTime - new Date(myAttendance.check_in_time).getTime());
-    const totalSecs = Math.floor(diffMs / 1000);
-    const hrs = Math.floor(totalSecs / 3600);
-    const mins = Math.floor((totalSecs % 3600) / 60);
-    const secs = totalSecs % 60;
-    liveDurationStr = `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  } else if (myAttendance?.check_in_time && myAttendance?.check_out_time) {
+  if (myAttendance?.check_in_time && myAttendance?.check_out_time) {
     const diffMs = Math.max(0, new Date(myAttendance.check_out_time).getTime() - new Date(myAttendance.check_in_time).getTime());
     const totalSecs = Math.floor(diffMs / 1000);
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
     completedDurationStr = `${hrs}h ${mins}m`;
   }
+
+  const liveClockStr = new Date(nowTime).toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+  });
 
   return (
     <div className="page dashboard-page">
@@ -140,7 +135,7 @@ export default function DashboardPage() {
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> 🟢 WORKING NOW
                   </div>
                   <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
-                    {liveDurationStr}
+                    {liveClockStr}
                   </div>
                 </div>
               ) : (
