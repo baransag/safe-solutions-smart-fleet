@@ -264,12 +264,40 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
         [vehicle_id, employeeId, meterVal, checkout[0].id, meterPhotoUrl]
       );
 
+      // 9. If employee has an open attendance record today, update attendance checkout as well
+      let attCheckoutResult = null;
+      const { rows: openAtt } = await client.query(
+        `SELECT id, check_in_time, attendance_type, project_name, location_name
+         FROM attendance_records
+         WHERE employee_id = $1 AND check_in_time::date = $2 AND check_out_time IS NULL
+         ORDER BY check_in_time DESC LIMIT 1`,
+        [employeeId, today]
+      );
+
+      if (openAtt.length > 0) {
+        const attRec = openAtt[0];
+        const attInTime = new Date(attRec.check_in_time);
+        const attHours = Math.max(0, Math.round(((now - attInTime) / (1000 * 60 * 60)) * 100) / 100);
+        const { rows: updatedAtt } = await client.query(
+          `UPDATE attendance_records
+           SET check_out_time = NOW(),
+               check_out_lat = COALESCE($1, check_out_lat),
+               check_out_lng = COALESCE($2, check_out_lng),
+               work_hours = $3
+           WHERE id = $4
+           RETURNING *`,
+          [gps_lat || null, gps_lng || null, attHours, attRec.id]
+        );
+        attCheckoutResult = updatedAtt[0];
+      }
+
       return {
         ...checkout[0],
         opening_km: openingKm,
         closing_km: closingKm,
         distance_km: distanceKm,
-        duration_minutes: durationMinutes
+        duration_minutes: durationMinutes,
+        attendance_checkout: attCheckoutResult
       };
     });
 

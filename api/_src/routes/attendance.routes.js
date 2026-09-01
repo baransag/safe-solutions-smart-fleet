@@ -331,6 +331,74 @@ router.post('/site/checkout', authenticate, async (req, res, next) => {
   }
 });
 
+// POST /api/attendance/vehicle-checkout (Attendance Check-Out via Bike / Vehicle QR flow)
+router.post('/vehicle-checkout', authenticate, async (req, res, next) => {
+  try {
+    const { lat, lng, notes } = req.body;
+    const userId = req.user.id;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Find today's existing attendance record
+    const { rows: existing } = await query(
+      `SELECT * FROM attendance_records
+       WHERE employee_id = $1 AND check_in_time::date = $2
+       ORDER BY check_in_time DESC LIMIT 1`,
+      [userId, today]
+    );
+
+    // Rule 8: No attendance record protection
+    if (existing.length === 0) {
+      return res.status(400).json({ error: 'No active attendance check-in found for today. Please complete Check-In first.' });
+    }
+
+    const currentRecord = existing[0];
+
+    // Rule 7: Duplicate check-out protection
+    if (currentRecord.check_out_time) {
+      const outTimeStr = new Date(currentRecord.check_out_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return res.status(400).json({ error: `Attendance already checked out today at ${outTimeStr}.` });
+    }
+
+    const checkOutTime = new Date();
+    const checkInTime = new Date(currentRecord.check_in_time);
+    const workHours = Math.max(0, Math.round(((checkOutTime - checkInTime) / (1000 * 60 * 60)) * 100) / 100);
+
+    const updatedNotes = notes && notes.trim()
+      ? (currentRecord.notes ? `${currentRecord.notes} | Vehicle/Bike Check-Out: ${notes.trim()}` : `Vehicle/Bike Check-Out: ${notes.trim()}`)
+      : currentRecord.notes;
+
+    const { rows: updatedRows } = await query(`
+      UPDATE attendance_records
+      SET check_out_time = NOW(),
+          check_out_lat = COALESCE($1, check_out_lat),
+          check_out_lng = COALESCE($2, check_out_lng),
+          work_hours = $3,
+          notes = $4
+      WHERE id = $5
+      RETURNING *
+    `, [
+      lat || null, lng || null, workHours, updatedNotes || null, currentRecord.id
+    ]);
+
+    // Send notifications to Controllers & Managers
+    const { rows: managers } = await query(`SELECT id FROM employees WHERE role IN ('manager', 'controller') AND is_active = true`);
+    for (const m of managers) {
+      await query(`
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES ($1, 'Attendance Check-Out via Vehicle QR', $2, 'info', '/attendance')
+      `, [m.id, `${req.user.name} checked out from ${currentRecord.attendance_type === 'office' ? 'Office Attendance' : 'Site Attendance'} via Vehicle/Bike Check-Out. Work duration: ${workHours} hrs.`]);
+    }
+
+    const timeOutFormatted = checkOutTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    res.status(200).json({
+      message: `Attendance Check-Out completed successfully at ${timeOutFormatted}.`,
+      attendance: updatedRows[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/attendance/today
 router.get('/today', authenticate, async (req, res, next) => {
   try {

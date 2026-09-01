@@ -76,18 +76,7 @@ export default function DashboardPage() {
     weekday: 'long', month: 'short', day: 'numeric', year: 'numeric'
   });
 
-  let completedDurationStr = '';
-  if (myAttendance?.check_in_time && myAttendance?.check_out_time) {
-    const diffMs = Math.max(0, new Date(myAttendance.check_out_time).getTime() - new Date(myAttendance.check_in_time).getTime());
-    const totalSecs = Math.floor(diffMs / 1000);
-    const hrs = Math.floor(totalSecs / 3600);
-    const mins = Math.floor((totalSecs % 3600) / 60);
-    completedDurationStr = `${hrs}h ${mins}m`;
-  }
 
-  const liveClockStr = new Date(nowTime).toLocaleTimeString('en-US', {
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
-  });
 
   return (
     <div className="page dashboard-page">
@@ -119,33 +108,6 @@ export default function DashboardPage() {
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>☀️ 28°C Clear Skies</div>
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>{todayStr} • Faisalabad, Punjab, Pakistan</div>
-            </div>
-            <div style={{ width: 1, height: 36, background: 'var(--bg-tertiary)' }} />
-            <div>
-              {!myAttendance || !myAttendance.check_in_time ? (
-                <div onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--color-gold)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>ATTENDANCE STATUS</div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#3B82F6', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3B82F6' }} /> Ready to Check In
-                  </div>
-                </div>
-              ) : !myAttendance.check_out_time ? (
-                <div onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> 🟢 WORKING NOW
-                  </div>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
-                    {liveClockStr}
-                  </div>
-                </div>
-              ) : (
-                <div onClick={() => navigate('/attendance')} style={{ cursor: 'pointer' }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.04em' }}>✓ COMPLETED</div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
-                    Total Work: {completedDurationStr || `${myAttendance.work_hours || 0} hrs`}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>

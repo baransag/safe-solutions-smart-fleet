@@ -807,7 +807,7 @@ export default function AttendancePage() {
               className="btn btn-danger btn-lg"
               onClick={() => navigate('/check-out')}
             >
-              <Route size={18} /> Vehicle Check-Out <ArrowRight size={16} />
+              <Route size={18} /> Vehicle & Attendance Check-Out <ArrowRight size={16} />
             </button>
           </div>
         </div>
