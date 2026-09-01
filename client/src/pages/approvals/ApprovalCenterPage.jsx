@@ -191,7 +191,7 @@ export default function ApprovalCenterPage() {
       </div>
 
       {/* Grid of Pending Requests */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 16 }}>
         {/* 1. ATTENDANCE PENDING CARDS */}
         {(activeTab === 'all' || activeTab === 'office' || activeTab === 'site') &&
           pendingRequests

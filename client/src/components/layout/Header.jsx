@@ -127,11 +127,27 @@ export default function Header({ onMenuClick }) {
 
   return (
     <header className="header">
-      <div className="header-left" style={{ flex: 1, paddingRight: 'var(--space-8)' }}>
-        <button className="header-icon-btn mobile-menu-btn" onClick={onMenuClick}>
-          <Menu size={20} />
+      <div className="header-left" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        <button className="header-icon-btn mobile-menu-btn" onClick={onMenuClick} aria-label="Open Navigation Menu">
+          <Menu size={22} />
         </button>
-        <div style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
+
+        {/* Mobile Branding Logo + Title */}
+        <div className="show-on-mobile" style={{ alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <img
+              src="/assets/images/logo.jpeg"
+              alt="Logo"
+              style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'contain', background: '#FFFFFF', padding: 1 }}
+            />
+            <span style={{ fontWeight: 800, fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
+              FleetOps
+            </span>
+          </div>
+        </div>
+
+        {/* Desktop Search Bar */}
+        <div className="hide-on-mobile" style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
           <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)' }} />
           <input
             type="text"
@@ -152,7 +168,7 @@ export default function Header({ onMenuClick }) {
         </div>
       </div>
 
-      <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         {/* Notification Bell Dropdown Container */}
         <div ref={dropdownRef} style={{ position: 'relative' }}>
           <button
@@ -206,8 +222,8 @@ export default function Header({ onMenuClick }) {
                 position: 'absolute',
                 top: 'calc(100% + 10px)',
                 right: 0,
-                width: 380,
-                maxHeight: 520,
+                width: 'min(380px, calc(100vw - 24px))',
+                maxHeight: 'min(520px, calc(100vh - 90px))',
                 background: '#FFFFFF',
                 borderRadius: 20,
                 boxShadow: '0 20px 50px rgba(15, 23, 42, 0.15), 0 1px 3px rgba(0,0,0,0.05)',
@@ -381,6 +397,7 @@ export default function Header({ onMenuClick }) {
 
         {/* Date Display Pill */}
         <div
+          className="hide-on-mobile"
           style={{
             background: 'var(--bg-primary)',
             padding: '8px 16px',

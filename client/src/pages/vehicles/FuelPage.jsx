@@ -195,7 +195,7 @@ export default function FuelPage() {
                 Fill Slip Details (Check & Match with Photo)
               </h4>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
                 <div className="form-group">
                   <label className="form-label" style={{ fontWeight: 700 }}>Petrol Pump / Station Name</label>
                   <input
@@ -319,57 +319,123 @@ export default function FuelPage() {
       )}
 
       {tab === 'history' && (
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Receipt Slip</th>
-                <th>Vehicle</th>
-                <th>Station</th>
-                <th>Amount (Rs)</th>
-                <th>Volume</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
+        <>
+          {/* Desktop Table View */}
+          <div className="table-container hide-on-mobile">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Receipt Slip</th>
+                  <th>Vehicle</th>
+                  <th>Station</th>
+                  <th>Amount (Rs)</th>
+                  <th>Volume</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fuelLogs.map(f => (
+                  <tr key={f.id}>
+                    <td>{new Date(f.submitted_at).toLocaleDateString()}</td>
+                    <td>
+                      {(f.processed_receipt_url || f.receipt_photo_url) ? (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setPreviewModalImg(f.processed_receipt_url || f.receipt_photo_url)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#0F2B5B', fontWeight: 700 }}
+                        >
+                          <ImageIcon size={14} /> View Slip
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>No Image</span>
+                      )}
+                    </td>
+                    <td>
+                      <strong>{f.vehicle_name}</strong>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{f.number_plate}</div>
+                    </td>
+                    <td>{f.pump_name || 'Station'}</td>
+                    <td><strong style={{ color: '#0F2B5B' }}>Rs {parseFloat(f.fuel_amount).toLocaleString()}</strong></td>
+                    <td>{f.liters} L</td>
+                    <td>
+                      <span className={`badge badge-${f.approval_status === 'approved' ? 'green' : f.approval_status === 'rejected' ? 'red' : 'yellow'}`}>
+                        {f.approval_status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {fuelLogs.length === 0 && (
+                  <tr><td colSpan="7" style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>No fuel entries found</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card List View */}
+          <div className="show-on-mobile">
+            <div className="mobile-card-list">
               {fuelLogs.map(f => (
-                <tr key={f.id}>
-                  <td>{new Date(f.submitted_at).toLocaleDateString()}</td>
-                  <td>
-                    {(f.processed_receipt_url || f.receipt_photo_url) ? (
+                <div key={`mfuel_${f.id}`} className="mobile-record-card" style={{ borderLeft: `4px solid ${f.approval_status === 'approved' ? '#10B981' : f.approval_status === 'rejected' ? '#EF4444' : '#D97706'}` }}>
+                  <div className="mobile-card-header">
+                    <div>
+                      <div className="mobile-card-title">{f.vehicle_name} ({f.number_plate})</div>
+                      <div className="mobile-card-subtitle">
+                        {new Date(f.submitted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} • {f.pump_name || 'Station'}
+                      </div>
+                    </div>
+                    <span className={`badge badge-${f.approval_status === 'approved' ? 'green' : f.approval_status === 'rejected' ? 'red' : 'yellow'}`}>
+                      {f.approval_status}
+                    </span>
+                  </div>
+
+                  <div className="mobile-card-grid">
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">Total Amount</span>
+                      <span className="mobile-card-value" style={{ color: '#0F2B5B', fontSize: 13 }}>
+                        Rs {parseFloat(f.fuel_amount).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">Volume</span>
+                      <span className="mobile-card-value">{f.liters} Litres</span>
+                    </div>
+
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">Rate / L</span>
+                      <span className="mobile-card-value">{f.rate_per_liter ? `Rs ${f.rate_per_liter}` : '—'}</span>
+                    </div>
+
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">Fuel Type</span>
+                      <span className="mobile-card-value">{f.fuel_type || 'Super Petrol'}</span>
+                    </div>
+                  </div>
+
+                  {(f.processed_receipt_url || f.receipt_photo_url) && (
+                    <div className="mobile-card-footer">
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm"
                         onClick={() => setPreviewModalImg(f.processed_receipt_url || f.receipt_photo_url)}
-                        style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#0F2B5B', fontWeight: 700 }}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#0F2B5B', fontWeight: 700 }}
                       >
-                        <ImageIcon size={14} /> View Slip
+                        <ImageIcon size={14} /> View Attached Slip
                       </button>
-                    ) : (
-                      <span style={{ fontSize: 11, color: '#94a3b8' }}>No Image</span>
-                    )}
-                  </td>
-                  <td>
-                    <strong>{f.vehicle_name}</strong>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>{f.number_plate}</div>
-                  </td>
-                  <td>{f.pump_name || 'Station'}</td>
-                  <td><strong style={{ color: '#0F2B5B' }}>Rs {parseFloat(f.fuel_amount).toLocaleString()}</strong></td>
-                  <td>{f.liters} L</td>
-                  <td>
-                    <span className={`badge badge-${f.approval_status === 'approved' ? 'green' : f.approval_status === 'rejected' ? 'red' : 'yellow'}`}>
-                      {f.approval_status}
-                    </span>
-                  </td>
-                </tr>
+                    </div>
+                  )}
+                </div>
               ))}
               {fuelLogs.length === 0 && (
-                <tr><td colSpan="7" style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>No fuel entries found</td></tr>
+                <div className="card-elevated" style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)' }}>
+                  No fuel entries found
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>
+        </>
       )}
 
       {tab === 'approvals' && isManagerOrController && (

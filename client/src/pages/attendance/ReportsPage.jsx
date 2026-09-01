@@ -280,73 +280,127 @@ export default function ReportsPage() {
       </div>
 
       {/* Report Records Table */}
-      <div className="table-container animate-fade-in-up">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Date & Time</th>
-              <th>Employee</th>
-              <th>Designation</th>
-              <th>Type</th>
-              <th>Location / Site</th>
-              <th>GPS Status</th>
-              <th>Status</th>
-              <th>Approved By</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRecords.length > 0 ? (
-              filteredRecords.map(r => (
-                <tr key={r.id}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{new Date(r.check_in_time).toLocaleDateString()}</div>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>{new Date(r.check_in_time).toLocaleTimeString()}</div>
-                  </td>
-                  <td>
-                    <strong>{r.employee_name}</strong>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>{r.emp_id}</div>
-                  </td>
-                  <td>{r.designation || 'Staff'}</td>
-                  <td>
-                    <span style={{
-                      padding: '3px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700,
-                      background: r.attendance_type === 'site' ? '#fff1f2' : '#eff6ff',
-                      color: r.attendance_type === 'site' ? '#d42d56' : '#0f2b5b'
-                    }}>
-                      {r.attendance_type === 'site' ? '🏗️ Site' : '🏢 Office'}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600, color: '#0F2B5B' }}>{r.location_name || 'Head Office'}</div>
-                    {r.project_name && <div style={{ fontSize: 11, color: '#64748b' }}>{r.project_name}</div>}
-                  </td>
-                  <td>
-                    <span style={{ fontSize: 11, color: '#047857', fontWeight: 600 }}>
-                      📍 {r.gps_status || 'Inside Office'} ({r.distance_meters || 0}m)
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`badge badge-${r.approval_status === 'approved' ? 'green' : r.approval_status === 'rejected' ? 'red' : 'yellow'}`} style={{ fontWeight: 700 }}>
-                      {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
-                    </span>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: 12, color: r.approved_by_name ? '#047857' : '#94a3b8', fontWeight: 600 }}>
-                      {r.approved_by_name || 'Awaiting Review'}
-                    </span>
+      <>
+        {/* Desktop Table View */}
+        <div className="table-container hide-on-mobile animate-fade-in-up">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Date & Time</th>
+                <th>Employee</th>
+                <th>Designation</th>
+                <th>Type</th>
+                <th>Location / Site</th>
+                <th>GPS Status</th>
+                <th>Status</th>
+                <th>Approved By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRecords.length > 0 ? (
+                filteredRecords.map(r => (
+                  <tr key={r.id}>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{new Date(r.check_in_time).toLocaleDateString()}</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{new Date(r.check_in_time).toLocaleTimeString()}</div>
+                    </td>
+                    <td>
+                      <strong>{r.employee_name}</strong>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{r.emp_id}</div>
+                    </td>
+                    <td>{r.designation || 'Staff'}</td>
+                    <td>
+                      <span style={{
+                        padding: '3px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700,
+                        background: r.attendance_type === 'site' ? '#fff1f2' : '#eff6ff',
+                        color: r.attendance_type === 'site' ? '#d42d56' : '#0f2b5b'
+                      }}>
+                        {r.attendance_type === 'site' ? '🏗️ Site' : '🏢 Office'}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 600, color: '#0F2B5B' }}>{r.location_name || 'Head Office'}</div>
+                      {r.project_name && <div style={{ fontSize: 11, color: '#64748b' }}>{r.project_name}</div>}
+                    </td>
+                    <td>
+                      <span style={{ fontSize: 11, color: '#047857', fontWeight: 600 }}>
+                        📍 {r.gps_status || 'Inside Office'} ({r.distance_meters || 0}m)
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`badge badge-${r.approval_status === 'approved' ? 'green' : r.approval_status === 'rejected' ? 'red' : 'yellow'}`} style={{ fontWeight: 700 }}>
+                        {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: 12, color: r.approved_by_name ? '#047857' : '#94a3b8', fontWeight: 600 }}>
+                        {r.approved_by_name || 'Awaiting Review'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>
+                    No attendance records matching filter criteria for {selectedDate}.
                   </td>
                 </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Card List View */}
+        <div className="show-on-mobile">
+          <div className="mobile-card-list">
+            {filteredRecords.length > 0 ? (
+              filteredRecords.map(r => (
+                <div key={`mrep_${r.id}`} className="mobile-record-card" style={{ borderLeft: `4px solid ${r.attendance_type === 'site' ? '#D42D56' : '#0F2B5B'}` }}>
+                  <div className="mobile-card-header">
+                    <div>
+                      <div className="mobile-card-title">{r.employee_name} ({r.emp_id})</div>
+                      <div className="mobile-card-subtitle">{r.location_name || r.project_name || 'Head Office'}</div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                      <span className={`badge badge-${r.attendance_type === 'site' ? 'red' : 'blue'}`} style={{ fontSize: 10 }}>
+                        {r.attendance_type === 'site' ? '🏗️ Site' : '🏢 Office'}
+                      </span>
+                      <span className={`badge badge-${r.approval_status === 'approved' ? 'green' : r.approval_status === 'rejected' ? 'red' : 'yellow'}`} style={{ fontSize: 10 }}>
+                        {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mobile-card-grid">
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">Check-In</span>
+                      <span className="mobile-card-value" style={{ color: '#047857' }}>
+                        {new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                      </span>
+                    </div>
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">GPS Status</span>
+                      <span className="mobile-card-value" style={{ fontSize: 11, color: 'var(--color-info)' }}>
+                        📍 {r.gps_status || 'Verified'} ({r.distance_meters || 0}m)
+                      </span>
+                    </div>
+                  </div>
+
+                  {r.approved_by_name && (
+                    <div style={{ fontSize: 11, color: '#047857', fontWeight: 600, borderTop: '1px dashed #EFE9DE', paddingTop: 4 }}>
+                      ✓ Approved by {r.approved_by_name}
+                    </div>
+                  )}
+                </div>
               ))
             ) : (
-              <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>
-                  No attendance records matching filter criteria for {selectedDate}.
-                </td>
-              </tr>
+              <div className="card-elevated" style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>
+                No attendance records matching filter criteria for {selectedDate}.
+              </div>
             )}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </div>
+      </>
     </div>
   );
 }

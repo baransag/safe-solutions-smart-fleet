@@ -604,7 +604,8 @@ export default function VisitReportsPage() {
             </div>
           </div>
 
-          <div className="table-container">
+          {/* Desktop Table View */}
+          <div className="table-container hide-on-mobile">
             <table className="table">
               <thead>
                 <tr>
@@ -669,6 +670,79 @@ export default function VisitReportsPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card List View */}
+          <div className="show-on-mobile">
+            <div className="mobile-card-list">
+              {filteredReports.map(r => (
+                <div key={`mvis_${r.id}`} className="mobile-record-card" style={{ borderLeft: '4px solid #E06D34' }}>
+                  <div className="mobile-card-header">
+                    <div>
+                      <div className="mobile-card-title" style={{ color: '#E06D34' }}>{r.project_location}</div>
+                      <div className="mobile-card-subtitle">
+                        {new Date(r.visit_date).toLocaleDateString('en-GB')} • {r.sales_person_name}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mobile-card-grid">
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">Client</span>
+                      <span className="mobile-card-value">{r.client_name || '—'}</span>
+                    </div>
+
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">Contractor</span>
+                      <span className="mobile-card-value">{r.contractor_name || '—'}</span>
+                    </div>
+
+                    <div className="mobile-card-cell" style={{ gridColumn: 'span 2' }}>
+                      <span className="mobile-card-label">Purpose of Visit</span>
+                      <span className="mobile-card-value">{r.purpose_of_visit}</span>
+                    </div>
+
+                    {r.product_of_interest && (
+                      <div className="mobile-card-cell" style={{ gridColumn: 'span 2' }}>
+                        <span className="mobile-card-label">Product of Interest</span>
+                        <span className="mobile-card-value" style={{ color: '#E06D34' }}>{r.product_of_interest}</span>
+                      </div>
+                    )}
+
+                    {r.contact_number && (
+                      <div className="mobile-card-cell" style={{ gridColumn: 'span 2' }}>
+                        <span className="mobile-card-label">Contact</span>
+                        <span className="mobile-card-value" style={{ color: '#006A71' }}>📞 {r.contact_number}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mobile-card-footer" style={{ gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => generateAndDownloadReportImage([r], r.sales_person_name, new Date(r.visit_date).toISOString().split('T')[0])}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontWeight: 700 }}
+                    >
+                      <Download size={14} /> PNG Picture
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => handleShareExistingToWhatsApp(r)}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#25D366', borderColor: '#25D366', fontWeight: 700 }}
+                    >
+                      <Share2 size={14} /> WhatsApp
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {filteredReports.length === 0 && (
+                <div className="card-elevated" style={{ textAlign: 'center', padding: 24, color: '#94A3B8' }}>
+                  No visit reports found. Click "New Visit Report" to add one!
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

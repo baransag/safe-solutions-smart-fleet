@@ -283,3 +283,67 @@
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* ─── Dashboard Mobile Styles ─── */
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 12px 10px calc(84px + env(safe-area-inset-bottom, 16px)) 10px !important;
+  }
+
+  .dashboard-greeting h2 {
+    font-size: 20px;
+  }
+
+  .top-stats-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .stat-card {
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+
+  .stat-card-label {
+    font-size: 12px;
+  }
+
+  .stat-card-sub {
+    display: none;
+  }
+
+  .stat-card-value {
+    font-size: 22px;
+  }
+
+  .stat-card-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .quick-action-card {
+    min-height: 80px;
+    padding: 12px;
+  }
+
+  .bottom-bar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px;
+  }
+}
+
+@media (max-width: 380px) {
+  .top-stats-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+

@@ -98,44 +98,83 @@ export default function VehiclesPage() {
           <p className="empty-text">Add your first vehicle to get started</p>
         </div>
       ) : (
-        <div className="table-container animate-fade-in-up">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Vehicle ID</th>
-                <th>Name</th>
-                <th>Number Plate</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Assigned To</th>
-                <th>Current KM</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+        <>
+          {/* Desktop Table View */}
+          <div className="table-container hide-on-mobile animate-fade-in-up">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Vehicle ID</th>
+                  <th>Name</th>
+                  <th>Number Plate</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Assigned To</th>
+                  <th>Current KM</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(v => (
+                  <tr key={v.id}>
+                    <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)' }}>{v.vehicle_id}</span></td>
+                    <td><span style={{ fontWeight: 500 }}>{v.name}</span></td>
+                    <td><span className="badge badge-teal">{v.number_plate}</span></td>
+                    <td style={{ textTransform: 'capitalize' }}>{v.type}</td>
+                    <td>
+                      <span className={`badge badge-${v.status === 'active' ? 'green' : v.status === 'maintenance' ? 'yellow' : 'red'}`}>
+                        {v.status}
+                      </span>
+                    </td>
+                    <td>{v.assigned_employee_name || <span style={{ color: 'var(--text-tertiary)' }}>Unassigned</span>}</td>
+                    <td>{v.current_meter && parseFloat(v.current_meter) > 0 ? `${parseFloat(v.current_meter).toLocaleString()} km` : '----'}</td>
+                    <td>
+                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(v)}>
+                        <Edit2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card List View */}
+          <div className="show-on-mobile">
+            <div className="mobile-card-list">
               {filtered.map(v => (
-                <tr key={v.id}>
-                  <td><span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)' }}>{v.vehicle_id}</span></td>
-                  <td><span style={{ fontWeight: 500 }}>{v.name}</span></td>
-                  <td><span className="badge badge-teal">{v.number_plate}</span></td>
-                  <td style={{ textTransform: 'capitalize' }}>{v.type}</td>
-                  <td>
+                <div key={`mveh_${v.id}`} className="mobile-record-card" style={{ borderLeft: `4px solid ${v.status === 'active' ? '#006A71' : v.status === 'maintenance' ? '#E06D34' : '#DC2626'}` }}>
+                  <div className="mobile-card-header">
+                    <div>
+                      <div className="mobile-card-title">{v.vehicle_id} • {v.name}</div>
+                      <div className="mobile-card-subtitle">{v.number_plate} • {v.type?.toUpperCase()}</div>
+                    </div>
                     <span className={`badge badge-${v.status === 'active' ? 'green' : v.status === 'maintenance' ? 'yellow' : 'red'}`}>
                       {v.status}
                     </span>
-                  </td>
-                  <td>{v.assigned_employee_name || <span style={{ color: 'var(--text-tertiary)' }}>Unassigned</span>}</td>
-                  <td>{v.current_meter && parseFloat(v.current_meter) > 0 ? `${parseFloat(v.current_meter).toLocaleString()} km` : '----'}</td>
-                  <td>
-                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(v)}>
-                      <Edit2 size={14} />
+                  </div>
+
+                  <div className="mobile-card-grid">
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">Assigned Driver</span>
+                      <span className="mobile-card-value">{v.assigned_employee_name || 'Unassigned'}</span>
+                    </div>
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">Current Meter</span>
+                      <span className="mobile-card-value">{v.current_meter ? `${parseFloat(v.current_meter).toLocaleString()} km` : '—'}</span>
+                    </div>
+                  </div>
+
+                  <div className="mobile-card-footer">
+                    <button className="btn btn-secondary btn-sm" onClick={() => openEdit(v)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <Edit2 size={14} /> Edit Vehicle Details
                     </button>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Add/Edit Modal */}
@@ -147,7 +186,7 @@ export default function VehiclesPage() {
               <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <form onSubmit={handleSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
                 <div className="form-group">
                   <label className="form-label">Vehicle ID *</label>
                   <input className="form-input" value={form.vehicle_id} onChange={(e) => setForm({...form, vehicle_id: e.target.value})} required disabled={!!editVehicle} />

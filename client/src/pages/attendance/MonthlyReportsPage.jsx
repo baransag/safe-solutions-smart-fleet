@@ -526,16 +526,15 @@ export default function MonthlyReportsPage() {
       </div>
 
       {/* Report Filter Controls Card */}
-      <div className="card-elevated" style={{ marginBottom: 24, padding: 20, borderLeft: '4px solid #0F2B5B' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+      <div className="card-elevated" style={{ marginBottom: 24, padding: 16, borderLeft: '4px solid #0F2B5B' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, alignItems: 'center' }}>
           {/* Month Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Calendar size={18} color="#0F2B5B" />
-            <label style={{ fontSize: 13, fontWeight: 700, color: '#0F2B5B' }}>Month:</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+            <Calendar size={18} color="#0F2B5B" style={{ flexShrink: 0 }} />
             <select
               value={selectedMonth}
               onChange={e => setSelectedMonth(e.target.value)}
-              style={{ padding: '8px 14px', borderRadius: 10, border: '2px solid #0F2B5B', fontSize: 13, fontWeight: 700, color: '#0F2B5B', background: '#fff', minWidth: 200 }}
+              style={{ padding: '8px 14px', borderRadius: 10, border: '2px solid #0F2B5B', fontSize: 13, fontWeight: 700, color: '#0F2B5B', background: '#fff', width: '100%' }}
             >
               {months.length === 0 && <option value="">No months available</option>}
               {months.map(m => (
@@ -547,13 +546,12 @@ export default function MonthlyReportsPage() {
           </div>
 
           {/* Employee Selector Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Users size={18} color="#0F2B5B" />
-            <label style={{ fontSize: 13, fontWeight: 700, color: '#0F2B5B' }}>Employee:</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+            <Users size={18} color="#0F2B5B" style={{ flexShrink: 0 }} />
             <select
               value={selectedEmployee}
               onChange={e => setSelectedEmployee(e.target.value)}
-              style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 13, fontWeight: 700, color: '#0F2B5B', background: '#fff', minWidth: 220 }}
+              style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 13, fontWeight: 700, color: '#0F2B5B', background: '#fff', width: '100%' }}
             >
               <option value="all">👥 All Employees</option>
               {summary.map(emp => (
@@ -565,23 +563,22 @@ export default function MonthlyReportsPage() {
           </div>
 
           {/* Search Box */}
-          <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+          <div style={{ position: 'relative', width: '100%' }}>
             <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               type="text"
-              placeholder="Filter by employee name or ID..."
+              placeholder="Filter employee or ID..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{ padding: '8px 14px 8px 34px', borderRadius: 10, border: '1px solid #cbd5e1', fontSize: 13, width: '100%', background: '#fff' }}
             />
           </div>
-
-          {selectedMonth && (
-            <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>
-              📅 {getMonthDateRange(selectedMonth)}
-            </span>
-          )}
         </div>
+        {selectedMonth && (
+          <div style={{ marginTop: 10, fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+            📅 {getMonthDateRange(selectedMonth)}
+          </div>
+        )}
       </div>
 
       {loading ? (

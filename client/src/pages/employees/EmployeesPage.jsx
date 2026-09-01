@@ -182,76 +182,141 @@ export default function EmployeesPage() {
       {loading ? (
         <div className="page-loader"><div className="loader loader-lg" /></div>
       ) : (
-        <div className="card-elevated" style={{ overflow: 'hidden', padding: 0 }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--bg-secondary)', textAlign: 'left', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  <th style={{ padding: '12px 16px' }}>Employee</th>
-                  <th style={{ padding: '12px 16px' }}>Contact</th>
-                  <th style={{ padding: '12px 16px' }}>Role</th>
-                  <th style={{ padding: '12px 16px' }}>Department</th>
-                  <th style={{ padding: '12px 16px' }}>Designation</th>
-                  <th style={{ padding: '12px 16px' }}>Status</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEmployees.map((emp) => (
-                  <tr key={emp.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <img
-                          src={getEmployeeAvatar(emp.employee_id)}
-                          alt={emp.name}
-                          style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border-color)', flexShrink: 0 }}
-                          onError={(e) => { e.currentTarget.src = '/assets/images/logo.jpeg'; }}
-                        />
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{emp.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{emp.employee_id}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 16px', fontSize: '0.85rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Mail size={14} className="text-tertiary" /> {emp.email}</div>
-                      {emp.phone && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, color: 'var(--text-tertiary)' }}><Phone size={14} /> {emp.phone}</div>}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span className={`badge badge-${
-                        emp.role === 'admin' ? 'purple' :
-                        emp.role === 'boss' ? 'red' :
-                        emp.role === 'controller' ? 'orange' :
-                        emp.role === 'manager' ? 'blue' : 'green'
-                      }`} style={{ textTransform: 'capitalize' }}>
-                        {emp.role}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', fontSize: '0.85rem' }}>{emp.department || 'Operations'}</td>
-                    <td style={{ padding: '14px 16px', fontSize: '0.85rem' }}>{emp.designation || 'Staff'}</td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span className={`badge badge-${emp.is_active ? 'green' : 'gray'}`}>
-                        {emp.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                        <button className="btn-icon" onClick={() => handleOpenEdit(emp)} title="Edit Employee">
-                          <Edit3 size={16} />
-                        </button>
-                        {emp.is_active && (
-                          <button className="btn-icon text-danger" onClick={() => handleDeactivate(emp.id)} title="Deactivate Employee">
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+        <>
+          {/* Desktop Table View */}
+          <div className="card-elevated hide-on-mobile" style={{ overflow: 'hidden', padding: 0 }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-secondary)', textAlign: 'left', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    <th style={{ padding: '12px 16px' }}>Employee</th>
+                    <th style={{ padding: '12px 16px' }}>Contact</th>
+                    <th style={{ padding: '12px 16px' }}>Role</th>
+                    <th style={{ padding: '12px 16px' }}>Department</th>
+                    <th style={{ padding: '12px 16px' }}>Designation</th>
+                    <th style={{ padding: '12px 16px' }}>Status</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredEmployees.map((emp) => (
+                    <tr key={emp.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <img
+                            src={getEmployeeAvatar(emp.employee_id)}
+                            alt={emp.name}
+                            style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border-color)', flexShrink: 0 }}
+                            onError={(e) => { e.currentTarget.src = '/assets/images/logo.jpeg'; }}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{emp.name}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{emp.employee_id}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 16px', fontSize: '0.85rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Mail size={14} className="text-tertiary" /> {emp.email}</div>
+                        {emp.phone && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, color: 'var(--text-tertiary)' }}><Phone size={14} /> {emp.phone}</div>}
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span className={`badge badge-${
+                          emp.role === 'admin' ? 'purple' :
+                          emp.role === 'boss' ? 'red' :
+                          emp.role === 'controller' ? 'orange' :
+                          emp.role === 'manager' ? 'blue' : 'green'
+                        }`} style={{ textTransform: 'capitalize' }}>
+                          {emp.role}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px', fontSize: '0.85rem' }}>{emp.department || 'Operations'}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '0.85rem' }}>{emp.designation || 'Staff'}</td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span className={`badge badge-${emp.is_active ? 'green' : 'gray'}`}>
+                          {emp.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                          <button className="btn-icon" onClick={() => handleOpenEdit(emp)} title="Edit Employee">
+                            <Edit3 size={16} />
+                          </button>
+                          {emp.is_active && (
+                            <button className="btn-icon text-danger" onClick={() => handleDeactivate(emp.id)} title="Deactivate Employee">
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {/* Mobile Cards View */}
+          <div className="show-on-mobile">
+            <div className="mobile-card-list">
+              {filteredEmployees.map((emp) => (
+                <div key={`memp_${emp.id}`} className="mobile-record-card" style={{ borderLeft: `4px solid ${emp.is_active ? '#006A71' : '#A89F9E'}` }}>
+                  <div className="mobile-card-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <img
+                        src={getEmployeeAvatar(emp.employee_id)}
+                        alt={emp.name}
+                        style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid #0F2B5B', flexShrink: 0 }}
+                        onError={(e) => { e.currentTarget.src = '/assets/images/logo.jpeg'; }}
+                      />
+                      <div>
+                        <div className="mobile-card-title">{emp.name}</div>
+                        <div className="mobile-card-subtitle">{emp.employee_id} • {emp.designation || 'Staff'}</div>
+                      </div>
+                    </div>
+                    <span className={`badge badge-${
+                      emp.role === 'admin' ? 'purple' :
+                      emp.role === 'boss' ? 'red' :
+                      emp.role === 'controller' ? 'orange' :
+                      emp.role === 'manager' ? 'blue' : 'green'
+                    }`} style={{ textTransform: 'capitalize', fontSize: 10 }}>
+                      {emp.role}
+                    </span>
+                  </div>
+
+                  <div className="mobile-card-grid">
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">Department</span>
+                      <span className="mobile-card-value">{emp.department || 'Operations'}</span>
+                    </div>
+                    <div className="mobile-card-cell">
+                      <span className="mobile-card-label">Status</span>
+                      <span className="mobile-card-value" style={{ color: emp.is_active ? '#006A71' : '#A89F9E' }}>
+                        {emp.is_active ? '● Active' : '○ Inactive'}
+                      </span>
+                    </div>
+                    {emp.phone && (
+                      <div className="mobile-card-cell" style={{ gridColumn: 'span 2' }}>
+                        <span className="mobile-card-label">Phone</span>
+                        <span className="mobile-card-value">📞 {emp.phone}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mobile-card-footer">
+                    <button className="btn btn-secondary btn-sm" onClick={() => handleOpenEdit(emp)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Edit3 size={14} /> Edit
+                    </button>
+                    {emp.is_active && (
+                      <button className="btn btn-ghost btn-sm text-danger" onClick={() => handleDeactivate(emp.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#DC2626' }}>
+                        <Trash2 size={14} /> Deactivate
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
       {/* Employee Modal */}

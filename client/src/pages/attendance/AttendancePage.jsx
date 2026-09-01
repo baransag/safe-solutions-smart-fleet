@@ -495,9 +495,9 @@ export default function AttendancePage() {
               className="btn btn-primary btn-lg"
               onClick={() => handleStartScan('office', 'checkin')}
               disabled={actionLoading}
-              style={{ width: '100%' }}
+              style={{ width: '100%', minHeight: 52, fontSize: 15, fontWeight: 800, borderRadius: 14 }}
             >
-              <Building2 size={18} /> Click Office Attendance & Scan QR (Check-In)
+              <Building2 size={20} /> Click Office Attendance & Scan QR (Check-In)
             </button>
           ) : todayAttendance.attendance_type === 'office' && !todayAttendance.check_out_time ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -523,9 +523,9 @@ export default function AttendancePage() {
                 className="btn btn-danger btn-lg"
                 onClick={() => handleStartScan('office', 'checkout')}
                 disabled={actionLoading}
-                style={{ width: '100%', background: '#D42D56', borderColor: '#D42D56' }}
+                style={{ width: '100%', minHeight: 52, fontSize: 15, fontWeight: 800, borderRadius: 14, background: '#D42D56', borderColor: '#D42D56' }}
               >
-                <Building2 size={18} /> Scan Office QR for Check-Out
+                <Building2 size={20} /> Scan Office QR for Check-Out
               </button>
             </div>
           ) : todayAttendance.attendance_type === 'office' && todayAttendance.check_out_time ? (
@@ -562,7 +562,7 @@ export default function AttendancePage() {
           {!todayAttendance || todayAttendance.approval_status === 'rejected' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               {/* Step 1: Site Name & Site Location Inputs */}
-              <div className="form-group" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="form-group" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
                 <div>
                   <label className="form-label" style={{ fontWeight: 700 }}>1a. Enter Site Name *</label>
                   <input
@@ -592,7 +592,7 @@ export default function AttendancePage() {
               {/* Step 2: Verify GPS */}
               <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
                 <label className="form-label" style={{ fontWeight: 700 }}>2. Verify GPS Location *</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     className="btn btn-outline"
@@ -652,7 +652,7 @@ export default function AttendancePage() {
               {/* Step 5: Small Note */}
               <div className="form-group" style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 12 }}>
                 <label className="form-label" style={{ fontWeight: 700, marginBottom: 8, display: 'block' }}>5. Write Small Note (Required) *</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 12 }}>
                   <div>
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>Work Completed:</span>
                     <input className="form-input" placeholder="e.g. Waterproofing slab" value={workCompleted} onChange={(e) => setWorkCompleted(e.target.value)} disabled={actionLoading} />
@@ -662,7 +662,7 @@ export default function AttendancePage() {
                     <input className="form-input" placeholder="e.g. Rain delays, no issues" value={issueFound} onChange={(e) => setIssueFound(e.target.value)} disabled={actionLoading} />
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                   <div>
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>Weather Status:</span>
                     <input className="form-input" placeholder="e.g. Clear skies, 32C" value={weather} onChange={(e) => setWeather(e.target.value)} disabled={actionLoading} />
@@ -680,7 +680,7 @@ export default function AttendancePage() {
                 className="btn btn-danger btn-lg"
                 disabled={actionLoading || !gpsVerified || !selfieBlob || !sitePhotoBlob || !workCompleted}
                 onClick={handleSubmitSiteAttendance}
-                style={{ width: '100%', marginTop: 12, height: 50, fontSize: 15, fontWeight: 800, background: '#D42D56', borderColor: '#D42D56' }}
+                style={{ width: '100%', marginTop: 12, minHeight: 52, fontSize: 15, fontWeight: 800, background: '#D42D56', borderColor: '#D42D56', borderRadius: 14 }}
               >
                 {actionLoading ? 'Submitting Site Attendance...' : 'Submit Site Attendance (Check-In)'}
               </button>
@@ -966,8 +966,8 @@ export default function AttendancePage() {
                 </div>
               </div>
 
-              {/* Records Table for this Employee */}
-              <div className="table-container" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
+              {/* Desktop Records Table */}
+              <div className="table-container hide-on-mobile" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
                 <table className="table" style={{ margin: 0 }}>
                   <thead>
                     <tr style={{ background: '#f8fafc' }}>
@@ -1048,6 +1048,76 @@ export default function AttendancePage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile Dedicated Attendance Cards */}
+              <div className="show-on-mobile" style={{ padding: '12px 10px', background: '#FAF6EE' }}>
+                <div className="mobile-card-list">
+                  {group.records.map(r => (
+                    <div key={`mob_${r.id}`} className="mobile-record-card" style={{ borderLeft: `4px solid ${r.attendance_type === 'site' ? '#D42D56' : '#0F2B5B'}` }}>
+                      <div className="mobile-card-header">
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 800, fontSize: 12.5, color: 'var(--text-primary)' }}>
+                            <Calendar size={13} color="var(--text-tertiary)" />
+                            {new Date(r.check_in_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </div>
+                          <div style={{ fontWeight: 800, fontSize: 13.5, color: '#0F2B5B', marginTop: 2, wordBreak: 'break-word' }}>
+                            {r.location_name || r.project_name || 'Head Office'}
+                          </div>
+                          {r.project_name && r.location_name && r.project_name !== r.location_name && (
+                            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{r.project_name}</div>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                          <span className={`badge badge-${r.attendance_type === 'site' ? 'red' : 'blue'}`} style={{ fontSize: 10 }}>
+                            {r.attendance_type === 'site' ? '🏗️ Site' : '🏢 Office'}
+                          </span>
+                          <span className={`badge badge-${r.approval_status === 'approved' ? 'green' : r.approval_status === 'rejected' ? 'red' : 'yellow'}`} style={{ fontSize: 10 }}>
+                            {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mobile-card-grid">
+                        <div className="mobile-card-cell">
+                          <span className="mobile-card-label">Check-In</span>
+                          <span className="mobile-card-value" style={{ color: '#047857', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Clock size={12} color="#047857" />
+                            {new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                          </span>
+                        </div>
+
+                        <div className="mobile-card-cell">
+                          <span className="mobile-card-label">Check-Out</span>
+                          <span className="mobile-card-value" style={{ color: r.check_out_time ? '#D42D56' : '#D97706', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Clock size={12} color={r.check_out_time ? '#D42D56' : '#D97706'} />
+                            {r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : 'In Progress'}
+                          </span>
+                        </div>
+
+                        <div className="mobile-card-cell">
+                          <span className="mobile-card-label">GPS Radius</span>
+                          <span className="mobile-card-value" style={{ fontSize: 11, color: 'var(--color-info)' }}>
+                            📍 {r.gps_status || 'Radius Ok'} ({r.distance_meters || 0}m)
+                          </span>
+                        </div>
+
+                        <div className="mobile-card-cell">
+                          <span className="mobile-card-label">Work Duration</span>
+                          <span className="mobile-card-value" style={{ color: '#0F2B5B' }}>
+                            {r.check_out_time ? getWorkDuration(r.check_in_time, r.check_out_time, r.work_hours) : '🟢 Working'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {r.approved_by_name && (
+                        <div style={{ fontSize: 11, color: 'var(--color-success)', fontWeight: 600, borderTop: '1px dashed #EFE9DE', paddingTop: 4 }}>
+                          ✓ Approved by {r.approved_by_name}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           ))}

@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, Car, Users, ClipboardCheck, Fuel, QrCode,
   BarChart3, AlertTriangle, Bell, Settings, LogOut, Wrench,
-  Route, CalendarCheck, FileText, Shield, ShieldCheck, Megaphone
+  Route, CalendarCheck, FileText, Shield, ShieldCheck, Megaphone, X
 } from 'lucide-react';
 
 import { getEmployeeAvatar } from '../../utils/avatarHelper';
@@ -48,8 +48,8 @@ export default function Sidebar({ isOpen, onClose }) {
     <>
       {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <NavLink to="/" className="sidebar-logo">
+        <div className="sidebar-header" style={{ justifyContent: 'space-between' }}>
+          <NavLink to="/" className="sidebar-logo" onClick={() => onClose?.()}>
             <img
               src="/assets/images/logo.jpeg"
               alt="SAFE SOLUTIONS Logo"
@@ -57,9 +57,29 @@ export default function Sidebar({ isOpen, onClose }) {
             />
             <div>
                <div style={{ lineHeight: 1.1, fontWeight: 900, letterSpacing: '0.04em', fontSize: 13 }}>SAFE SOLUTIONS FleetOps</div>
-              <div style={{ fontSize: 8, color: 'var(--color-gold)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: 2 }}>Enterprise Fleet, Attendance & Site Operations</div>
+              <div style={{ fontSize: 8, color: 'var(--color-gold)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginTop: 2 }}>Enterprise Operations</div>
             </div>
           </NavLink>
+
+          <button
+            className="show-on-mobile"
+            onClick={onClose}
+            aria-label="Close Sidebar"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: 'none',
+              color: '#FFFFFF',
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }}
+          >
+            <X size={20} />
+          </button>
         </div>
 
         <nav className="sidebar-nav">
