@@ -87,9 +87,9 @@ class StorageService {
     }
 
     if (file.buffer) {
-      const mime = file.mimetype || 'image/jpeg';
-      const base64 = file.buffer.toString('base64');
-      return `data:${mime};base64,${base64}`;
+      const ext = (file.mimetype && file.mimetype.includes('png')) ? 'png' : 'jpg';
+      const filename = `${folder}-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`;
+      return `/uploads/${folder}/${filename}`;
     }
 
     return null;

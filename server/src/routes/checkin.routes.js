@@ -55,8 +55,10 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
     const selfieFile = req.files?.selfie?.[0];
     const meterFile = req.files?.meter_photo?.[0];
 
-    const selfieUrl = selfieFile ? await storageService.uploadFile(selfieFile, 'selfies') : null;
-    const meterPhotoUrl = meterFile ? await storageService.uploadFile(meterFile, 'meters') : null;
+    const rawSelfieUrl = selfieFile ? await storageService.uploadFile(selfieFile, 'selfies') : null;
+    const rawMeterPhotoUrl = meterFile ? await storageService.uploadFile(meterFile, 'meters') : null;
+    const selfieUrl = rawSelfieUrl ? String(rawSelfieUrl).substring(0, 500) : null;
+    const meterPhotoUrl = rawMeterPhotoUrl ? String(rawMeterPhotoUrl).substring(0, 500) : null;
 
     const result = await transaction(async (client) => {
       // 1. Verify vehicle assignment
@@ -171,8 +173,10 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
     const selfieFile = req.files?.selfie?.[0];
     const meterFile = req.files?.meter_photo?.[0];
 
-    const selfieUrl = selfieFile ? await storageService.uploadFile(selfieFile, 'selfies') : null;
-    const meterPhotoUrl = meterFile ? await storageService.uploadFile(meterFile, 'meters') : null;
+    const rawSelfieUrl = selfieFile ? await storageService.uploadFile(selfieFile, 'selfies') : null;
+    const rawMeterPhotoUrl = meterFile ? await storageService.uploadFile(meterFile, 'meters') : null;
+    const selfieUrl = rawSelfieUrl ? String(rawSelfieUrl).substring(0, 500) : null;
+    const meterPhotoUrl = rawMeterPhotoUrl ? String(rawMeterPhotoUrl).substring(0, 500) : null;
 
     const result = await transaction(async (client) => {
       // 1. Find today's check-in
