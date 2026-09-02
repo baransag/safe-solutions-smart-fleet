@@ -2,10 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
-import Tesseract from 'tesseract.js';
 import {
   QrCode, MapPin, Camera, ScanLine, CheckCircle2,
-  AlertTriangle, Route, TrendingUp, Clock, Loader2
+  AlertTriangle, Route, TrendingUp, Clock
 } from 'lucide-react';
 import './CheckInPage.css';
 
@@ -30,8 +29,6 @@ export default function CheckOutPage() {
   const [checkoutNotes, setCheckoutNotes] = useState('');
   const [checkoutResult, setCheckoutResult] = useState(null);
   const [attCheckoutResult, setAttCheckoutResult] = useState(null);
-  const [isOcrScanning, setIsOcrScanning] = useState(false);
-  const [ocrDetected, setOcrDetected] = useState(null);
 
   useEffect(() => {
     checkStatus();
@@ -282,7 +279,7 @@ export default function CheckOutPage() {
         {step === 0 && <QRStep onScan={handleQRScan} checkinInfo={todayStatus?.checkin} isAttOnly={attOnlyMode} />}
         {step === 1 && <GPSStep onCapture={captureGPS} loading={loading} />}
         {step === 2 && !attOnlyMode && <CameraStep label="Take Selfie" onCapture={(b, p) => { setSelfieBlob(b); setStep(3); }} />}
-        {step === 3 && !attOnlyMode && <CameraStep label="Capture Meter Photo" onCapture={handleMeterCapture} />}
+        {step === 3 && !attOnlyMode && <CameraStep label="Capture Meter Photo" onCapture={(b, p) => { setMeterBlob(b); setMeterPreview(p); setStep(4); }} />}
         {step === 4 && (
           <div className="step-card card-elevated">
             <h3><CheckCircle2 size={20} /> Confirm & Submit Check-Out</h3>
@@ -313,46 +310,14 @@ export default function CheckOutPage() {
             {!attOnlyMode && (
               <>
                 {meterPreview && <img src={meterPreview} alt="Meter" style={{ width: '100%', maxWidth: 300, borderRadius: 'var(--radius-md)', margin: 'var(--space-4) auto', display: 'block' }} />}
-
-                {isOcrScanning ? (
-                  <div style={{ background: 'rgba(15, 43, 91, 0.06)', border: '1px solid rgba(15, 43, 91, 0.2)', borderRadius: 'var(--radius-md)', padding: 12, margin: '12px auto', textAlign: 'center' }}>
-                    <Loader2 size={20} style={{ color: '#0F2B5B', animation: 'spin 1.5s linear infinite', margin: '0 auto 6px' }} />
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0F2B5B' }}>🤖 Scanning speedometer photo for digits...</div>
-                  </div>
-                ) : ocrDetected ? (
-                  <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: 'var(--radius-md)', padding: 10, margin: '12px auto', textAlign: 'center' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#047857' }}>✨ Scanned: {ocrDetected} KM (Please verify and correct if needed)</span>
-                  </div>
-                ) : null}
-
                 <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-                  <label className="form-label" style={{ fontWeight: 800, fontSize: 14, color: '#0F2B5B' }}>
-                    Enter Exact Closing Meter Reading (KM) *
-                  </label>
-                  <input
-                    className="form-input"
-                    type="number"
-                    step="0.1"
-                    placeholder="e.g. 15480"
-                    value={meterReading}
-                    onChange={(e) => setMeterReading(e.target.value)}
-                    style={{ fontSize: '22px', fontWeight: 800, textAlign: 'center', borderColor: '#0F2B5B', background: '#FFFDF9', color: '#0F2B5B', padding: '12px' }}
-                    autoFocus
-                  />
-                  <p style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 6 }}>
-                    Type the exact numbers visible on your bike/vehicle odometer photo above.
-                  </p>
+                  <label className="form-label">Closing Meter Reading (KM) *</label>
+                  <input className="form-input" type="number" step="0.1" placeholder="Enter closing odometer" value={meterReading} onChange={(e) => setMeterReading(e.target.value)}
+                         style={{ fontSize: 'var(--text-xl)', fontWeight: 700, textAlign: 'center' }} autoFocus />
                 </div>
-                <div style={{ padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: 8, textAlign: 'center', margin: '8px 0' }}>
-                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                    Opening KM: {parseFloat(todayStatus?.checkin?.meter_reading || 0).toLocaleString()} km
-                  </span>
-                  {meterReading && parseFloat(meterReading) >= parseFloat(todayStatus?.checkin?.meter_reading || 0) && (
-                    <span style={{ marginLeft: 10, color: '#047857', fontWeight: 700, fontSize: 'var(--text-sm)' }}>
-                      • Run: +{(parseFloat(meterReading) - parseFloat(todayStatus?.checkin?.meter_reading || 0)).toFixed(1)} KM
-                    </span>
-                  )}
-                </div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 'var(--space-2)' }}>
+                  Opening: {parseFloat(todayStatus?.checkin?.meter_reading || 0).toLocaleString()} km
+                </p>
               </>
             )}
 
