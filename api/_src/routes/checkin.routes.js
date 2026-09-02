@@ -38,9 +38,14 @@ const checkinUpload = multer({
 
 router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, next) => {
   try {
-    const { vehicle_id, gps_lat, gps_lng, gps_address, meter_reading, ocr_reading, ocr_confidence, ocr_raw_text } = req.body;
+    let { vehicle_id, gps_lat, gps_lng, gps_address, meter_reading, ocr_reading, ocr_confidence, ocr_raw_text } = req.body;
 
-    if (!vehicle_id || !meter_reading) {
+    if (Array.isArray(vehicle_id)) {
+      vehicle_id = vehicle_id[vehicle_id.length - 1];
+    }
+    const cleanVehicleId = parseInt(vehicle_id, 10);
+
+    if (!cleanVehicleId || isNaN(cleanVehicleId) || !meter_reading) {
       return res.status(400).json({ error: 'vehicle_id and meter_reading are required' });
     }
 
@@ -60,12 +65,12 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
          FROM vehicle_assignments va
          JOIN vehicles v ON v.id = va.vehicle_id
          WHERE va.employee_id = $1 AND va.is_current = true AND v.id = $2`,
-        [employeeId, vehicle_id]
+        [employeeId, cleanVehicleId]
       );
 
       if (assignment.length === 0) {
         await createAlert(client, {
-          vehicle_id: parseInt(vehicle_id),
+          vehicle_id: cleanVehicleId,
           employee_id: employeeId,
           alert_type: 'wrong_vehicle',
           severity: 'high',
@@ -80,12 +85,12 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
       const { rows: existing } = await client.query(
         `SELECT id FROM vehicle_checkins
          WHERE employee_id = $1 AND vehicle_id = $2 AND checkin_time::date = $3`,
-        [employeeId, vehicle_id, today]
+        [employeeId, cleanVehicleId, today]
       );
 
       if (existing.length > 0) {
         await createAlert(client, {
-          vehicle_id: parseInt(vehicle_id),
+          vehicle_id: cleanVehicleId,
           employee_id: employeeId,
           alert_type: 'duplicate_checkin',
           severity: 'medium',
@@ -99,7 +104,7 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
       const prevMeter = parseFloat(assignment[0].current_meter) || 0;
       if (meterVal < prevMeter) {
         await createAlert(client, {
-          vehicle_id: parseInt(vehicle_id),
+          vehicle_id: cleanVehicleId,
           employee_id: employeeId,
           alert_type: 'negative_km',
           severity: 'high',
@@ -116,7 +121,7 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
           meter_reading, ocr_reading, ocr_confidence, ocr_raw_text, is_confirmed)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
          RETURNING *`,
-        [vehicle_id, employeeId, gps_lat, gps_lng, gps_address, selfieUrl, meterPhotoUrl,
+        [cleanVehicleId, employeeId, gps_lat, gps_lng, gps_address, selfieUrl, meterPhotoUrl,
          meterVal, ocr_reading ? parseFloat(ocr_reading) : null,
          ocr_confidence ? parseFloat(ocr_confidence) : null, ocr_raw_text, true]
       );
@@ -124,14 +129,14 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
       // 5. Update vehicle current meter
       await client.query(
         'UPDATE vehicles SET current_meter = $1, updated_at = NOW() WHERE id = $2',
-        [meterVal, vehicle_id]
+        [meterVal, cleanVehicleId]
       );
 
       // 6. Log meter reading
       await client.query(
         `INSERT INTO vehicle_meter_logs (vehicle_id, employee_id, reading, source, reference_id, reference_type, photo_url)
          VALUES ($1, $2, $3, 'checkin', $4, 'vehicle_checkins', $5)`,
-        [vehicle_id, employeeId, meterVal, checkin[0].id, meterPhotoUrl]
+        [cleanVehicleId, employeeId, meterVal, checkin[0].id, meterPhotoUrl]
       );
 
       return checkin[0];
@@ -149,9 +154,14 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
 // POST /api/checkins/vehicle-checkout - Evening checkout
 router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, next) => {
   try {
-    const { vehicle_id, gps_lat, gps_lng, gps_address, meter_reading, ocr_reading, ocr_confidence, ocr_raw_text } = req.body;
+    let { vehicle_id, gps_lat, gps_lng, gps_address, meter_reading, ocr_reading, ocr_confidence, ocr_raw_text } = req.body;
 
-    if (!vehicle_id || !meter_reading) {
+    if (Array.isArray(vehicle_id)) {
+      vehicle_id = vehicle_id[vehicle_id.length - 1];
+    }
+    const cleanVehicleId = parseInt(vehicle_id, 10);
+
+    if (!cleanVehicleId || isNaN(cleanVehicleId) || !meter_reading) {
       return res.status(400).json({ error: 'vehicle_id and meter_reading are required' });
     }
 
@@ -171,7 +181,7 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
         `SELECT * FROM vehicle_checkins
          WHERE employee_id = $1 AND vehicle_id = $2 AND checkin_time::date = $3 AND status = 'active'
          ORDER BY checkin_time DESC LIMIT 1`,
-        [employeeId, vehicle_id, today]
+        [employeeId, cleanVehicleId, today]
       );
 
       if (checkins.length === 0) {
@@ -188,7 +198,7 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
 
       if (existingOut.length > 0) {
         await createAlert(client, {
-          vehicle_id: parseInt(vehicle_id),
+          vehicle_id: cleanVehicleId,
           employee_id: employeeId,
           alert_type: 'duplicate_checkout',
           severity: 'medium',
@@ -209,7 +219,7 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
       // 4. Validate
       if (distanceKm < 0) {
         await createAlert(client, {
-          vehicle_id: parseInt(vehicle_id),
+          vehicle_id: cleanVehicleId,
           employee_id: employeeId,
           alert_type: 'negative_km',
           severity: 'high',
@@ -221,7 +231,7 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
 
       if (distanceKm > 500) {
         await createAlert(client, {
-          vehicle_id: parseInt(vehicle_id),
+          vehicle_id: cleanVehicleId,
           employee_id: employeeId,
           alert_type: 'impossible_distance',
           severity: 'high',
@@ -239,7 +249,7 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
           opening_km, closing_km, distance_km, duration_minutes, is_confirmed)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
          RETURNING *`,
-        [vehicle_id, employeeId, checkin.id, gps_lat, gps_lng, gps_address,
+        [cleanVehicleId, employeeId, checkin.id, gps_lat, gps_lng, gps_address,
          selfieUrl, meterPhotoUrl, meterVal, ocr_reading ? parseFloat(ocr_reading) : null,
          ocr_confidence ? parseFloat(ocr_confidence) : null, ocr_raw_text,
          openingKm, closingKm, distanceKm, durationMinutes, true]
@@ -254,14 +264,14 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
       // 7. Update vehicle meter
       await client.query(
         'UPDATE vehicles SET current_meter = $1, updated_at = NOW() WHERE id = $2',
-        [meterVal, vehicle_id]
+        [meterVal, cleanVehicleId]
       );
 
       // 8. Log meter
       await client.query(
         `INSERT INTO vehicle_meter_logs (vehicle_id, employee_id, reading, source, reference_id, reference_type, photo_url)
          VALUES ($1, $2, $3, 'checkout', $4, 'vehicle_checkouts', $5)`,
-        [vehicle_id, employeeId, meterVal, checkout[0].id, meterPhotoUrl]
+        [cleanVehicleId, employeeId, meterVal, checkout[0].id, meterPhotoUrl]
       );
 
       // 9. If employee has an open attendance record today, update attendance checkout as well
