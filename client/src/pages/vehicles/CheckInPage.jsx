@@ -169,6 +169,7 @@ export default function CheckInPage() {
 
       await api.upload('/checkins/vehicle-checkin', formData);
       toast.success('Check-in submitted successfully!');
+      window.dispatchEvent(new CustomEvent('app:data-sync'));
       // Reset
       setStep(5);
     } catch (err) {

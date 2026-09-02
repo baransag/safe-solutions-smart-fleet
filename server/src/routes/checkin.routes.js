@@ -141,6 +141,58 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
         [cleanVehicleId, employeeId, meterVal, checkin[0].id, meterPhotoUrl]
       );
 
+      // 7. Auto-create linked attendance record (pending approval) if not yet marked today
+      const { rows: existingAtt } = await client.query(
+        `SELECT id FROM attendance_records WHERE employee_id = $1 AND check_in_time::date = $2`,
+        [employeeId, today]
+      );
+
+      if (existingAtt.length === 0) {
+        const now = new Date();
+        const isLate = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 15);
+        await client.query(
+          `INSERT INTO attendance_records (
+            employee_id, check_in_time, check_in_lat, check_in_lng, status,
+            attendance_type, location_name, project_name,
+            approval_status, is_late, gps_status, distance_meters, notes,
+            selfie_url
+          ) VALUES ($1, NOW(), $2, $3, 'present', 'site', $4, $5, 'pending', $6, 'GPS Verified', 0, $7, $8)`,
+          [
+            employeeId,
+            gps_lat || 31.4504,
+            gps_lng || 73.1350,
+            gps_address || 'Field / Fleet Operation',
+            `Vehicle Check-In (${assignment[0].vehicle_name} - ${assignment[0].number_plate || ''})`,
+            isLate,
+            `Meter: ${meterVal} KM`,
+            selfieUrl
+          ]
+        );
+      }
+
+      // 8. Send instant approval notification to Controller & Manager
+      const { rows: controllers } = await client.query(
+        `SELECT id FROM employees WHERE role IN ('manager', 'controller', 'boss', 'admin') AND is_active = true`
+      );
+      for (const c of controllers) {
+        await client.query(
+          `INSERT INTO notifications (user_id, title, message, type, link, metadata)
+           VALUES ($1, 'New Vehicle Check-In Submitted', $2, 'info', '/approvals', $3)`,
+          [
+            c.id,
+            `${req.user.name} submitted Vehicle Check-In for ${assignment[0].vehicle_name} (${meterVal} KM). Approval pending.`,
+            JSON.stringify({
+              employee_name: req.user.name,
+              vehicle_name: assignment[0].vehicle_name,
+              meter_reading: meterVal,
+              selfie_url: selfieUrl,
+              meter_photo_url: meterPhotoUrl,
+              time: new Date().toISOString()
+            })
+          ]
+        );
+      }
+
       return checkin[0];
     });
 
