@@ -93,19 +93,36 @@ router.get('/manager', authenticate, authorize('manager', 'controller', 'boss', 
              ORDER BY vo.checkout_time DESC LIMIT 20`, [today]),
 
       query(`SELECT 
-              vc.id as checkin_id, vc.vehicle_id, v.name as vehicle_name, v.number_plate, v.vehicle_id as vehicle_code,
+              v.id as vehicle_id, v.name as vehicle_name, v.number_plate, v.vehicle_id as vehicle_code, v.current_meter,
               e.id as employee_id, e.name as employee_name, e.employee_id as emp_code, e.designation,
-              vc.checkin_time, vc.meter_reading as opening_km, vc.gps_address as checkin_location,
-              vc.selfie_url as checkin_selfie, vc.meter_photo_url as checkin_meter_photo,
+              vc.id as checkin_id, vc.checkin_time, COALESCE(vc.meter_reading, v.current_meter) as opening_km, vc.gps_address as checkin_location,
+              vc.meter_photo_url as checkin_meter_photo,
               vo.id as checkout_id, vo.checkout_time, vo.meter_reading as closing_km,
               vo.distance_km, vo.duration_minutes, vo.gps_address as checkout_location,
-              vo.selfie_url as checkout_selfie, vo.meter_photo_url as checkout_meter_photo,
-              vc.status as checkin_status
-             FROM vehicle_checkins vc
-             JOIN vehicles v ON v.id = vc.vehicle_id
-             JOIN employees e ON e.id = vc.employee_id
+              vo.meter_photo_url as checkout_meter_photo,
+              CASE 
+                WHEN vo.id IS NOT NULL THEN 'completed'
+                WHEN vc.id IS NOT NULL THEN 'active'
+                ELSE 'pending'
+              END as checkin_status
+             FROM vehicles v
+             JOIN vehicle_assignments va ON va.vehicle_id = v.id AND va.is_current = true
+             JOIN employees e ON e.id = va.employee_id
+             LEFT JOIN LATERAL (
+               SELECT * FROM vehicle_checkins 
+               WHERE vehicle_id = v.id AND employee_id = e.id 
+               ORDER BY checkin_time DESC LIMIT 1
+             ) vc ON true
              LEFT JOIN vehicle_checkouts vo ON vo.checkin_id = vc.id
-             ORDER BY vc.checkin_time DESC LIMIT 50`),
+             WHERE v.is_active = true
+             ORDER BY 
+               CASE 
+                 WHEN vc.id IS NOT NULL AND vo.id IS NULL THEN 1
+                 WHEN vc.id IS NOT NULL AND vo.id IS NOT NULL THEN 2
+                 ELSE 3
+               END,
+               vc.checkin_time DESC NULLS LAST,
+               v.id ASC`),
 
       query(`SELECT
               COUNT(*) as total_attendance,
@@ -205,19 +222,36 @@ router.get('/controller', authenticate, authorize('manager', 'controller', 'boss
              WHERE v.is_active = true
              ORDER BY v.id ASC`),
       query(`SELECT 
-              vc.id as checkin_id, vc.vehicle_id, v.name as vehicle_name, v.number_plate, v.vehicle_id as vehicle_code,
+              v.id as vehicle_id, v.name as vehicle_name, v.number_plate, v.vehicle_id as vehicle_code, v.current_meter,
               e.id as employee_id, e.name as employee_name, e.employee_id as emp_code, e.designation,
-              vc.checkin_time, vc.meter_reading as opening_km, vc.gps_address as checkin_location,
-              vc.selfie_url as checkin_selfie, vc.meter_photo_url as checkin_meter_photo,
+              vc.id as checkin_id, vc.checkin_time, COALESCE(vc.meter_reading, v.current_meter) as opening_km, vc.gps_address as checkin_location,
+              vc.meter_photo_url as checkin_meter_photo,
               vo.id as checkout_id, vo.checkout_time, vo.meter_reading as closing_km,
               vo.distance_km, vo.duration_minutes, vo.gps_address as checkout_location,
-              vo.selfie_url as checkout_selfie, vo.meter_photo_url as checkout_meter_photo,
-              vc.status as checkin_status
-             FROM vehicle_checkins vc
-             JOIN vehicles v ON v.id = vc.vehicle_id
-             JOIN employees e ON e.id = vc.employee_id
+              vo.meter_photo_url as checkout_meter_photo,
+              CASE 
+                WHEN vo.id IS NOT NULL THEN 'completed'
+                WHEN vc.id IS NOT NULL THEN 'active'
+                ELSE 'pending'
+              END as checkin_status
+             FROM vehicles v
+             JOIN vehicle_assignments va ON va.vehicle_id = v.id AND va.is_current = true
+             JOIN employees e ON e.id = va.employee_id
+             LEFT JOIN LATERAL (
+               SELECT * FROM vehicle_checkins 
+               WHERE vehicle_id = v.id AND employee_id = e.id 
+               ORDER BY checkin_time DESC LIMIT 1
+             ) vc ON true
              LEFT JOIN vehicle_checkouts vo ON vo.checkin_id = vc.id
-             ORDER BY vc.checkin_time DESC LIMIT 50`)
+             WHERE v.is_active = true
+             ORDER BY 
+               CASE 
+                 WHEN vc.id IS NOT NULL AND vo.id IS NULL THEN 1
+                 WHEN vc.id IS NOT NULL AND vo.id IS NOT NULL THEN 2
+                 ELSE 3
+               END,
+               vc.checkin_time DESC NULLS LAST,
+               v.id ASC`)
     ]);
 
     const attRow = attendanceStats?.rows?.[0] || {};

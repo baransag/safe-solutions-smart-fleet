@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import './CheckInPage.css';
 
-const STEPS = ['Scan QR', 'GPS', 'Selfie', 'Meter Photo', 'Confirm'];
+const STEPS = ['Scan QR', 'GPS', 'Meter Photo', 'Confirm'];
 
 export default function CheckInPage() {
   const { user } = useAuth();
@@ -22,8 +22,6 @@ export default function CheckInPage() {
   // Data collection
   const [scannedVehicle, setScannedVehicle] = useState(null);
   const [gps, setGps] = useState(null);
-  const [selfieBlob, setSelfieBlob] = useState(null);
-  const [selfiePreview, setSelfiePreview] = useState(null);
   const [meterBlob, setMeterBlob] = useState(null);
   const [meterPreview, setMeterPreview] = useState(null);
   const [meterReading, setMeterReading] = useState('');
@@ -101,31 +99,25 @@ export default function CheckInPage() {
     );
   }
 
-  // Step 3 & 4: Camera & AI OCR Odometer Reading
-  function handleCapture(blob, preview, type) {
-    if (type === 'selfie') {
-      setSelfieBlob(blob);
-      setSelfiePreview(preview);
-      setStep(3);
-    } else {
-      if (!scannedVehicle) {
-        toast.error('🚫 Meter photo locked until QR Code is verified!');
-        return;
-      }
-      setMeterBlob(blob);
-      setMeterPreview(preview);
-      // AI OCR Odometer Auto-Reading Simulation
-      const baseMeter = parseFloat(assignment?.current_meter || 0.0);
-      const autoOcrMeter = baseMeter.toFixed(1);
-      setMeterReading(autoOcrMeter);
-      setOcrReading(autoOcrMeter);
-      setOcrConfidence(95.0);
-      toast.success(`🤖 AI OCR Detected Meter Reading: ${autoOcrMeter} KM`);
-      setStep(4);
+  // Step 3: Camera & AI OCR Odometer Reading
+  function handleCapture(blob, preview) {
+    if (!scannedVehicle) {
+      toast.error('🚫 Meter photo locked until QR Code is verified!');
+      return;
     }
+    setMeterBlob(blob);
+    setMeterPreview(preview);
+    // AI OCR Odometer Auto-Reading Simulation
+    const baseMeter = parseFloat(assignment?.current_meter || 0.0);
+    const autoOcrMeter = baseMeter.toFixed(1);
+    setMeterReading(autoOcrMeter);
+    setOcrReading(autoOcrMeter);
+    setOcrConfidence(95.0);
+    toast.success(`🤖 AI OCR Detected Meter Reading: ${autoOcrMeter} KM`);
+    setStep(3);
   }
 
-  // Step 5: Submit
+  // Step 4: Submit
   async function handleSubmit() {
     if (!meterReading) {
       toast.warning('Please enter the meter reading');
@@ -134,14 +126,12 @@ export default function CheckInPage() {
 
     setLoading(true);
     try {
-      // Find DB vehicle id from assignment
+      // Robust Vehicle Matching:
       const vehiclesData = await api.get('/vehicles');
-      const matchedVehicle = vehiclesData.vehicles?.find(v =>
-        v.vehicle_id === scannedVehicle?.vehicleId ||
-        v.id === scannedVehicle?.vehicleId ||
-        v.id === assignment?.vehicle_id ||
-        (assignment?.v_id && v.vehicle_id === assignment.v_id) ||
-        (assignment?.number_plate && v.number_plate === assignment.number_plate)
+      const vehiclesList = vehiclesData.vehicles || [];
+      const matchedVehicle = vehiclesList.find(v => 
+        (scannedVehicle?.numberPlate && v.number_plate?.toLowerCase() === scannedVehicle.numberPlate.toLowerCase()) ||
+        (scannedVehicle?.name && v.name?.toLowerCase() === scannedVehicle.name.toLowerCase())
       );
 
       const targetVehicleDbId = matchedVehicle ? matchedVehicle.id : assignment?.vehicle_id;
@@ -160,9 +150,6 @@ export default function CheckInPage() {
       if (ocrReading) formData.append('ocr_reading', ocrReading);
       if (ocrConfidence) formData.append('ocr_confidence', ocrConfidence);
 
-      if (selfieBlob) {
-        formData.append('selfie', selfieBlob, 'selfie.jpg');
-      }
       if (meterBlob) {
         formData.append('meter_photo', meterBlob, 'meter.jpg');
       }
@@ -171,7 +158,7 @@ export default function CheckInPage() {
       toast.success('Check-in submitted successfully!');
       window.dispatchEvent(new CustomEvent('app:data-sync'));
       // Reset
-      setStep(5);
+      setStep(4);
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -302,21 +289,13 @@ export default function CheckInPage() {
 
         {step === 2 && (
           <div className="step-card card-elevated">
-            <h3><Camera size={20} /> Take Selfie</h3>
-            <p>Capture a live photo for identity verification</p>
-            <CameraCapture onCapture={(blob, preview) => handleCapture(blob, preview, 'selfie')} />
+            <h3><ScanLine size={20} /> Capture Meter Reading</h3>
+            <p>Take a clear photo of the speedometer/odometer</p>
+            <CameraCapture onCapture={(blob, preview) => handleCapture(blob, preview)} />
           </div>
         )}
 
         {step === 3 && (
-          <div className="step-card card-elevated">
-            <h3><ScanLine size={20} /> Capture Meter Reading</h3>
-            <p>Take a clear photo of the speedometer/odometer</p>
-            <CameraCapture onCapture={(blob, preview) => handleCapture(blob, preview, 'meter')} />
-          </div>
-        )}
-
-        {step === 4 && (
           <div className="step-card card-elevated">
             <h3><CheckCircle2 size={20} /> Confirm & Submit</h3>
 
@@ -356,10 +335,6 @@ export default function CheckInPage() {
               <div className="summary-row">
                 <span>GPS</span>
                 <span>{gps ? `${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)}` : 'Not captured'}</span>
-              </div>
-              <div className="summary-row">
-                <span>Selfie</span>
-                <span>{selfieBlob ? '✅ Captured' : '❌ Missing'}</span>
               </div>
             </div>
 

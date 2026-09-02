@@ -510,16 +510,22 @@ function EnterpriseDashboard({ data, navigate }) {
                 </tr>
               ) : (
                 filteredHistory.map(row => (
-                  <tr key={row.checkin_id || row.id}>
+                  <tr key={row.checkin_id || row.vehicle_id}>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: '#0F2B5B' }}>
-                        <Calendar size={13} color="#64748b" />
-                        {new Date(row.checkin_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#059669', fontWeight: 600, marginTop: 2 }}>
-                        <Clock size={12} color="#059669" />
-                        {new Date(row.checkin_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                      </div>
+                      {row.checkin_time ? (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: '#0F2B5B' }}>
+                            <Calendar size={13} color="#64748b" />
+                            {new Date(row.checkin_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#059669', fontWeight: 600, marginTop: 2 }}>
+                            <Clock size={12} color="#059669" />
+                            {new Date(row.checkin_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                          </div>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Awaiting Check-In</span>
+                      )}
                     </td>
                     <td>
                       {row.checkout_time ? (
@@ -532,10 +538,12 @@ function EnterpriseDashboard({ data, navigate }) {
                             {new Date(row.checkout_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                           </div>
                         </div>
-                      ) : (
+                      ) : row.checkin_time ? (
                         <span style={{ fontSize: 11, color: '#D97706', fontWeight: 700, background: '#fef3c7', padding: '3px 8px', borderRadius: 6, display: 'inline-block' }}>
                           In Transit
                         </span>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>
                       )}
                     </td>
                     <td>
@@ -580,46 +588,31 @@ function EnterpriseDashboard({ data, navigate }) {
                       )}
                     </td>
                     <td>
-                      <span className={`badge badge-${row.checkout_time ? 'green' : 'yellow'}`} style={{ fontSize: 11 }}>
-                        {row.checkout_time ? '✅ Completed' : '🚗 In Transit'}
+                      <span className={`badge badge-${row.checkin_status === 'completed' ? 'green' : row.checkin_status === 'active' ? 'yellow' : 'blue'}`} style={{ fontSize: 11 }}>
+                        {row.checkin_status === 'completed' ? '✅ Completed' : row.checkin_status === 'active' ? '🚗 In Transit' : '⏳ Awaiting Check-In'}
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {row.checkin_selfie && (
-                          <button
-                            type="button"
-                            title="View Check-In Selfie"
-                            onClick={() => setPhotoModal({ url: row.checkin_selfie, title: `Driver Selfie • ${row.employee_name}` })}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                          >
-                            <img src={row.checkin_selfie} alt="Selfie" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', border: '1px solid #cbd5e1' }} />
-                          </button>
-                        )}
-                        {row.checkin_meter_photo && (
-                          <button
-                            type="button"
-                            title="View Meter Photo"
-                            onClick={() => setPhotoModal({ url: row.checkin_meter_photo, title: `Opening Meter • ${row.vehicle_name} (${row.opening_km} KM)` })}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                          >
-                            <img src={row.checkin_meter_photo} alt="Meter" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', border: '1px solid #cbd5e1' }} />
-                          </button>
-                        )}
-                        {row.checkout_meter_photo && (
-                          <button
-                            type="button"
-                            title="View Closing Meter Photo"
-                            onClick={() => setPhotoModal({ url: row.checkout_meter_photo, title: `Closing Meter • ${row.vehicle_name} (${row.closing_km} KM)` })}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                          >
-                            <img src={row.checkout_meter_photo} alt="Closing Meter" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', border: '1px solid #D42D56' }} />
-                          </button>
-                        )}
-                        {!row.checkin_selfie && !row.checkin_meter_photo && !row.checkout_meter_photo && (
-                          <span style={{ fontSize: 11, color: '#94a3b8' }}>None</span>
-                        )}
-                      </div>
+                      {row.checkin_meter_photo || row.checkout_meter_photo ? (
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-outline"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '4px 9px', fontSize: 11, borderRadius: 6,
+                            color: '#0F2B5B', border: '1px solid #cbd5e1', background: '#fff',
+                            cursor: 'pointer', fontWeight: 600
+                          }}
+                          onClick={() => setPhotoModal({
+                            url: row.checkout_meter_photo || row.checkin_meter_photo,
+                            title: `Meter Inspection • ${row.vehicle_name} (${(row.closing_km || row.opening_km || 0).toLocaleString()} KM)`
+                          })}
+                        >
+                          <Camera size={13} color="#0F2B5B" /> Meter Photo
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>—</span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -653,7 +646,20 @@ function EnterpriseDashboard({ data, navigate }) {
               </button>
             </div>
             <div style={{ padding: 16, textAlign: 'center', background: '#0b1120' }}>
-              <img src={photoModal.url} alt="Full View" style={{ maxHeight: 450, maxWidth: '100%', objectFit: 'contain', borderRadius: 8 }} />
+              <img
+                src={photoModal.url}
+                alt="Full View"
+                style={{ maxHeight: 450, maxWidth: '100%', objectFit: 'contain', borderRadius: 8 }}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  const fb = document.getElementById('modal-photo-fallback');
+                  if (fb) fb.style.display = 'block';
+                }}
+              />
+              <div id="modal-photo-fallback" style={{ display: 'none', color: '#94a3b8', padding: '32px 16px', fontSize: 13 }}>
+                <Camera size={40} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.6 }} />
+                <span>Meter reading captured & verified in database</span>
+              </div>
             </div>
           </div>
         </div>

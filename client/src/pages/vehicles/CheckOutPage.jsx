@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import './CheckInPage.css';
 
-const STEPS = ['Scan QR', 'GPS', 'Selfie', 'Meter Photo', 'Confirm'];
+const STEPS = ['Scan QR', 'GPS', 'Meter Photo', 'Confirm'];
 
 export default function CheckOutPage() {
   const { user } = useAuth();
@@ -22,7 +22,6 @@ export default function CheckOutPage() {
 
   const [scannedVehicle, setScannedVehicle] = useState(null);
   const [gps, setGps] = useState(null);
-  const [selfieBlob, setSelfieBlob] = useState(null);
   const [meterBlob, setMeterBlob] = useState(null);
   const [meterPreview, setMeterPreview] = useState(null);
   const [meterReading, setMeterReading] = useState('');
@@ -63,14 +62,14 @@ export default function CheckOutPage() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setStep(attOnlyMode ? 4 : 2);
+        setStep(attOnlyMode ? 3 : 2);
         setLoading(false);
         toast.success('GPS captured');
       },
       (err) => {
         // Fallback default coordinates if GPS permission denied
         setGps({ lat: 31.4504, lng: 73.1350 });
-        setStep(attOnlyMode ? 4 : 2);
+        setStep(attOnlyMode ? 3 : 2);
         setLoading(false);
         toast.warning('Using approximate GPS location');
       },
@@ -313,7 +312,7 @@ export default function CheckOutPage() {
                 <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
                   <label className="form-label">Closing Meter Reading (KM) *</label>
                   <input className="form-input" type="number" step="0.1" placeholder="Enter closing odometer" value={meterReading} onChange={(e) => setMeterReading(e.target.value)}
-                         style={{ fontSize: 'var(--text-xl)', fontWeight: 700, textAlign: 'center' }} autoFocus />
+                    style={{ fontSize: 'var(--text-xl)', fontWeight: 700, textAlign: 'center' }} autoFocus />
                 </div>
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', marginTop: 'var(--space-2)' }}>
                   Opening: {parseFloat(todayStatus?.checkin?.meter_reading || 0).toLocaleString()} km
@@ -356,18 +355,18 @@ function QRStep({ onScan, checkinInfo, isAttOnly }) {
     if (!checkinInfo) {
       api.get('/vehicle-assignments/my').then(res => {
         if (res?.assignment) setMyAssignment(res.assignment);
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     import('html5-qrcode').then(({ Html5Qrcode }) => {
       const scanner = new Html5Qrcode('qr-reader-out');
       html5QrRef.current = scanner;
-      scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScan, () => {}).catch(err => {
+      scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScan, () => { }).catch(err => {
         console.warn('QR scanner notice:', err);
         setCameraError(true);
       });
     });
-    return () => { html5QrRef.current?.stop().catch(() => {}); };
+    return () => { html5QrRef.current?.stop().catch(() => { }); };
   }, [checkinInfo]);
 
   const activeVehicle = checkinInfo || myAssignment;
@@ -388,7 +387,7 @@ function QRStep({ onScan, checkinInfo, isAttOnly }) {
       <h3><QrCode size={20} /> {isAttOnly ? 'Scan Bike QR Code' : 'Scan Vehicle QR Code'}</h3>
       <p>{isAttOnly ? 'Scan your assigned bike QR or click verify to proceed with attendance check-out' : 'Scan your vehicle QR or use quick verification to begin checkout'}</p>
       <div id="qr-reader-out" style={{ width: '100%', maxWidth: 400, margin: 'var(--space-4) auto', borderRadius: 'var(--radius-md)', overflow: 'hidden' }} />
-      
+
       {cameraError && (
         <div style={{
           padding: 'var(--space-3)', background: 'rgba(230, 118, 45, 0.1)', border: '1px solid var(--color-primary-orange)',
@@ -428,7 +427,7 @@ function CameraStep({ label, onCapture }) {
   useEffect(() => {
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } })
       .then(stream => { streamRef.current = stream; if (videoRef.current) videoRef.current.srcObject = stream; })
-      .catch(() => {});
+      .catch(() => { });
     return () => { streamRef.current?.getTracks().forEach(t => t.stop()); };
   }, []);
 

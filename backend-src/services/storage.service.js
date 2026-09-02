@@ -82,14 +82,19 @@ class StorageService {
 
     // 3. Fallback: Return relative upload path or base64 Data URI for durable persistence if local file
     if (file.path && fs.existsSync(file.path)) {
-      const filename = path.basename(file.path);
-      return `/uploads/${folder}/${filename}`;
+      try {
+        const fileBuffer = fs.readFileSync(file.path);
+        const mime = file.mimetype || 'image/jpeg';
+        return `data:${mime};base64,${fileBuffer.toString('base64')}`;
+      } catch {
+        const filename = path.basename(file.path);
+        return `/uploads/${folder}/${filename}`;
+      }
     }
 
     if (file.buffer) {
-      const ext = (file.mimetype && file.mimetype.includes('png')) ? 'png' : 'jpg';
-      const filename = `${folder}-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`;
-      return `/uploads/${folder}/${filename}`;
+      const mime = file.mimetype || 'image/jpeg';
+      return `data:${mime};base64,${file.buffer.toString('base64')}`;
     }
 
     return null;

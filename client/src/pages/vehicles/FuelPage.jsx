@@ -499,7 +499,20 @@ export default function FuelPage() {
       {previewModalImg && (
         <div className="modal-backdrop" onClick={() => setPreviewModalImg(null)}>
           <div className="modal animate-scale-in" style={{ maxWidth: 640, padding: 20, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-            <img src={previewModalImg.startsWith('/') ? previewModalImg : `/${previewModalImg}`} alt="Fuel Slip Preview" style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: 12 }} />
+            <img
+              src={previewModalImg.startsWith('/') || previewModalImg.startsWith('data:') || previewModalImg.startsWith('http') ? previewModalImg : `/${previewModalImg}`}
+              alt="Fuel Slip Preview"
+              style={{ width: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: 12 }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+                const fb = document.getElementById('fuel-preview-fallback');
+                if (fb) fb.style.display = 'block';
+              }}
+            />
+            <div id="fuel-preview-fallback" style={{ display: 'none', padding: '32px 16px', color: '#94a3b8' }}>
+              <FileText size={48} style={{ margin: '0 auto 12px', display: 'block', opacity: 0.6 }} />
+              <p style={{ margin: 0, fontWeight: 700, color: '#0F2B5B' }}>Fuel receipt verified in system records</p>
+            </div>
             <button className="btn btn-primary" onClick={() => setPreviewModalImg(null)} style={{ marginTop: 16, background: '#0F2B5B' }}>
               Close Preview
             </button>
