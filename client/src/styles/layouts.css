@@ -356,7 +356,9 @@
 /* ─── Page Layout ─── */
 .page {
   padding: var(--space-8);
-  max-width: var(--content-max-width);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   animation: fadeInUp 0.4s ease-out;
 }
 

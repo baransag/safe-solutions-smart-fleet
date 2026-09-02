@@ -272,10 +272,9 @@ export default function MonthlyReportsPage() {
         { name: 'Type', w: 100 },
         { name: 'Check-In', w: 120 },
         { name: 'Check-Out', w: 120 },
-        { name: 'Office / Site', w: 220 },
-        { name: 'GPS Status', w: 140 },
-        { name: 'Status', w: 110 },
-        { name: 'Work Duration', w: 130 }
+        { name: 'Office / Site', w: 260 },
+        { name: 'GPS Status', w: 170 },
+        { name: 'Status', w: 140 }
       ];
 
       const dScale = tableWidth / detailCols.reduce((s, c) => s + c.w, 0);
@@ -323,8 +322,7 @@ export default function MonthlyReportsPage() {
             timeOutStr,
             r.location_name || r.project_name || 'Head Office',
             r.gps_status || 'Inside Office',
-            r.approval_status ? r.approval_status.toUpperCase() : 'APPROVED',
-            durationStr
+            r.approval_status ? r.approval_status.toUpperCase() : 'APPROVED'
           ];
 
           let rx = tableStartX;
@@ -709,7 +707,6 @@ export default function MonthlyReportsPage() {
                                       <th style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, fontSize: 11 }}>Office / Site</th>
                                       <th style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, fontSize: 11 }}>GPS Status</th>
                                       <th style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, fontSize: 11 }}>Status</th>
-                                      <th style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, fontSize: 11 }}>Work Duration</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -747,14 +744,11 @@ export default function MonthlyReportsPage() {
                                               {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
                                             </span>
                                           </td>
-                                          <td style={{ padding: '6px 10px', fontWeight: 700, color: '#0F2B5B' }}>
-                                            {getWorkDuration(r.check_in_time, r.check_out_time, r.work_hours)}
-                                          </td>
                                         </tr>
                                       ))
                                     ) : (
                                       <tr>
-                                        <td colSpan={8} style={{ padding: 12, textAlign: 'center', color: '#94a3b8' }}>
+                                        <td colSpan={7} style={{ padding: 12, textAlign: 'center', color: '#94a3b8' }}>
                                           No detailed records found for this employee.
                                         </td>
                                       </tr>

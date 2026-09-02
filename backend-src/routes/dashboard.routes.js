@@ -57,7 +57,7 @@ router.get('/manager', authenticate, authorize('manager', 'controller', 'boss', 
 
     const [
       vehicleStats, todayCheckins, pendingFuel, weeklyKm, monthlyKm,
-      alerts, recentCheckouts, attendanceStats, activeEmployeesCount, vehiclesList
+      alerts, recentCheckouts, vehicleCheckinHistory, attendanceStats, activeEmployeesCount, vehiclesList
     ] = await Promise.all([
       query(`SELECT
               COUNT(*) as total_vehicles,
@@ -92,6 +92,21 @@ router.get('/manager', authenticate, authorize('manager', 'controller', 'boss', 
              WHERE vo.checkout_time::date = $1
              ORDER BY vo.checkout_time DESC LIMIT 20`, [today]),
 
+      query(`SELECT 
+              vc.id as checkin_id, vc.vehicle_id, v.name as vehicle_name, v.number_plate, v.vehicle_id as vehicle_code,
+              e.id as employee_id, e.name as employee_name, e.employee_id as emp_code, e.designation,
+              vc.checkin_time, vc.meter_reading as opening_km, vc.gps_address as checkin_location,
+              vc.selfie_url as checkin_selfie, vc.meter_photo_url as checkin_meter_photo,
+              vo.id as checkout_id, vo.checkout_time, vo.meter_reading as closing_km,
+              vo.distance_km, vo.duration_minutes, vo.gps_address as checkout_location,
+              vo.selfie_url as checkout_selfie, vo.meter_photo_url as checkout_meter_photo,
+              vc.status as checkin_status
+             FROM vehicle_checkins vc
+             JOIN vehicles v ON v.id = vc.vehicle_id
+             JOIN employees e ON e.id = vc.employee_id
+             LEFT JOIN vehicle_checkouts vo ON vo.checkin_id = vc.id
+             ORDER BY vc.checkin_time DESC LIMIT 50`),
+
       query(`SELECT
               COUNT(*) as total_attendance,
               COUNT(CASE WHEN attendance_type = 'office' THEN 1 END) as office_present,
@@ -123,6 +138,7 @@ router.get('/manager', authenticate, authorize('manager', 'controller', 'boss', 
       monthlyKm: monthlyKm?.rows?.[0] || { total_km: 0 },
       alerts: alerts?.rows || [],
       recentCheckouts: recentCheckouts?.rows || [],
+      vehicleCheckinHistory: vehicleCheckinHistory?.rows || [],
       activeEmployees: parseInt(activeEmployeesCount?.rows?.[0]?.count || 0),
       vehiclesList: vehiclesList?.rows || [],
       employeeAttendance: {
@@ -151,7 +167,7 @@ router.get('/controller', authenticate, authorize('manager', 'controller', 'boss
     const [
       todayKm, weeklyKm, monthlyKm, fuelCost, vehicleHealth,
       serviceDue, pendingVehicles, alerts, attendanceStats,
-      activeEmployeesCount, pendingFuel, vehiclesList
+      activeEmployeesCount, pendingFuel, vehiclesList, vehicleCheckinHistory
     ] = await Promise.all([
       query(`SELECT COALESCE(SUM(distance_km), 0) as total FROM vehicle_checkouts WHERE checkout_time::date = $1`, [today]),
       query(`SELECT COALESCE(SUM(distance_km), 0) as total FROM vehicle_checkouts WHERE checkout_time::date >= $1`, [weekAgo]),
@@ -187,7 +203,21 @@ router.get('/controller', authenticate, authorize('manager', 'controller', 'boss
              LEFT JOIN vehicle_assignments va ON va.vehicle_id = v.id AND va.is_current = true
              LEFT JOIN employees e ON e.id = va.employee_id
              WHERE v.is_active = true
-             ORDER BY v.id ASC`)
+             ORDER BY v.id ASC`),
+      query(`SELECT 
+              vc.id as checkin_id, vc.vehicle_id, v.name as vehicle_name, v.number_plate, v.vehicle_id as vehicle_code,
+              e.id as employee_id, e.name as employee_name, e.employee_id as emp_code, e.designation,
+              vc.checkin_time, vc.meter_reading as opening_km, vc.gps_address as checkin_location,
+              vc.selfie_url as checkin_selfie, vc.meter_photo_url as checkin_meter_photo,
+              vo.id as checkout_id, vo.checkout_time, vo.meter_reading as closing_km,
+              vo.distance_km, vo.duration_minutes, vo.gps_address as checkout_location,
+              vo.selfie_url as checkout_selfie, vo.meter_photo_url as checkout_meter_photo,
+              vc.status as checkin_status
+             FROM vehicle_checkins vc
+             JOIN vehicles v ON v.id = vc.vehicle_id
+             JOIN employees e ON e.id = vc.employee_id
+             LEFT JOIN vehicle_checkouts vo ON vo.checkin_id = vc.id
+             ORDER BY vc.checkin_time DESC LIMIT 50`)
     ]);
 
     const attRow = attendanceStats?.rows?.[0] || {};
@@ -204,6 +234,7 @@ router.get('/controller', authenticate, authorize('manager', 'controller', 'boss
       activeEmployees: parseInt(activeEmployeesCount?.rows?.[0]?.count || 0),
       pendingFuel: parseInt(pendingFuel?.rows?.[0]?.pending || 0),
       vehiclesList: vehiclesList?.rows || [],
+      vehicleCheckinHistory: vehicleCheckinHistory?.rows || [],
       employeeAttendance: {
         total_attendance: parseInt(attRow.total_attendance || 0),
         office_present: parseInt(attRow.office_present || 0),

@@ -394,9 +394,25 @@ export default function AttendancePage() {
           <p className="page-description">Complete Unified Hub for Office Attendance, Site Attendance & Vehicle Attendance</p>
         </div>
 
-        <button className="btn btn-secondary btn-sm" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <RefreshCw size={14} /> Refresh Status
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: 'linear-gradient(135deg, #0F2B5B 0%, #1e3a8a 100%)',
+            color: '#fff', padding: '8px 16px', borderRadius: 12,
+            boxShadow: '0 4px 12px rgba(15, 43, 91, 0.2)'
+          }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', display: 'inline-block', boxShadow: '0 0 8px #10B981' }} />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#93c5fd' }}>Live Operational Clock</span>
+              <span style={{ fontSize: 15, fontWeight: 900, fontFamily: 'monospace', letterSpacing: '0.04em' }}>
+                {new Date(nowTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+              </span>
+            </div>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 42 }}>
+            <RefreshCw size={14} /> Refresh Status
+          </button>
+        </div>
       </div>
 
       {/* TOP TAB SWITCHER FOR UNIFIED ATTENDANCE CENTER */}
@@ -443,7 +459,7 @@ export default function AttendancePage() {
               <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                 Check-In: {new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                 {todayAttendance.check_out_time && (
-                  <> • Check-Out: {new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} (Duration: {getCompletedWorkDuration(todayAttendance.check_in_time, todayAttendance.check_out_time, todayAttendance.work_hours)})</>
+                  <> • Check-Out: {new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</>
                 )}
                 {' '}• GPS: 📍 {todayAttendance.gps_status || 'Inside Radius'} ({todayAttendance.distance_meters || 0}m distance)
               </p>
@@ -452,7 +468,7 @@ export default function AttendancePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {!todayAttendance.check_out_time ? (
                 <div style={{ textAlign: 'right', padding: '6px 12px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 10, border: '1px solid rgba(16, 185, 129, 0.25)' }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em' }}>🟢 WORKING NOW</div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em' }}>🟢 LIVE TIME</div>
                   <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
                     {new Date(nowTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                   </div>
@@ -460,8 +476,8 @@ export default function AttendancePage() {
               ) : (
                 <div style={{ textAlign: 'right', padding: '6px 12px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 10 }}>
                   <div style={{ fontSize: 10, fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>✓ COMPLETED</div>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#047857' }}>
-                    {getCompletedWorkDuration(todayAttendance.check_in_time, todayAttendance.check_out_time, todayAttendance.work_hours)}
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#047857' }}>
+                    {new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                   </div>
                 </div>
               )}
@@ -533,7 +549,7 @@ export default function AttendancePage() {
               <CheckCircle2 size={36} color="#10B981" style={{ margin: '0 auto 8px' }} />
               <h4 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800, color: '#10B981' }}>Office Attendance Completed for Today</h4>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
-                Check-In: {new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} • Check-Out: {new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} • Total Duration: {getCompletedWorkDuration(todayAttendance.check_in_time, todayAttendance.check_out_time, todayAttendance.work_hours)}
+                Check-In: {new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} • Check-Out: {new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
               </p>
             </div>
           ) : (
@@ -699,9 +715,9 @@ export default function AttendancePage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ textAlign: 'right', padding: '6px 14px', background: 'rgba(16, 185, 129, 0.12)', borderRadius: 10, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                      <div style={{ fontSize: 10, fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>🟢 WORKING NOW</div>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>🟢 LIVE TIME</div>
                       <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
-                        {getLiveWorkTimer(todayAttendance.check_in_time)}
+                        {new Date(nowTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                       </div>
                     </div>
                     <span className={`badge badge-${todayAttendance.approval_status === 'approved' ? 'green' : 'yellow'}`}>
@@ -766,7 +782,7 @@ export default function AttendancePage() {
               <h4 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800, color: '#10B981' }}>Site Attendance Completed for Today</h4>
               <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{todayAttendance.project_name || 'On-Site Project'} ({todayAttendance.location_name || 'Site'})</p>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
-                Check-In: {new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} • Check-Out: {new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} • Total Duration: {getCompletedWorkDuration(todayAttendance.check_in_time, todayAttendance.check_out_time, todayAttendance.work_hours)}
+                Check-In: {new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} • Check-Out: {new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
               </p>
             </div>
           ) : (
@@ -978,7 +994,6 @@ export default function AttendancePage() {
                       <th>Office / Site Name</th>
                       <th>GPS Status</th>
                       <th style={{ width: 110 }}>Status</th>
-                      <th style={{ width: 120 }}>Work Duration</th>
                       <th>Approved By</th>
                     </tr>
                   </thead>
@@ -1029,15 +1044,6 @@ export default function AttendancePage() {
                           <span className={`badge badge-${r.approval_status === 'approved' ? 'green' : r.approval_status === 'rejected' ? 'red' : 'yellow'}`} style={{ fontSize: 11 }}>
                             {r.approval_status === 'approved' ? '✅ Approved' : r.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending'}
                           </span>
-                        </td>
-                        <td>
-                          {r.check_out_time ? (
-                            <span style={{ fontSize: 12, color: '#0F2B5B', fontWeight: 800 }}>
-                              {getWorkDuration(r.check_in_time, r.check_out_time, r.work_hours)}
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: 11, color: '#059669', fontWeight: 700 }}>🟢 Working</span>
-                          )}
                         </td>
                         <td>
                           <span style={{ fontSize: 11, color: r.approved_by_name ? 'var(--color-success)' : 'var(--text-tertiary)', fontWeight: 500 }}>
@@ -1099,13 +1105,6 @@ export default function AttendancePage() {
                           <span className="mobile-card-label">GPS Radius</span>
                           <span className="mobile-card-value" style={{ fontSize: 11, color: 'var(--color-info)' }}>
                             📍 {r.gps_status || 'Radius Ok'} ({r.distance_meters || 0}m)
-                          </span>
-                        </div>
-
-                        <div className="mobile-card-cell">
-                          <span className="mobile-card-label">Work Duration</span>
-                          <span className="mobile-card-value" style={{ color: '#0F2B5B' }}>
-                            {r.check_out_time ? getWorkDuration(r.check_in_time, r.check_out_time, r.work_hours) : '🟢 Working'}
                           </span>
                         </div>
                       </div>

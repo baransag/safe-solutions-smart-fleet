@@ -87,7 +87,8 @@ export default function HeroSection() {
   };
 
   const getImageUrl = (url) => {
-    if (!url) return '/assets/images/logo.jpeg';
+    if (!url) return '/assets/images/hero-1.jpeg';
+    if (url.startsWith('data:')) return url;
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     if (url.startsWith('/assets/')) return url;
     if (url.startsWith('/uploads/')) {
@@ -133,7 +134,11 @@ export default function HeroSection() {
                 <img
                   src={getImageUrl(slide.media_url || slide.image_url)}
                   alt={slide.title || 'Hero Banner'}
-                  loading="lazy"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/assets/images/hero-1.jpeg';
+                  }}
+                  loading="eager"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               )}

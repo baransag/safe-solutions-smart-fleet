@@ -164,7 +164,7 @@ export default function CheckOutPage() {
                 ✓ Attendance Check-Out Synchronized
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
-                Total Work Duration: {attCheckoutResult.work_hours || 0} hrs • Status: {attCheckoutResult.approval_status === 'approved' ? 'Approved' : 'Pending Approval'}
+                Status: {attCheckoutResult.approval_status === 'approved' ? 'Approved' : 'Pending Approval'}
               </div>
             </div>
           )}

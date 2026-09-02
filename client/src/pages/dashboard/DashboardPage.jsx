@@ -7,7 +7,8 @@ import {
   Car, ClipboardCheck, Route, Fuel, AlertTriangle, Wrench,
   TrendingUp, Users, Clock, MapPin, CheckCircle2, XCircle,
   Building2, HardHat, ShieldCheck, UserX, CalendarCheck, Search,
-  ArrowUpRight, ArrowDownRight, Megaphone, Sparkles, Check, ChevronRight
+  ArrowUpRight, ArrowDownRight, Megaphone, Sparkles, Check, ChevronRight,
+  Calendar, Camera, Eye, X
 } from 'lucide-react';
 import './DashboardPage.css';
 import { getEmployeeAvatar, getAvatarByName } from '../../utils/avatarHelper';
@@ -76,8 +77,6 @@ export default function DashboardPage() {
     weekday: 'long', month: 'short', day: 'numeric', year: 'numeric'
   });
 
-
-
   return (
     <div className="page dashboard-page">
       {/* ─── COMMAND CENTER TOP GREETING HEADER ─── */}
@@ -104,7 +103,25 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #0F2B5B 0%, #1e3a8a 100%)',
+              color: '#fff',
+              padding: '10px 18px',
+              borderRadius: 14,
+              boxShadow: '0 4px 14px rgba(15, 43, 91, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12
+            }}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10B981', boxShadow: '0 0 10px #10B981' }} />
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#93c5fd' }}>Operational Live Time</div>
+                <div style={{ fontSize: 18, fontWeight: 900, fontFamily: 'monospace', letterSpacing: '0.04em' }}>
+                  {new Date(nowTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                </div>
+              </div>
+            </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>☀️ 28°C Clear Skies</div>
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>{todayStr} • Faisalabad, Punjab, Pakistan</div>
@@ -233,9 +250,24 @@ function EmployeeDashboard({ data, navigate }) {
 function EnterpriseDashboard({ data, navigate }) {
   if (!data) return null;
 
+  const [historySearch, setHistorySearch] = useState('');
+  const [photoModal, setPhotoModal] = useState(null);
+
   const empAtt = data.employeeAttendance || {};
   const vehicles = data.vehicles || {};
   const vehiclesList = data.vehiclesList || [];
+  const checkinHistory = data.vehicleCheckinHistory || [];
+
+  const filteredHistory = checkinHistory.filter(h => {
+    if (!historySearch) return true;
+    const term = historySearch.toLowerCase();
+    return (
+      (h.employee_name && h.employee_name.toLowerCase().includes(term)) ||
+      (h.vehicle_name && h.vehicle_name.toLowerCase().includes(term)) ||
+      (h.number_plate && h.number_plate.toLowerCase().includes(term)) ||
+      (h.emp_code && h.emp_code.toLowerCase().includes(term))
+    );
+  });
 
   return (
     <div className="enterprise-dashboard animate-fade-in-up delay-1">
@@ -427,6 +459,223 @@ function EnterpriseDashboard({ data, navigate }) {
           ))}
         </div>
       </div>
+
+      {/* ─── VEHICLE CHECK-IN & CHECK-OUT HISTORY TABLE ─── */}
+      <div className="card-glass animate-fade-in-up" style={{ padding: 24, marginBottom: 32, borderRadius: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <h3 className="section-title" style={{ margin: 0 }}>Vehicle Check-In & Check-Out History</h3>
+              <span className="status-badge badge-blue" style={{ fontSize: 11 }}>
+                {filteredHistory.length} Logged Session{filteredHistory.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <p className="stat-card-sub" style={{ marginTop: 4 }}>
+              Driver odometer readings, opening & closing KM, GPS logs and photographic audit trail
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', minWidth: 240 }}>
+              <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <input
+                type="text"
+                placeholder="Search driver, vehicle or plate..."
+                value={historySearch}
+                onChange={e => setHistorySearch(e.target.value)}
+                style={{
+                  padding: '8px 14px 8px 36px',
+                  borderRadius: 10,
+                  border: '1px solid #cbd5e1',
+                  fontSize: 13,
+                  background: '#fff',
+                  color: '#0F2B5B',
+                  width: '100%',
+                  fontWeight: 600
+                }}
+              />
+            </div>
+            <button className="btn btn-sm btn-secondary" onClick={() => navigate('/check-in')} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ClipboardCheck size={14} /> New Check-In
+            </button>
+            <button className="btn btn-sm btn-primary" onClick={() => navigate('/check-out')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#0F2B5B' }}>
+              <Route size={14} /> New Check-Out
+            </button>
+          </div>
+        </div>
+
+        <div className="table-container hide-on-mobile" style={{ margin: 0, borderRadius: 12, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+          <table className="table" style={{ margin: 0 }}>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                <th>Date & Check-In</th>
+                <th>Check-Out</th>
+                <th>Vehicle</th>
+                <th>Driver / Employee</th>
+                <th>Opening KM</th>
+                <th>Closing KM</th>
+                <th>Distance</th>
+                <th>Status</th>
+                <th>Photos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredHistory.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: 32, color: '#94a3b8' }}>
+                    No vehicle check-in / check-out history records found.
+                  </td>
+                </tr>
+              ) : (
+                filteredHistory.map(row => (
+                  <tr key={row.checkin_id || row.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: '#0F2B5B' }}>
+                        <Calendar size={13} color="#64748b" />
+                        {new Date(row.checkin_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#059669', fontWeight: 600, marginTop: 2 }}>
+                        <Clock size={12} color="#059669" />
+                        {new Date(row.checkin_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                      </div>
+                    </td>
+                    <td>
+                      {row.checkout_time ? (
+                        <div>
+                          <div style={{ fontSize: 12, color: '#D42D56', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Clock size={12} color="#D42D56" />
+                            {new Date(row.checkout_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>
+                            {new Date(row.checkout_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                          </div>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 11, color: '#D97706', fontWeight: 700, background: '#fef3c7', padding: '3px 8px', borderRadius: 6, display: 'inline-block' }}>
+                          In Transit
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 800, color: '#0F2B5B', fontSize: 13 }}>{row.vehicle_name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                        <span style={{ fontSize: 11, fontWeight: 800, background: '#fff1f2', color: '#D42D56', padding: '1px 6px', borderRadius: 4, border: '1px solid rgba(212, 45, 86, 0.2)' }}>
+                          {row.number_plate}
+                        </span>
+                        {row.vehicle_code && <span style={{ fontSize: 10, color: '#64748b' }}>#{row.vehicle_code}</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <img src={getAvatarByName(row.employee_name || 'Driver')} alt="Driver" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }} />
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b' }}>{row.employee_name || 'Driver'}</div>
+                          <div style={{ fontSize: 11, color: '#64748b' }}>{row.emp_code ? `ID: ${row.emp_code}` : (row.designation || 'Staff')}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 700, color: '#0F2B5B', fontSize: 13 }}>
+                        {parseFloat(row.opening_km || 0).toLocaleString()} km
+                      </div>
+                    </td>
+                    <td>
+                      {row.closing_km ? (
+                        <div style={{ fontWeight: 700, color: '#0F2B5B', fontSize: 13 }}>
+                          {parseFloat(row.closing_km).toLocaleString()} km
+                        </div>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: 12 }}>Pending</span>
+                      )}
+                    </td>
+                    <td>
+                      {row.distance_km ? (
+                        <span style={{ fontSize: 12, fontWeight: 800, color: '#059669', background: '#dcfce7', padding: '2px 8px', borderRadius: 6 }}>
+                          +{row.distance_km} km
+                        </span>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`badge badge-${row.checkout_time ? 'green' : 'yellow'}`} style={{ fontSize: 11 }}>
+                        {row.checkout_time ? '✅ Completed' : '🚗 In Transit'}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {row.checkin_selfie && (
+                          <button
+                            type="button"
+                            title="View Check-In Selfie"
+                            onClick={() => setPhotoModal({ url: row.checkin_selfie, title: `Driver Selfie • ${row.employee_name}` })}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                          >
+                            <img src={row.checkin_selfie} alt="Selfie" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', border: '1px solid #cbd5e1' }} />
+                          </button>
+                        )}
+                        {row.checkin_meter_photo && (
+                          <button
+                            type="button"
+                            title="View Meter Photo"
+                            onClick={() => setPhotoModal({ url: row.checkin_meter_photo, title: `Opening Meter • ${row.vehicle_name} (${row.opening_km} KM)` })}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                          >
+                            <img src={row.checkin_meter_photo} alt="Meter" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', border: '1px solid #cbd5e1' }} />
+                          </button>
+                        )}
+                        {row.checkout_meter_photo && (
+                          <button
+                            type="button"
+                            title="View Closing Meter Photo"
+                            onClick={() => setPhotoModal({ url: row.checkout_meter_photo, title: `Closing Meter • ${row.vehicle_name} (${row.closing_km} KM)` })}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                          >
+                            <img src={row.checkout_meter_photo} alt="Closing Meter" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', border: '1px solid #D42D56' }} />
+                          </button>
+                        )}
+                        {!row.checkin_selfie && !row.checkin_meter_photo && !row.checkout_meter_photo && (
+                          <span style={{ fontSize: 11, color: '#94a3b8' }}>None</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Inspection Photo Modal */}
+      {photoModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, padding: 20
+          }}
+          onClick={() => setPhotoModal(null)}
+        >
+          <div
+            style={{
+              background: '#fff', borderRadius: 16, maxWidth: 600, width: '100%',
+              overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: '14px 20px', background: '#0F2B5B', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff' }}>{photoModal.title}</h4>
+              <button onClick={() => setPhotoModal(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ padding: 16, textAlign: 'center', background: '#0b1120' }}>
+              <img src={photoModal.url} alt="Full View" style={{ maxHeight: 450, maxWidth: '100%', objectFit: 'contain', borderRadius: 8 }} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

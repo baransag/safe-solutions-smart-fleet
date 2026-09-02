@@ -83,6 +83,7 @@ export default function HeroManagementPage() {
       formData.append('start_date', form.start_date);
       if (form.end_date) formData.append('end_date', form.end_date);
       if (imageFile) formData.append('media_file', imageFile);
+      if (imagePreview) formData.append('image_url', imagePreview);
 
       if (editSlide) {
         await api.put(`/hero-slides/${editSlide.id}`, formData);
