@@ -103,25 +103,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{
-              background: 'linear-gradient(135deg, #0F2B5B 0%, #1e3a8a 100%)',
-              color: '#fff',
-              padding: '10px 18px',
-              borderRadius: 14,
-              boxShadow: '0 4px 14px rgba(15, 43, 91, 0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12
-            }}>
-              <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#10B981', boxShadow: '0 0 10px #10B981' }} />
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#93c5fd' }}>Operational Live Time</div>
-                <div style={{ fontSize: 18, fontWeight: 900, fontFamily: 'monospace', letterSpacing: '0.04em' }}>
-                  {new Date(nowTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-                </div>
-              </div>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>☀️ 28°C Clear Skies</div>
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600 }}>{todayStr} • Faisalabad, Punjab, Pakistan</div>

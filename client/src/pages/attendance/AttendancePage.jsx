@@ -394,25 +394,9 @@ export default function AttendancePage() {
           <p className="page-description">Complete Unified Hub for Office Attendance, Site Attendance & Vehicle Attendance</p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: 'linear-gradient(135deg, #0F2B5B 0%, #1e3a8a 100%)',
-            color: '#fff', padding: '8px 16px', borderRadius: 12,
-            boxShadow: '0 4px 12px rgba(15, 43, 91, 0.2)'
-          }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', display: 'inline-block', boxShadow: '0 0 8px #10B981' }} />
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#93c5fd' }}>Live Operational Clock</span>
-              <span style={{ fontSize: 15, fontWeight: 900, fontFamily: 'monospace', letterSpacing: '0.04em' }}>
-                {new Date(nowTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-              </span>
-            </div>
-          </div>
-          <button className="btn btn-secondary btn-sm" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 42 }}>
-            <RefreshCw size={14} /> Refresh Status
-          </button>
-        </div>
+        <button className="btn btn-secondary btn-sm" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <RefreshCw size={14} /> Refresh Status
+        </button>
       </div>
 
       {/* TOP TAB SWITCHER FOR UNIFIED ATTENDANCE CENTER */}
@@ -466,21 +450,6 @@ export default function AttendancePage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {!todayAttendance.check_out_time ? (
-                <div style={{ textAlign: 'right', padding: '6px 12px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 10, border: '1px solid rgba(16, 185, 129, 0.25)' }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em' }}>🟢 LIVE TIME</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
-                    {new Date(nowTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ textAlign: 'right', padding: '6px 12px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: 10 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>✓ COMPLETED</div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#047857' }}>
-                    {new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                  </div>
-                </div>
-              )}
               <span className={`badge badge-${todayAttendance.approval_status === 'approved' ? 'green' : todayAttendance.approval_status === 'rejected' ? 'red' : 'yellow'}`}>
                 {todayAttendance.approval_status === 'approved' ? '✅ Approved' : todayAttendance.approval_status === 'rejected' ? '❌ Rejected' : '⏳ Pending Approval'}
               </span>
@@ -525,12 +494,6 @@ export default function AttendancePage() {
                     <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
                       Checked in at {new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
                     </p>
-                  </div>
-                  <div style={{ textAlign: 'right', padding: '6px 14px', background: 'rgba(16, 185, 129, 0.12)', borderRadius: 10, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>🟢 WORKING NOW</div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
-                      {getLiveWorkTimer(todayAttendance.check_in_time)}
-                    </div>
                   </div>
                 </div>
               </div>
@@ -714,12 +677,6 @@ export default function AttendancePage() {
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ textAlign: 'right', padding: '6px 14px', background: 'rgba(16, 185, 129, 0.12)', borderRadius: 10, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                      <div style={{ fontSize: 10, fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>🟢 LIVE TIME</div>
-                      <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
-                        {new Date(nowTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-                      </div>
-                    </div>
                     <span className={`badge badge-${todayAttendance.approval_status === 'approved' ? 'green' : 'yellow'}`}>
                       {todayAttendance.approval_status === 'approved' ? '✅ Approved' : '⏳ Pending Approval'}
                     </span>

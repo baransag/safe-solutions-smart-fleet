@@ -34,7 +34,6 @@ export default function Header({ onMenuClick }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all' | 'unread'
-  const [liveTime, setLiveTime] = useState(new Date());
   const dropdownRef = useRef(null);
 
   const pageName = pageNames[location.pathname] || 'SAFE SOLUTIONS FleetOps';
@@ -42,14 +41,12 @@ export default function Header({ onMenuClick }) {
   useEffect(() => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 5000);
-    const clockInterval = setInterval(() => setLiveTime(new Date()), 1000);
 
     const handleSync = () => fetchNotifications();
     window.addEventListener('app:data-sync', handleSync);
 
     return () => {
       clearInterval(interval);
-      clearInterval(clockInterval);
       window.removeEventListener('app:data-sync', handleSync);
     };
   }, []);
@@ -398,30 +395,21 @@ export default function Header({ onMenuClick }) {
           )}
         </div>
 
-        {/* Live Operational Clock Display Pill */}
+        {/* Date Display Pill */}
         <div
+          className="hide-on-mobile"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            background: 'linear-gradient(135deg, #0F2B5B 0%, #1e3a8a 100%)',
-            padding: '6px 14px',
+            background: 'var(--bg-primary)',
+            padding: '8px 16px',
             borderRadius: 'var(--radius-full)',
-            boxShadow: '0 2px 10px rgba(15, 43, 91, 0.25)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            color: '#FFFFFF'
+            boxShadow: 'var(--shadow-sm)',
+            border: '1px solid #E2E8F0',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 700,
+            color: '#0F2B5B'
           }}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 800, color: '#34D399', letterSpacing: '0.04em' }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981', display: 'inline-block', boxShadow: '0 0 8px #10B981' }} />
-            LIVE
-          </span>
-          <span style={{ fontSize: 13, fontWeight: 900, fontFamily: 'monospace', letterSpacing: '0.04em', color: '#FFFFFF' }}>
-            {liveTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-          </span>
-          <span className="hide-on-mobile" style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 600, borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 8 }}>
-            {liveTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-          </span>
+          {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
         </div>
       </div>
     </header>
