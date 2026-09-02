@@ -6,12 +6,6 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure media upload directory exists
-const mediaDir = path.join(__dirname, '../../uploads/media');
-if (!fs.existsSync(mediaDir)) {
-  fs.mkdirSync(mediaDir, { recursive: true });
-}
-
 // Configure Multer for Hero Media Uploads (Memory storage for 100% cloud & serverless reliability)
 const upload = multer({
   storage: multer.memoryStorage(),
