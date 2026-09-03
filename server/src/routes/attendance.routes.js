@@ -659,6 +659,10 @@ router.get('/monthly-report', authenticate, authorize('manager', 'controller', '
       summary: summaryRows,
       records: recordRows
     });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // LEAVE & HALF-DAY REQUEST ENDPOINTS
