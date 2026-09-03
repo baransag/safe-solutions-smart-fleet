@@ -571,5 +571,325 @@ router.get('/reports', authenticate, authorize('manager', 'controller', 'boss', 
     res.status(500).json({ error: 'Failed to retrieve attendance reports from database' });
   }
 });
+// GET /api/attendance/monthly-report (Monthly attendance report — READ-ONLY, SELECT queries only)
+router.get('/monthly-report', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
+  try {
+    const { month, employee_id } = req.query;
+
+    // 1. Get all distinct months that have attendance data (for the month selector)
+    const { rows: monthRows } = await query(`
+      SELECT DISTINCT TO_CHAR(check_in_time, 'YYYY-MM') as month_key,
+             TO_CHAR(check_in_time, 'Month YYYY') as month_label,
+             MIN(check_in_time::date) as first_date,
+             MAX(check_in_time::date) as last_date
+      FROM attendance_records
+      GROUP BY TO_CHAR(check_in_time, 'YYYY-MM'), TO_CHAR(check_in_time, 'Month YYYY')
+      ORDER BY month_key DESC
+    `);
+
+    // Ensure current calendar month is always present at top of available months
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (!monthRows.some(m => m.month_key === currentMonthKey)) {
+      const monthLabel = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+      monthRows.unshift({
+        month_key: currentMonthKey,
+        month_label: monthLabel,
+        first_date: `${currentMonthKey}-01`,
+        last_date: null
+      });
+    }
+
+    // If no month selected, return just the available months
+    if (!month) {
+      return res.json({ months: monthRows, summary: [], records: [] });
+    }
+
+    // 2. Employee-wise summary for selected month (LEFT JOIN to ensure all active employees appear)
+    let summarySQL = `
+      SELECT
+        e.id as employee_id,
+        e.name as employee_name,
+        e.employee_id as emp_id,
+        e.designation,
+        COUNT(ar.id) as total_records,
+        COUNT(DISTINCT ar.check_in_time::date) as present_days,
+        COUNT(CASE WHEN ar.attendance_type = 'office' THEN 1 END) as office_checkins,
+        COUNT(CASE WHEN ar.attendance_type = 'site' THEN 1 END) as site_checkins,
+        COUNT(CASE WHEN ar.check_out_time IS NOT NULL THEN 1 END) as checkouts,
+        COUNT(CASE WHEN ar.id IS NOT NULL AND ar.check_out_time IS NULL THEN 1 END) as missing_checkouts,
+        COALESCE(SUM(ar.work_hours), 0) as total_work_hours
+      FROM employees e
+      LEFT JOIN attendance_records ar ON ar.employee_id = e.id AND TO_CHAR(ar.check_in_time, 'YYYY-MM') = $1
+      WHERE e.is_active = true
+    `;
+    const summaryParams = [month];
+
+    if (employee_id && employee_id !== 'all') {
+      summaryParams.push(employee_id);
+      summarySQL += ` AND (e.id::text = $${summaryParams.length} OR e.employee_id = $${summaryParams.length})`;
+    }
+
+    summarySQL += ` GROUP BY e.id, e.name, e.employee_id, e.designation ORDER BY e.name`;
+
+    const { rows: summaryRows } = await query(summarySQL, summaryParams);
+
+    // 3. Detailed records for selected month
+    let recordsSQL = `
+      SELECT ar.*, e.name as employee_name, e.employee_id as emp_id, e.designation,
+             app.name as approved_by_name
+      FROM attendance_records ar
+      JOIN employees e ON e.id = ar.employee_id
+      LEFT JOIN employees app ON app.id = ar.approved_by
+      WHERE TO_CHAR(ar.check_in_time, 'YYYY-MM') = $1
+    `;
+    const recordsParams = [month];
+
+    if (employee_id && employee_id !== 'all') {
+      recordsParams.push(employee_id);
+      recordsSQL += ` AND (ar.employee_id::text = $${recordsParams.length} OR e.employee_id = $${recordsParams.length})`;
+    }
+
+    recordsSQL += ` ORDER BY ar.check_in_time DESC`;
+
+    const { rows: recordRows } = await query(recordsSQL, recordsParams);
+
+    res.json({
+      months: monthRows,
+      summary: summaryRows,
+      records: recordRows
+    });
+
+// ═══════════════════════════════════════════════════════════════════
+// LEAVE & HALF-DAY REQUEST ENDPOINTS
+// ═══════════════════════════════════════════════════════════════════
+
+// POST /api/attendance/leave-request - Submit full day / half day / short leave request
+router.post('/leave-request', authenticate, async (req, res, next) => {
+  try {
+    const {
+      request_type = 'full_day',
+      half_day_slot = 'none',
+      leave_reason = 'casual',
+      start_date,
+      end_date,
+      total_days = 1.0,
+      notes,
+      emergency_phone
+    } = req.body;
+
+    if (!start_date) {
+      return res.status(400).json({ error: 'Start date is required for leave request' });
+    }
+
+    const employeeId = req.user.id;
+    const finalEndDate = end_date || start_date;
+    const calcDays = request_type === 'half_day' ? 0.5 : request_type === 'short_leave' ? 0.25 : parseFloat(total_days) || 1.0;
+
+    const { rows } = await query(
+      `INSERT INTO leave_requests
+       (employee_id, request_type, half_day_slot, leave_reason, start_date, end_date, total_days, notes, emergency_phone, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+       RETURNING *`,
+      [employeeId, request_type, half_day_slot, leave_reason, start_date, finalEndDate, calcDays, notes, emergency_phone]
+    );
+
+    // Notify Controllers and Managers
+    const { rows: admins } = await query(
+      `SELECT id FROM employees WHERE role IN ('manager', 'controller', 'boss', 'admin') AND is_active = true`
+    );
+    const leaveLabel = request_type === 'half_day'
+      ? `Half-Day (${half_day_slot === 'first_half_morning' ? 'Morning' : 'Afternoon'})`
+      : request_type === 'short_leave' ? 'Short Leave / Gate Pass' : 'Full Day Leave';
+
+    for (const adm of admins) {
+      await query(
+        `INSERT INTO notifications (user_id, title, message, type, link, metadata)
+         VALUES ($1, 'New Leave / Half-Day Request', $2, 'info', '/approvals', $3)`,
+        [
+          adm.id,
+          `${req.user.name} submitted a ${leaveLabel} request for ${start_date}. Reason: ${leave_reason}.`,
+          JSON.stringify({
+            leave_id: rows[0].id,
+            employee_name: req.user.name,
+            request_type,
+            start_date,
+            reason: leave_reason
+          })
+        ]
+      );
+    }
+
+    res.status(201).json({ message: 'Leave request submitted successfully!', request: rows[0] });
+  } catch (err) {
+    console.error('Leave request error:', err.message);
+    next(err);
+  }
+});
+
+// GET /api/attendance/leave-requests/my - Get current user's leave requests
+router.get('/leave-requests/my', authenticate, async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      `SELECT lr.*, e.name as employee_name, e.employee_id as emp_code,
+              app.name as actioned_by_name
+       FROM leave_requests lr
+       JOIN employees e ON e.id = lr.employee_id
+       LEFT JOIN employees app ON app.id = lr.actioned_by
+       WHERE lr.employee_id = $1
+       ORDER BY lr.created_at DESC
+       LIMIT 50`,
+      [req.user.id]
+    );
+    res.json({ requests: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/attendance/leave-requests/pending - Pending requests for Approval Center (manager/controller)
+router.get('/leave-requests/pending', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      `SELECT lr.*, e.name as employee_name, e.employee_id as emp_code, e.designation, e.department, e.phone
+       FROM leave_requests lr
+       JOIN employees e ON e.id = lr.employee_id
+       WHERE lr.status = 'pending'
+       ORDER BY lr.created_at ASC`
+    );
+    res.json({ requests: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/attendance/leave-requests/all - All requests with filters for managers
+router.get('/leave-requests/all', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
+  try {
+    const { status, month, employee_id } = req.query;
+    let sql = `
+      SELECT lr.*, e.name as employee_name, e.employee_id as emp_code, e.designation, e.department,
+             app.name as actioned_by_name
+      FROM leave_requests lr
+      JOIN employees e ON e.id = lr.employee_id
+      LEFT JOIN employees app ON app.id = lr.actioned_by
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (status && status !== 'all') {
+      params.push(status);
+      sql += ` AND lr.status = $${params.length}`;
+    }
+    if (month) {
+      params.push(month);
+      sql += ` AND TO_CHAR(lr.start_date, 'YYYY-MM') = $${params.length}`;
+    }
+    if (employee_id && employee_id !== 'all') {
+      params.push(employee_id);
+      sql += ` AND lr.employee_id = $${params.length}`;
+    }
+
+    sql += ` ORDER BY lr.created_at DESC LIMIT 200`;
+
+    const { rows } = await query(sql, params);
+    res.json({ requests: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/attendance/leave-requests/:id/action - Approve or Reject request
+router.patch('/leave-requests/:id/action', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, manager_remarks } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Status must be either approved or rejected' });
+    }
+
+    const { rows } = await query(
+      `UPDATE leave_requests
+       SET status = $1,
+           manager_remarks = $2,
+           actioned_by = $3,
+           actioned_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $4
+       RETURNING *`,
+      [status, manager_remarks || (status === 'approved' ? 'Approved by Manager' : 'Rejected by Manager'), req.user.id, id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Leave request not found' });
+    }
+
+    const reqRecord = rows[0];
+
+    // Notify employee of decision
+    await query(
+      `INSERT INTO notifications (user_id, title, message, type, link, metadata)
+       VALUES ($1, $2, $3, $4, '/attendance', $5)`,
+      [
+        reqRecord.employee_id,
+        `Leave Request ${status.toUpperCase()}`,
+        `Your leave request for ${reqRecord.start_date} has been ${status}. Remarks: ${manager_remarks || 'None'}`,
+        status === 'approved' ? 'success' : 'error',
+        JSON.stringify({ leave_id: id, status })
+      ]
+    );
+
+    res.json({ message: `Leave request ${status} successfully!`, request: reqRecord });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/attendance/manual - Manual Attendance Entry by Controller/Manager
+router.post('/manual', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
+  try {
+    const { employee_id, attendance_type, check_in_time, check_out_time, location_name, project_name, status, notes } = req.body;
+
+    if (!employee_id) {
+      return res.status(400).json({ error: 'employee_id is required' });
+    }
+
+    const inTime = check_in_time ? new Date(check_in_time).toISOString() : new Date().toISOString();
+    const outTime = check_out_time ? new Date(check_out_time).toISOString() : null;
+
+    let workHours = null;
+    if (outTime) {
+      const diffMs = new Date(outTime) - new Date(inTime);
+      workHours = Math.max(0, +(diffMs / (1000 * 60 * 60)).toFixed(2));
+    }
+
+    const { rows } = await query(
+      `INSERT INTO attendance_records (
+        employee_id, check_in_time, check_out_time, attendance_type,
+        location_name, project_name, status, approval_status,
+        approved_by, approved_at, notes, work_hours, gps_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved', $8, NOW(), $9, $10, 'Manual Entry by Management')
+      RETURNING *`,
+      [
+        employee_id,
+        inTime,
+        outTime,
+        attendance_type || 'office',
+        location_name || 'Head Office Faisalabad',
+        project_name || 'SAFE SOLUTIONS HQ',
+        status || 'present',
+        req.user.id,
+        notes || 'Manual Entry by Controller/Manager',
+        workHours
+      ]
+    );
+
+    res.status(201).json({ message: 'Manual attendance recorded successfully!', attendance: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;
+
