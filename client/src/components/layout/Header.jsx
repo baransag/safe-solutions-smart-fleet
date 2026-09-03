@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Bell, Menu, Search, CheckCircle2, AlertTriangle, Info, AlertCircle, Sparkles, Check, ChevronRight } from 'lucide-react';
+import { Bell, Menu, Search, CheckCircle2, AlertTriangle, Info, AlertCircle, Sparkles, Check, ChevronRight, BookOpen } from 'lucide-react';
 import api from '../../services/api';
 
 const pageNames = {
@@ -26,7 +26,7 @@ const pageNames = {
   '/profile': 'Profile'
 };
 
-export default function Header({ onMenuClick }) {
+export default function Header({ onMenuClick, onOpenGuide }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -394,6 +394,29 @@ export default function Header({ onMenuClick }) {
             </div>
           )}
         </div>
+
+        {/* User Guide / E-Book Button */}
+        <button
+          onClick={onOpenGuide || (() => window.dispatchEvent(new CustomEvent('app:open-guide')))}
+          className="header-icon-btn"
+          title="Open User Guide & Manual E-Book"
+          style={{
+            background: 'rgba(15, 43, 91, 0.08)',
+            border: '1px solid rgba(15, 43, 91, 0.2)',
+            borderRadius: '12px',
+            padding: '8px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            color: '#0F2B5B',
+            fontWeight: 700,
+            fontSize: 12,
+            cursor: 'pointer'
+          }}
+        >
+          <BookOpen size={16} color="#0F2B5B" />
+          <span className="hide-on-mobile">User Guide</span>
+        </button>
 
         {/* Date Display Pill */}
         <div

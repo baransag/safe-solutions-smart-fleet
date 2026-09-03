@@ -233,18 +233,32 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
     const result = await transaction(async (client) => {
       // 1. Find today's check-in
       const today = new Date().toISOString().split('T')[0];
-      const { rows: checkins } = await client.query(
+      let { rows: checkins } = await client.query(
         `SELECT * FROM vehicle_checkins
          WHERE employee_id = $1 AND vehicle_id = $2 AND checkin_time::date = $3 AND status = 'active'
          ORDER BY checkin_time DESC LIMIT 1`,
         [employeeId, cleanVehicleId, today]
       );
 
+      let checkin;
       if (checkins.length === 0) {
-        throw Object.assign(new Error('No active check-in found for today'), { status: 400 });
-      }
+        // Graceful fallback: If no check-in today, use vehicle's current meter as opening baseline
+        const { rows: vehRows } = await client.query('SELECT * FROM vehicles WHERE id = $1', [cleanVehicleId]);
+        const baseMeter = vehRows.length > 0 ? parseFloat(vehRows[0].current_meter || 0) : 0;
+        const morningDispatchTime = `${today}T08:30:00+05:00`;
 
-      const checkin = checkins[0];
+        const { rows: autoCheckin } = await client.query(
+          `INSERT INTO vehicle_checkins (
+             vehicle_id, employee_id, checkin_time, meter_reading, gps_lat, gps_lng,
+             gps_address, status, is_confirmed
+           ) VALUES ($1, $2, $3, $4, $5, $6, 'Head Office Dispatch, Faisalabad', 'active', true)
+           RETURNING *`,
+          [cleanVehicleId, employeeId, morningDispatchTime, baseMeter, gps_lat || 31.4504, gps_lng || 73.1350]
+        );
+        checkin = autoCheckin[0];
+      } else {
+        checkin = checkins[0];
+      }
 
       // 2. Check for duplicate checkout
       const { rows: existingOut } = await client.query(
@@ -428,6 +442,113 @@ router.get('/all-today', authenticate, async (req, res, next) => {
     `, [today]);
 
     res.json({ records: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/checkins/manual-checkin - Manual Vehicle Check-in by Manager/Controller
+router.post('/manual-checkin', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
+  try {
+    const { vehicle_id, employee_id, meter_reading, checkin_time, notes } = req.body;
+    if (!vehicle_id || !employee_id || meter_reading === undefined) {
+      return res.status(400).json({ error: 'vehicle_id, employee_id, and meter_reading are required' });
+    }
+
+    const meterVal = parseFloat(meter_reading);
+    const inTime = checkin_time ? new Date(checkin_time).toISOString() : new Date().toISOString();
+
+    const { rows: checkin } = await query(
+      `INSERT INTO vehicle_checkins (
+        vehicle_id, employee_id, checkin_time, meter_reading,
+        gps_lat, gps_lng, gps_address, status, is_confirmed
+      ) VALUES ($1, $2, $3, $4, 31.4504, 73.1350, $5, 'active', true)
+      RETURNING *`,
+      [vehicle_id, employee_id, inTime, meterVal, notes || 'Manual Check-in by Management']
+    );
+
+    // Update vehicle meter
+    await query('UPDATE vehicles SET current_meter = $1, updated_at = NOW() WHERE id = $2', [meterVal, vehicle_id]);
+
+    // Meter log
+    await query(
+      `INSERT INTO vehicle_meter_logs (vehicle_id, employee_id, reading, source, reference_id, reference_type)
+       VALUES ($1, $2, $3, 'manual_checkin', $4, 'vehicle_checkins')`,
+      [vehicle_id, employee_id, meterVal, checkin[0].id]
+    );
+
+    res.status(201).json({ message: 'Manual vehicle check-in recorded successfully!', checkin: checkin[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/checkins/manual-checkout - Manual Vehicle Check-out by Manager/Controller
+router.post('/manual-checkout', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
+  try {
+    const { vehicle_id, employee_id, meter_reading, checkout_time, checkout_location, notes } = req.body;
+    if (!vehicle_id || !employee_id || meter_reading === undefined) {
+      return res.status(400).json({ error: 'vehicle_id, employee_id, and meter_reading are required' });
+    }
+
+    const closingKm = parseFloat(meter_reading);
+    const outTime = checkout_time ? new Date(checkout_time).toISOString() : new Date().toISOString();
+
+    // 1. Find or create checkin for baseline
+    let { rows: checkins } = await query(
+      `SELECT * FROM vehicle_checkins
+       WHERE vehicle_id = $1 AND employee_id = $2 AND status = 'active'
+       ORDER BY checkin_time DESC LIMIT 1`,
+      [vehicle_id, employee_id]
+    );
+
+    let checkin = checkins[0];
+    if (!checkin) {
+      const { rows: autoIn } = await query(
+        `INSERT INTO vehicle_checkins (
+          vehicle_id, employee_id, checkin_time, meter_reading,
+          gps_lat, gps_lng, gps_address, status, is_confirmed
+        ) VALUES ($1, $2, NOW() - INTERVAL '6 hours', 0.00, 31.4504, 73.1350, 'Head Office Depot', 'active', true)
+        RETURNING *`,
+        [vehicle_id, employee_id]
+      );
+      checkin = autoIn[0];
+    }
+
+    const openingKm = parseFloat(checkin.meter_reading || 0);
+    const distanceKm = Math.max(0, +(closingKm - openingKm).toFixed(2));
+    const durationMinutes = Math.max(0, Math.round((new Date(outTime) - new Date(checkin.checkin_time)) / (1000 * 60)));
+
+    // 2. Insert checkout
+    const { rows: checkout } = await query(
+      `INSERT INTO vehicle_checkouts (
+        checkin_id, vehicle_id, employee_id, checkout_time,
+        meter_reading, distance_km, duration_minutes,
+        gps_lat, gps_lng, gps_address, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 31.4504, 73.1350, $8, $9)
+      RETURNING *`,
+      [
+        checkin.id, vehicle_id, employee_id, outTime,
+        closingKm, distanceKm, durationMinutes,
+        checkout_location || 'Head Office Faisalabad',
+        notes || 'Manual Check-out by Management'
+      ]
+    );
+
+    // 3. Update checkin status to completed
+    await query(`UPDATE vehicle_checkins SET status = 'completed' WHERE id = $1`, [checkin.id]);
+
+    // 4. Update vehicle current meter
+    await query('UPDATE vehicles SET current_meter = $1, updated_at = NOW() WHERE id = $2', [closingKm, vehicle_id]);
+
+    // 5. Meter log
+    await query(
+      `INSERT INTO vehicle_meter_logs (vehicle_id, employee_id, reading, source, reference_id, reference_type)
+       VALUES ($1, $2, $3, 'manual_checkout', $4, 'vehicle_checkouts')`,
+      [vehicle_id, employee_id, closingKm, checkout[0].id]
+    );
+
+    res.status(201).json({ message: 'Manual vehicle check-out recorded successfully!', checkout: checkout[0], distance_km: distanceKm });
   } catch (err) {
     next(err);
   }

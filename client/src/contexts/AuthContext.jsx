@@ -68,11 +68,11 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!user,
     isEmployee: user?.role === 'employee',
     isManager: ['manager', 'controller', 'admin', 'boss'].includes(user?.role),
-    isController: ['controller', 'admin', 'boss'].includes(user?.role),
+    isController: ['controller', 'manager', 'admin', 'boss'].includes(user?.role),
     isBoss: user?.role === 'boss' || user?.employee_id === 'ADMIN001' || user?.email === 'boss@safesolutions.com',
-    isSysAdmin: user?.role === 'admin',
+    isSysAdmin: ['admin', 'manager', 'controller', 'boss'].includes(user?.role),
     isAdmin: ['admin', 'boss', 'controller', 'manager'].includes(user?.role),
-    isSuperAdmin: ['admin', 'boss', 'controller'].includes(user?.role),
+    isSuperAdmin: ['admin', 'boss', 'controller', 'manager'].includes(user?.role),
   };
 
   return (

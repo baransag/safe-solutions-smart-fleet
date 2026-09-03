@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import HeroSection from '../../components/vehicle/HeroSection';
+import LeaveRequestModal from '../../components/attendance/LeaveRequestModal';
+import ManualManagementOpsModal from '../../components/common/ManualManagementOpsModal';
 import {
   Car, ClipboardCheck, Route, Fuel, AlertTriangle, Wrench,
   TrendingUp, Users, Clock, MapPin, CheckCircle2, XCircle,
   Building2, HardHat, ShieldCheck, UserX, CalendarCheck, Search,
   ArrowUpRight, ArrowDownRight, Megaphone, Sparkles, Check, ChevronRight,
-  Calendar, Camera, Eye, X
+  Calendar, Camera, Eye, X, BookOpen, FileText, Zap
 } from 'lucide-react';
 import './DashboardPage.css';
 import { getEmployeeAvatar, getAvatarByName } from '../../utils/avatarHelper';
@@ -130,9 +132,62 @@ export default function DashboardPage() {
 function EmployeeDashboard({ data, navigate }) {
   const assignment = data?.assignment;
   const todayCheckin = data?.todayCheckin;
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+
+  const hasCheckedIn = !!todayCheckin;
+  const hasCheckedOut = !!todayCheckin?.checkout_time;
 
   return (
     <>
+      {/* Evening Check-Out Prompt (If Checked In in the morning and awaiting evening checkout) */}
+      {hasCheckedIn && !hasCheckedOut && (
+        <div
+          className="card-elevated animate-fade-in-up"
+          style={{
+            background: 'linear-gradient(135deg, rgba(15, 43, 91, 0.05) 0%, rgba(212, 45, 86, 0.08) 100%)',
+            border: '2px solid #0F2B5B',
+            borderRadius: 16,
+            padding: '16px 20px',
+            marginBottom: 20,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="badge badge-green" style={{ fontSize: 11, fontWeight: 700 }}>🚗 Morning Check-In Active</span>
+              <span style={{ fontSize: 12, color: '#64748b' }}>Opening: {parseFloat(todayCheckin.meter_reading || 0).toLocaleString()} KM</span>
+            </div>
+            <h4 style={{ margin: '4px 0 2px', fontSize: 15, fontWeight: 800, color: '#0F2B5B' }}>
+              Shift Finished? Complete Evening Vehicle Check-Out
+            </h4>
+            <p style={{ margin: 0, fontSize: 12, color: '#64748B' }}>
+              Record your closing meter reading and calculate today's total distance travelled.
+            </p>
+          </div>
+
+          <button
+            onClick={() => navigate('/check-out')}
+            className="btn btn-primary"
+            style={{
+              background: '#0F2B5B',
+              padding: '10px 20px',
+              fontWeight: 800,
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: '0 4px 14px rgba(15,43,91,0.25)'
+            }}
+          >
+            <Route size={16} /> Proceed to Vehicle Check-Out ➔
+          </button>
+        </div>
+      )}
+
       {/* My Vehicle */}
       {assignment ? (
         <div className="dashboard-section animate-fade-in-up delay-1">
@@ -163,25 +218,47 @@ function EmployeeDashboard({ data, navigate }) {
       {/* Quick Actions */}
       <div className="dashboard-section animate-fade-in-up delay-2">
         <h3 className="section-title">Quick Actions</h3>
-        <div className="quick-actions-grid">
+        <div className="quick-actions-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}>
           <button className="quick-action-card" onClick={() => navigate('/attendance')}>
             <div className="qa-icon blue"><CalendarCheck size={22} /></div>
-            <span>Employee Attendance</span>
+            <span>Attendance</span>
           </button>
-          <button className="quick-action-card" onClick={() => navigate('/check-in')}>
-            <div className="qa-icon orange"><ClipboardCheck size={22} /></div>
-            <span>Vehicle Check In</span>
-          </button>
-          <button className="quick-action-card" onClick={() => navigate('/check-out')}>
-            <div className="qa-icon teal"><Route size={22} /></div>
-            <span>Vehicle Check Out</span>
-          </button>
+
+          {/* If already checked in today, direct focus to Check-out */}
+          {hasCheckedIn && !hasCheckedOut ? (
+            <button className="quick-action-card" onClick={() => navigate('/check-out')} style={{ border: '2px solid #0F2B5B', background: 'rgba(15,43,91,0.03)' }}>
+              <div className="qa-icon teal"><Route size={22} /></div>
+              <span style={{ fontWeight: 800, color: '#0F2B5B' }}>Vehicle Check Out (Evening)</span>
+            </button>
+          ) : (
+            <button className="quick-action-card" onClick={() => navigate('/check-in')}>
+              <div className="qa-icon orange"><ClipboardCheck size={22} /></div>
+              <span>Vehicle Check In</span>
+            </button>
+          )}
+
           <button className="quick-action-card" onClick={() => navigate('/fuel')}>
             <div className="qa-icon green"><Fuel size={22} /></div>
             <span>Submit Fuel</span>
           </button>
+
+          <button className="quick-action-card" onClick={() => setLeaveModalOpen(true)}>
+            <div className="qa-icon red" style={{ background: 'rgba(212, 45, 86, 0.1)', color: '#D42D56' }}><Calendar size={22} /></div>
+            <span>Request Leave</span>
+          </button>
+
+          <button className="quick-action-card" onClick={() => window.dispatchEvent(new CustomEvent('app:open-guide'))}>
+            <div className="qa-icon purple" style={{ background: 'rgba(124, 58, 237, 0.1)', color: '#7C3AED' }}><BookOpen size={22} /></div>
+            <span>App Guide / E-Book</span>
+          </button>
         </div>
       </div>
+
+      {/* Interactive Leave Request Modal */}
+      <LeaveRequestModal
+        isOpen={leaveModalOpen}
+        onClose={() => setLeaveModalOpen(false)}
+      />
 
       {/* Today's Status */}
       {todayCheckin && (
@@ -234,6 +311,7 @@ function EnterpriseDashboard({ data, navigate }) {
 
   const [historySearch, setHistorySearch] = useState('');
   const [photoModal, setPhotoModal] = useState(null);
+  const [manualOpsOpen, setManualOpsOpen] = useState(false);
 
   const empAtt = data.employeeAttendance || {};
   const vehicles = data.vehicles || {};
@@ -477,6 +555,22 @@ function EnterpriseDashboard({ data, navigate }) {
                 }}
               />
             </div>
+            <button
+              className="btn btn-sm"
+              onClick={() => setManualOpsOpen(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(212, 45, 86, 0.1)',
+                border: '1px solid #D42D56',
+                color: '#D42D56',
+                fontWeight: 700
+              }}
+              title="Manual override for Attendance, Vehicle Check-In & Check-Out"
+            >
+              <Zap size={14} /> ⚡ Manual Entry Override
+            </button>
             <button className="btn btn-sm btn-secondary" onClick={() => navigate('/check-in')} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <ClipboardCheck size={14} /> New Check-In
             </button>
@@ -494,9 +588,10 @@ function EnterpriseDashboard({ data, navigate }) {
                 <th>Check-Out</th>
                 <th>Vehicle</th>
                 <th>Driver / Employee</th>
-                <th>Opening KM</th>
-                <th>Closing KM</th>
-                <th>Distance</th>
+                <th>Subah Start (Opening KM)</th>
+                <th>Sham Close (Closing KM)</th>
+                <th>Total Travelled</th>
+                <th>Checkout Location</th>
                 <th>Status</th>
                 <th>Photos</th>
               </tr>
@@ -504,7 +599,7 @@ function EnterpriseDashboard({ data, navigate }) {
             <tbody>
               {filteredHistory.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: 32, color: '#94a3b8' }}>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: 32, color: '#94a3b8' }}>
                     No vehicle check-in / check-out history records found.
                   </td>
                 </tr>
@@ -575,7 +670,7 @@ function EnterpriseDashboard({ data, navigate }) {
                           {parseFloat(row.closing_km).toLocaleString()} km
                         </div>
                       ) : (
-                        <span style={{ color: '#94a3b8', fontSize: 12 }}>Pending</span>
+                        <span style={{ color: '#94a3b8', fontSize: 12 }}>Pending Return</span>
                       )}
                     </td>
                     <td>
@@ -586,6 +681,14 @@ function EnterpriseDashboard({ data, navigate }) {
                       ) : (
                         <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>
                       )}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#334155' }}>
+                        <MapPin size={13} color="#0F2B5B" />
+                        <span style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.checkout_location || row.checkin_location}>
+                          {row.checkout_location || row.checkin_location || 'Field Duty Location'}
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <span className={`badge badge-${row.checkin_status === 'completed' ? 'green' : row.checkin_status === 'active' ? 'yellow' : 'blue'}`} style={{ fontSize: 11 }}>
@@ -664,6 +767,12 @@ function EnterpriseDashboard({ data, navigate }) {
           </div>
         </div>
       )}
+
+      {/* Manual Emergency Operations Modal for Manager and Controller */}
+      <ManualManagementOpsModal
+        isOpen={manualOpsOpen}
+        onClose={() => setManualOpsOpen(false)}
+      />
     </div>
   );
 }

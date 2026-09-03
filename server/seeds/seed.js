@@ -15,8 +15,8 @@ async function seed() {
     const bossPassword = await bcrypt.hash('SS@Admin26', 12);
     const adminPassword = await bcrypt.hash('Admin@2024', 12);
 
-    // Truncate existing data to cleanly re-populate exact records
-    await client.query('TRUNCATE TABLE vehicle_assignments, vehicle_checkouts, vehicle_checkins, fuel_logs, vehicle_services, vehicle_alerts, vehicle_meter_logs, notifications, vehicles, attendance_records, employee_qr_codes, system_logs, employees RESTART IDENTITY CASCADE');
+    // Live data protection: NEVER truncate tables in operational environment
+    // await client.query('TRUNCATE TABLE vehicle_assignments, vehicle_checkouts, vehicle_checkins, fuel_logs, vehicle_services, vehicle_alerts, vehicle_meter_logs, notifications, vehicles, attendance_records, employee_qr_codes, system_logs, employees RESTART IDENTITY CASCADE');
 
     // Insert exact employee records as provided in Master List
     const employeesData = [

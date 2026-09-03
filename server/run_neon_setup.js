@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 
-const NEON_URL = 'postgresql://neondb_owner:npg_ijM05tOdoWcQ@ep-flat-block-ay3xxqz0-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require';
+const NEON_URL = 'postgresql://neondb_owner:npg_ijM05tOdoWcQ@ep-summer-pond-aylfy7kr-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require';
 
 const pool = new Pool({
   connectionString: NEON_URL,
@@ -32,12 +32,9 @@ async function runSetup() {
       }
     }
 
-    console.log('\n🌱 Migrations complete! Now seeding production employees & vehicles...');
+    console.log('\n✅ Migrations complete! Preserving existing live data.');
     client.release();
-
-    // Run seed.js
-    require('./seeds/seed.js');
-
+    pool.end();
   } catch (err) {
     console.error('❌ Neon Setup Error:', err.message);
     client.release();

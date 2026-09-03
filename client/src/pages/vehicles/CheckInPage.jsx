@@ -180,10 +180,27 @@ export default function CheckInPage() {
           <p style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-sm)' }}>
             Vehicle: {todayStatus.checkin?.vehicle_name} ({todayStatus.checkin?.number_plate})
           </p>
-          {!todayStatus?.hasCheckedOut && (
-            <a href="/check-out" className="btn btn-teal" style={{ marginTop: 'var(--space-4)' }}>
-              Proceed to Check-out
+          {!todayStatus?.hasCheckedOut ? (
+            <a
+              href="/check-out"
+              className="btn btn-primary"
+              style={{
+                marginTop: 'var(--space-4)',
+                background: '#0F2B5B',
+                fontWeight: 800,
+                padding: '12px 24px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                borderRadius: 12
+              }}
+            >
+              🌅 Proceed to Evening Check-Out
             </a>
+          ) : (
+            <p style={{ marginTop: 12, color: '#059669', fontWeight: 700 }}>
+              ✅ You have completed both Check-In and Check-Out for today.
+            </p>
           )}
         </div>
       </div>

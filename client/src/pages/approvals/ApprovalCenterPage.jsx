@@ -9,10 +9,11 @@ export default function ApprovalCenterPage() {
   const { user } = useAuth();
   const toast = useToast();
 
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'office' | 'site' | 'fuel'
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'office' | 'site' | 'fuel' | 'leave'
   const [remarks, setRemarks] = useState({});
   const [pendingRequests, setPendingRequests] = useState([]);
   const [pendingFuel, setPendingFuel] = useState([]);
+  const [pendingLeaves, setPendingLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [correctionModal, setCorrectionModal] = useState(null);
   const [correctionNote, setCorrectionNote] = useState('');
@@ -33,12 +34,14 @@ export default function ApprovalCenterPage() {
 
   async function fetchPendingRequests() {
     try {
-      const [attRes, fuelRes] = await Promise.all([
+      const [attRes, fuelRes, leaveRes] = await Promise.all([
         api.get('/attendance/pending').catch(() => ({ requests: [] })),
-        api.get('/fuel?status=pending').catch(() => ({ fuelLogs: [] }))
+        api.get('/fuel?status=pending').catch(() => ({ fuelLogs: [] })),
+        api.get('/attendance/leave-requests/pending').catch(() => ({ requests: [] }))
       ]);
       setPendingRequests(attRes.requests || []);
       setPendingFuel(fuelRes.fuelLogs || []);
+      setPendingLeaves(leaveRes.requests || []);
     } catch (err) {
       // Quiet background fetch fail
     } finally {
@@ -96,6 +99,30 @@ export default function ApprovalCenterPage() {
     }
   };
 
+  const handleLeaveApprove = async (id) => {
+    const noteText = remarks[`leave_${id}`] || 'Approved by Controller/Manager';
+    try {
+      await api.patch(`/attendance/leave-requests/${id}/action`, { status: 'approved', manager_remarks: noteText });
+      toast.success('Leave / Half-Day request approved!');
+      setPendingLeaves(prev => prev.filter(l => l.id !== id));
+      window.dispatchEvent(new CustomEvent('app:data-sync'));
+    } catch (err) {
+      toast.error(err.message || 'Failed to approve leave request.');
+    }
+  };
+
+  const handleLeaveReject = async (id) => {
+    const noteText = remarks[`leave_${id}`] || 'Rejected by Controller/Manager';
+    try {
+      await api.patch(`/attendance/leave-requests/${id}/action`, { status: 'rejected', manager_remarks: noteText });
+      toast.error('Leave / Half-Day request rejected.');
+      setPendingLeaves(prev => prev.filter(l => l.id !== id));
+      window.dispatchEvent(new CustomEvent('app:data-sync'));
+    } catch (err) {
+      toast.error(err.message || 'Failed to reject leave request.');
+    }
+  };
+
   const submitCorrectionRequest = async () => {
     if (!correctionModal || !correctionNote) return;
     try {
@@ -115,7 +142,7 @@ export default function ApprovalCenterPage() {
     }
   };
 
-  const totalPending = pendingRequests.length + pendingFuel.length;
+  const totalPending = pendingRequests.length + pendingFuel.length + pendingLeaves.length;
 
   if (loading) {
     return (
@@ -187,6 +214,15 @@ export default function ApprovalCenterPage() {
           }}
         >
           ⛽ Fuel Expense Requests ({pendingFuel.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('leave')}
+          style={{
+            padding: '8px 16px', borderRadius: 20, border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            background: activeTab === 'leave' ? '#7C3AED' : '#f0f4f8', color: activeTab === 'leave' ? '#fff' : '#666'
+          }}
+        >
+          📋 Leave & Half-Day Requests ({pendingLeaves.length})
         </button>
       </div>
 
@@ -400,6 +436,94 @@ export default function ApprovalCenterPage() {
               </div>
             </div>
           ))}
+
+        {/* 3. LEAVE & HALF-DAY PENDING CARDS */}
+        {(activeTab === 'all' || activeTab === 'leave') &&
+          pendingLeaves.map(leave => {
+            const isHalfDay = leave.request_type === 'half_day';
+            const isShort = leave.request_type === 'short_leave';
+            const typeBadge = isHalfDay
+              ? `🌗 Half-Day (${leave.half_day_slot === 'first_half_morning' ? 'Morning / First Half' : 'Afternoon / Second Half'})`
+              : isShort
+              ? '⏱️ Short Leave / Gate Pass'
+              : `📅 Full Day Leave (${parseFloat(leave.total_days || 1)} Day)`;
+
+            return (
+              <div key={`leave_${leave.id}`} className="card-elevated animate-fade-in-up" style={{ borderRadius: 16, padding: 20, border: '1px solid #E2E8F0', background: '#fff' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(124, 58, 237, 0.12)', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Calendar size={22} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#0F2B5B' }}>{leave.employee_name}</h4>
+                      <p style={{ margin: '2px 0 0', fontSize: 11, color: '#666' }}>{leave.designation || 'Staff'} • ID: {leave.emp_code}</p>
+                    </div>
+                  </div>
+
+                  <span className="badge" style={{ background: '#EDE9FE', color: '#7C3AED', fontWeight: 800, fontSize: 11 }}>
+                    {typeBadge}
+                  </span>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: 12, borderRadius: 10, fontSize: 12, marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Leave Reason</span>
+                    <strong style={{ color: '#D42D56', textTransform: 'capitalize' }}>{leave.leave_reason} Reason</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Target Date</span>
+                    <strong style={{ color: '#0F2B5B' }}>
+                      {leave.start_date === leave.end_date ? leave.start_date : `${leave.start_date} to ${leave.end_date}`}
+                    </strong>
+                  </div>
+                  {leave.emergency_phone && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b' }}>Contact Phone</span>
+                      <span>{leave.emergency_phone}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Submitted At</span>
+                    <span>{new Date(leave.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                  </div>
+                </div>
+
+                {leave.notes && (
+                  <p style={{ fontSize: 12, color: '#475569', fontStyle: 'italic', margin: '0 0 14px', background: '#fff', padding: 8, borderRadius: 6, border: '1px dashed #cbd5e1' }}>
+                    💬 "{leave.notes}"
+                  </p>
+                )}
+
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Add approval / rejection note..."
+                    value={remarks[`leave_${leave.id}`] || ''}
+                    onChange={(e) => setRemarks({ ...remarks, [`leave_${leave.id}`]: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 12, marginBottom: 12 }}
+                  />
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <button
+                      onClick={() => handleLeaveApprove(leave.id)}
+                      className="btn btn-primary btn-sm"
+                      style={{ background: '#059669', border: 'none', fontWeight: 700, fontSize: 12, padding: '9px 6px' }}
+                    >
+                      <CheckCircle2 size={15} /> Approve Request
+                    </button>
+                    <button
+                      onClick={() => handleLeaveReject(leave.id)}
+                      className="btn btn-danger btn-sm"
+                      style={{ background: '#DC2626', border: 'none', fontWeight: 700, fontSize: 12, padding: '9px 6px' }}
+                    >
+                      <XCircle size={15} /> Reject Request
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
 
         {totalPending === 0 && (
           <div style={{ gridColumn: '1 / -1', padding: 48, background: '#fff', borderRadius: 20, border: '1px solid #e2e8f0', textAlign: 'center', color: '#64748b' }}>

@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
 import EmployeeQRScanner from '../../components/attendance/EmployeeQRScanner';
+import LeaveRequestModal from '../../components/attendance/LeaveRequestModal';
 import { Building2, HardHat, CheckCircle2, MapPin, Navigation, Clock, Calendar, RefreshCw, Send, Car, Route, ClipboardCheck, ArrowRight, ShieldCheck, Filter, Camera, Search, Users } from 'lucide-react';
 
 export default function AttendancePage() {
@@ -13,6 +14,7 @@ export default function AttendancePage() {
 
   // Tab State: 'office' | 'site' | 'vehicle'
   const [activeTab, setActiveTab] = useState('office');
+  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
 
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [history, setHistory] = useState([]);
@@ -394,10 +396,26 @@ export default function AttendancePage() {
           <p className="page-description">Complete Unified Hub for Office Attendance, Site Attendance & Vehicle Attendance</p>
         </div>
 
-        <button className="btn btn-secondary btn-sm" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <RefreshCw size={14} /> Refresh Status
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setLeaveModalOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#0F2B5B', fontWeight: 700 }}
+          >
+            <Calendar size={14} /> Request Leave / Half-Day
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <RefreshCw size={14} /> Refresh Status
+          </button>
+        </div>
       </div>
+
+      {/* Interactive Leave Request Modal */}
+      <LeaveRequestModal
+        isOpen={leaveModalOpen}
+        onClose={() => setLeaveModalOpen(false)}
+        onSuccess={() => fetchData()}
+      />
 
       {/* TOP TAB SWITCHER FOR UNIFIED ATTENDANCE CENTER */}
       <div className="tabs">

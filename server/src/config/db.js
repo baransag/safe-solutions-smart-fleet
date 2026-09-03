@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL;
-const NEON_FALLBACK = 'postgresql://neondb_owner:npg_ijM05tOdoWcQ@ep-flat-block-ay3xxqz0-pooler.c-5.us-east-2.aws.neon.tech/neondb';
+const NEON_FALLBACK = 'postgresql://neondb_owner:npg_ijM05tOdoWcQ@ep-summer-pond-aylfy7kr-pooler.c-5.us-east-2.aws.neon.tech/neondb';
 
 const rawUrl = process.env.DATABASE_URL || NEON_FALLBACK;
 const cleanUrl = rawUrl.split('?')[0];
