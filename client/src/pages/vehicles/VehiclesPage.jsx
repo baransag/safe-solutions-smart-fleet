@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
-import { Car, Plus, Search, Edit2, X, Eye } from 'lucide-react';
+import { Car, Plus, Search, Edit2, X, Eye, Wrench } from 'lucide-react';
+import MaintenancePanel from '../../components/vehicle/MaintenancePanel';
 
 export default function VehiclesPage() {
   const toast = useToast();
@@ -10,6 +11,7 @@ export default function VehiclesPage() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editVehicle, setEditVehicle] = useState(null);
+  const [maintenanceVehicle, setMaintenanceVehicle] = useState(null);
   const [form, setForm] = useState({
     vehicle_id: '', name: '', number_plate: '', type: 'bike', make: '', model: '',
     year: '', color: '', fuel_type: 'petrol', tank_capacity: '', avg_mileage: ''
@@ -129,9 +131,19 @@ export default function VehiclesPage() {
                     <td>{v.assigned_employee_name || <span style={{ color: 'var(--text-tertiary)' }}>Unassigned</span>}</td>
                     <td>{v.current_meter && parseFloat(v.current_meter) > 0 ? `${parseFloat(v.current_meter).toLocaleString()} km` : '----'}</td>
                     <td>
-                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(v)}>
-                        <Edit2 size={14} />
-                      </button>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => openEdit(v)} title="Edit Vehicle">
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setMaintenanceVehicle(v)}
+                          title="View Maintenance"
+                          style={{ color: '#E06D34' }}
+                        >
+                          <Wrench size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -165,9 +177,16 @@ export default function VehiclesPage() {
                     </div>
                   </div>
 
-                  <div className="mobile-card-footer">
-                    <button className="btn btn-secondary btn-sm" onClick={() => openEdit(v)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      <Edit2 size={14} /> Edit Vehicle Details
+                  <div className="mobile-card-footer" style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-secondary btn-sm" onClick={() => openEdit(v)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <Edit2 size={14} /> Edit
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setMaintenanceVehicle(v)}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#E06D34', border: '1px solid rgba(224,109,52,0.3)' }}
+                    >
+                      <Wrench size={14} /> Maintenance
                     </button>
                   </div>
                 </div>
@@ -246,6 +265,14 @@ export default function VehiclesPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Maintenance Panel */}
+      {maintenanceVehicle && (
+        <MaintenancePanel
+          vehicle={maintenanceVehicle}
+          onClose={() => setMaintenanceVehicle(null)}
+        />
       )}
     </div>
   );
