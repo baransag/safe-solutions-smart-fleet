@@ -23,6 +23,7 @@ import EmployeesPage from './pages/employees/EmployeesPage';
 import ProfilePage from './pages/profile/ProfilePage';
 import SystemLogsPage from './pages/logs/SystemLogsPage';
 import VisitReportsPage from './pages/reports/VisitReportsPage';
+import VehicleReportsPage from './pages/reports/VehicleReportsPage';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -97,6 +98,7 @@ export default function AppRouter() {
           <Route path="/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
           <Route path="/alerts" element={<AdminRoute><AlertsPage /></AdminRoute>} />
           <Route path="/services" element={<AdminRoute><ServicesPage /></AdminRoute>} />
+          <Route path="/vehicle-reports" element={<AdminRoute><VehicleReportsPage /></AdminRoute>} />
           <Route path="/reports" element={<AdminRoute><ReportsPage /></AdminRoute>} />
           <Route path="/monthly-reports" element={<AdminRoute><MonthlyReportsPage /></AdminRoute>} />
           <Route path="/settings" element={<AdminRoute><SystemSettingsPage /></AdminRoute>} />

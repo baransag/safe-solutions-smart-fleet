@@ -38,6 +38,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/analytics', icon: BarChart3, label: 'Analytics', adminOnly: true },
     { to: '/alerts', icon: AlertTriangle, label: 'Alerts', adminOnly: true },
     { to: '/services', icon: Wrench, label: 'Vehicle Services', adminOnly: true },
+    { to: '/vehicle-reports', icon: Route, label: 'Vehicle Trip Reports', adminOnly: true },
     { to: '/reports', icon: FileText, label: 'Reports', adminOnly: true },
     { to: '/monthly-reports', icon: CalendarCheck, label: 'Monthly Reports', adminOnly: true },
     { to: '/system-logs', icon: Shield, label: 'System Audit Logs', controllerOnly: true },

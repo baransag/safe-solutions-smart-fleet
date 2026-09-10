@@ -554,4 +554,171 @@ router.post('/manual-checkout', authenticate, authorize('manager', 'controller',
   }
 });
 
+// GET /api/checkins/reports - Daily, Weekly, Monthly Vehicle Check-In & Check-Out Reports (READ-ONLY)
+router.get('/reports', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
+  try {
+    const { type = 'daily', date, month, startDate, endDate, vehicle_id, employee_id } = req.query;
+
+    let dateConditions = [];
+    let params = [];
+    let paramIndex = 1;
+
+    // Date range determination
+    if (type === 'daily') {
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      dateConditions.push(`vc.checkin_time::date = $${paramIndex++}`);
+      params.push(targetDate);
+    } else if (type === 'weekly') {
+      let start, end;
+      if (startDate && endDate) {
+        start = startDate;
+        end = endDate;
+      } else {
+        const anchor = date ? new Date(date) : new Date();
+        const endD = new Date(anchor);
+        const startD = new Date(anchor);
+        startD.setDate(startD.getDate() - 6);
+        start = startD.toISOString().split('T')[0];
+        end = endD.toISOString().split('T')[0];
+      }
+      dateConditions.push(`vc.checkin_time::date >= $${paramIndex++} AND vc.checkin_time::date <= $${paramIndex++}`);
+      params.push(start, end);
+    } else if (type === 'monthly') {
+      const targetMonth = month || new Date().toISOString().substring(0, 7); // 'YYYY-MM'
+      dateConditions.push(`TO_CHAR(vc.checkin_time, 'YYYY-MM') = $${paramIndex++}`);
+      params.push(targetMonth);
+    } else if (type === 'custom') {
+      if (startDate && endDate) {
+        dateConditions.push(`vc.checkin_time::date >= $${paramIndex++} AND vc.checkin_time::date <= $${paramIndex++}`);
+        params.push(startDate, endDate);
+      } else if (startDate) {
+        dateConditions.push(`vc.checkin_time::date >= $${paramIndex++}`);
+        params.push(startDate);
+      }
+    }
+
+    if (vehicle_id && vehicle_id !== 'all') {
+      dateConditions.push(`vc.vehicle_id = $${paramIndex++}`);
+      params.push(parseInt(vehicle_id, 10));
+    }
+
+    if (employee_id && employee_id !== 'all') {
+      dateConditions.push(`vc.employee_id = $${paramIndex++}`);
+      params.push(parseInt(employee_id, 10));
+    }
+
+    const whereClause = dateConditions.length > 0 ? `WHERE ${dateConditions.join(' AND ')}` : '';
+
+    const recordsSql = `
+      SELECT 
+        vc.id as checkin_id,
+        vc.vehicle_id,
+        vc.employee_id,
+        vc.checkin_time,
+        vc.meter_reading as opening_km,
+        vc.gps_lat as checkin_lat,
+        vc.gps_lng as checkin_lng,
+        vc.gps_address as checkin_location,
+        vc.meter_photo_url as checkin_meter_photo,
+        vc.selfie_url as checkin_selfie,
+        vc.status as checkin_status,
+        vc.notes as checkin_notes,
+        vo.id as checkout_id,
+        vo.checkout_time,
+        vo.meter_reading as closing_km,
+        vo.distance_km,
+        vo.duration_minutes,
+        vo.gps_lat as checkout_lat,
+        vo.gps_lng as checkout_lng,
+        vo.gps_address as checkout_location,
+        vo.meter_photo_url as checkout_meter_photo,
+        vo.notes as checkout_notes,
+        v.name as vehicle_name,
+        v.number_plate,
+        v.vehicle_id as vehicle_code,
+        v.type as vehicle_type,
+        e.name as employee_name,
+        e.employee_id as emp_code,
+        e.designation,
+        e.department,
+        CASE 
+          WHEN vo.id IS NOT NULL THEN 'completed'
+          WHEN vc.status = 'active' THEN 'in_transit'
+          ELSE vc.status
+        END as trip_status
+      FROM vehicle_checkins vc
+      JOIN vehicles v ON v.id = vc.vehicle_id
+      JOIN employees e ON e.id = vc.employee_id
+      LEFT JOIN vehicle_checkouts vo ON vo.checkin_id = vc.id
+      ${whereClause}
+      ORDER BY vc.checkin_time DESC
+    `;
+
+    const [recordsResult, monthsResult, vehiclesResult, employeesResult] = await Promise.all([
+      query(recordsSql, params),
+      query(`
+        SELECT DISTINCT TO_CHAR(checkin_time, 'YYYY-MM') as month_key,
+               TO_CHAR(checkin_time, 'Month YYYY') as month_label
+        FROM vehicle_checkins
+        GROUP BY TO_CHAR(checkin_time, 'YYYY-MM'), TO_CHAR(checkin_time, 'Month YYYY')
+        ORDER BY month_key DESC
+      `),
+      query(`SELECT id, name, number_plate, vehicle_id as vehicle_code FROM vehicles WHERE is_active = true ORDER BY name ASC`),
+      query(`SELECT id, name, employee_id as emp_code, designation FROM employees WHERE is_active = true ORDER BY name ASC`)
+    ]);
+
+    const records = recordsResult.rows || [];
+
+    // Summary calculations
+    let totalKm = 0;
+    let completedCount = 0;
+    let inTransitCount = 0;
+    const vehicleSet = new Set();
+    const driverSet = new Set();
+
+    records.forEach(r => {
+      if (r.trip_status === 'completed') {
+        completedCount++;
+        const dist = parseFloat(r.distance_km) || (r.closing_km && r.opening_km ? Math.max(0, r.closing_km - r.opening_km) : 0);
+        totalKm += dist;
+      } else {
+        inTransitCount++;
+      }
+      if (r.vehicle_id) vehicleSet.add(r.vehicle_id);
+      if (r.employee_id) driverSet.add(r.employee_id);
+    });
+
+    const summary = {
+      total_sessions: records.length,
+      completed_sessions: completedCount,
+      in_transit_sessions: inTransitCount,
+      total_distance_km: +totalKm.toFixed(2),
+      avg_distance_km: completedCount > 0 ? +(totalKm / completedCount).toFixed(2) : 0,
+      active_vehicles_count: vehicleSet.size,
+      active_drivers_count: driverSet.size
+    };
+
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    let availableMonths = monthsResult.rows || [];
+    if (!availableMonths.some(m => m.month_key === currentMonthKey)) {
+      availableMonths.unshift({
+        month_key: currentMonthKey,
+        month_label: now.toLocaleString('en-US', { month: 'long', year: 'numeric' })
+      });
+    }
+
+    res.json({
+      summary,
+      records,
+      availableMonths,
+      vehiclesList: vehiclesResult.rows || [],
+      employeesList: employeesResult.rows || []
+    });
+  } catch (err) {
+    console.error('Vehicle checkin reports fetch error:', err.message);
+    res.status(500).json({ error: 'Failed to retrieve vehicle reports from database' });
+  }
+});
+
 module.exports = router;
