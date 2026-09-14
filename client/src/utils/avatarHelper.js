@@ -11,6 +11,8 @@ export function getEmployeeAvatar(employeeId) {
     'EMP009': 'Muneeb.jpeg',
     'EMP010': 'Zahid.jpeg',
     'EMP011': 'Tajammul.jpeg',
+    'EMP014': 'Shoaib.jpeg',
+    'EMP015': 'Zohaib.jpeg',
     'ADMIN001': 'Asif.jpeg',
     'BOSS': 'Asif.jpeg',
     'SYSADMIN001': 'logo.jpeg'
