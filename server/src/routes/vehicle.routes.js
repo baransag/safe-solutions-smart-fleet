@@ -145,8 +145,12 @@ router.put('/:id', authenticate, authorize('admin', 'boss', 'controller', 'manag
         updated_at = NOW()
        WHERE id = $14
        RETURNING *`,
-      [name, number_plate, type, make, model, year, color, fuel_type,
-       status, tank_capacity, avg_mileage, insurance_expiry, registration_expiry, req.params.id]
+      [name, number_plate, type, make, model,
+       year ? parseInt(year) : null,
+       color, fuel_type, status,
+       tank_capacity ? parseFloat(tank_capacity) : null,
+       avg_mileage ? parseFloat(avg_mileage) : null,
+       insurance_expiry || null, registration_expiry || null, req.params.id]
     );
 
     if (rows.length === 0) {
