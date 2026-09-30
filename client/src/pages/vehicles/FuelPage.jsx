@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
 import ReceiptScanner from '../../components/fuel/ReceiptScanner';
-import { Fuel, CheckCircle2, AlertTriangle, Eye, X, Image as ImageIcon, FileText, Check } from 'lucide-react';
+import { Fuel, CheckCircle2, AlertTriangle, Eye, X, Image as ImageIcon, FileText, Check, Wrench } from 'lucide-react';
 
 export default function FuelPage() {
   const { user, isManager, isController, isAdmin } = useAuth();
@@ -13,6 +13,13 @@ export default function FuelPage() {
   const [fuelLogs, setFuelLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [assignment, setAssignment] = useState(null);
+  const [maintenanceRecords, setMaintenanceRecords] = useState([]);
+  const [maintenanceTab, setMaintenanceTab] = useState('form');
+  const [maintenanceForm, setMaintenanceForm] = useState({
+    service_type: '', description: '', service_date: new Date().toISOString().split('T')[0],
+    next_service_date: '', cost: '', odometer: '', vendor: '', notes: ''
+  });
+  const [submittingMaintenance, setSubmittingMaintenance] = useState(false);
 
   // Form State
   const [form, setForm] = useState({
@@ -39,12 +46,14 @@ export default function FuelPage() {
   async function fetchData() {
     setLoading(true);
     try {
-      const [assignData, fuelData] = await Promise.all([
+      const [assignData, fuelData, maintenanceData] = await Promise.all([
         api.get('/vehicle-assignments/my').catch(() => ({ assignment: null })),
-        api.get('/fuel').catch(() => ({ fuelLogs: [] }))
+        api.get('/fuel').catch(() => ({ fuelLogs: [] })),
+        api.get('/vehicle-services/my').catch(() => ({ services: [] }))
       ]);
       setAssignment(assignData.assignment);
       setFuelLogs(fuelData.fuelLogs || []);
+      setMaintenanceRecords(maintenanceData.services || []);
     } catch {} finally { setLoading(false); }
   }
 
@@ -159,6 +168,43 @@ export default function FuelPage() {
     }
   }
 
+  async function handleMaintenanceSubmit(e) {
+    e.preventDefault();
+    if (!assignment) {
+      toast.warning('No vehicle assigned to you. Cannot submit maintenance.');
+      return;
+    }
+    if (!maintenanceForm.service_type || !maintenanceForm.service_date) {
+      toast.warning('Service Type and Service Date are required.');
+      return;
+    }
+    setSubmittingMaintenance(true);
+    try {
+      await api.post('/vehicle-services/employee', {
+        service_type: maintenanceForm.service_type,
+        description: maintenanceForm.description || null,
+        service_date: maintenanceForm.service_date,
+        next_service_date: maintenanceForm.next_service_date || null,
+        cost: maintenanceForm.cost ? parseFloat(maintenanceForm.cost) : null,
+        odometer: maintenanceForm.odometer ? parseFloat(maintenanceForm.odometer) : null,
+        vendor: maintenanceForm.vendor || null,
+        notes: maintenanceForm.notes || null
+      });
+      toast.success('Maintenance record submitted successfully!');
+      window.dispatchEvent(new CustomEvent('app:data-sync'));
+      setMaintenanceForm({
+        service_type: '', description: '', service_date: new Date().toISOString().split('T')[0],
+        next_service_date: '', cost: '', odometer: '', vendor: '', notes: ''
+      });
+      fetchData();
+      setMaintenanceTab('history');
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit maintenance record.');
+    } finally {
+      setSubmittingMaintenance(false);
+    }
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -171,6 +217,7 @@ export default function FuelPage() {
       <div className="tabs">
         <button className={`tab ${tab === 'submit' ? 'active' : ''}`} onClick={() => setTab('submit')}>Submit Fuel Slip</button>
         <button className={`tab ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>Fuel Logs History</button>
+        <button className={`tab ${tab === 'maintenance' ? 'active' : ''}`} onClick={() => setTab('maintenance')}>🔧 Maintenance</button>
         {isManagerOrController && <button className={`tab ${tab === 'approvals' ? 'active' : ''}`} onClick={() => setTab('approvals')}>Approvals Center</button>}
       </div>
 
@@ -436,6 +483,187 @@ export default function FuelPage() {
             </div>
           </div>
         </>
+      )}
+
+      {tab === 'maintenance' && (
+        <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            <button
+              type="button"
+              className={`btn ${maintenanceTab === 'form' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setMaintenanceTab('form')}
+              style={{ fontWeight: 700, borderRadius: 10, fontSize: 13 }}
+            >+ Add Maintenance</button>
+            <button
+              type="button"
+              className={`btn ${maintenanceTab === 'history' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setMaintenanceTab('history')}
+              style={{ fontWeight: 700, borderRadius: 10, fontSize: 13 }}
+            >Maintenance History</button>
+          </div>
+
+          {maintenanceTab === 'form' && (
+            <form onSubmit={handleMaintenanceSubmit} className="card-elevated">
+              <h3 style={{ marginBottom: 16, fontWeight: 800, color: '#0F2B5B', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Wrench size={22} color="#D42D56" />
+                Add Vehicle Maintenance
+              </h3>
+
+              {!assignment && (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', padding: 14, borderRadius: 12, marginBottom: 16, color: '#991B1B', fontWeight: 600, fontSize: 13 }}>
+                  ⚠️ No vehicle is currently assigned to you. Contact your manager to get a vehicle assigned before submitting maintenance.
+                </div>
+              )}
+
+              {assignment && (
+                <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', padding: 14, borderRadius: 12, marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#1E40AF', marginBottom: 4 }}>Assigned Vehicle</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#0F2B5B' }}>
+                    {assignment.vehicle_name} ({assignment.number_plate})
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>Service Type *</label>
+                  <select className="form-input form-select" value={maintenanceForm.service_type} onChange={(e) => setMaintenanceForm({...maintenanceForm, service_type: e.target.value})} required>
+                    <option value="">Select...</option>
+                    <option value="oil_change">Oil Change</option>
+                    <option value="tire_replacement">Tire Replacement</option>
+                    <option value="brake_service">Brake Service</option>
+                    <option value="chain_service">Chain Service</option>
+                    <option value="general_service">General Service</option>
+                    <option value="engine_repair">Engine Repair</option>
+                    <option value="electrical">Electrical</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>Service Date *</label>
+                  <input className="form-input" type="date" value={maintenanceForm.service_date} onChange={(e) => setMaintenanceForm({...maintenanceForm, service_date: e.target.value})} required />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>Next Service Date</label>
+                  <input className="form-input" type="date" value={maintenanceForm.next_service_date} onChange={(e) => setMaintenanceForm({...maintenanceForm, next_service_date: e.target.value})} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>Cost (Rs)</label>
+                  <input className="form-input" type="number" step="0.01" value={maintenanceForm.cost} onChange={(e) => setMaintenanceForm({...maintenanceForm, cost: e.target.value})} placeholder="e.g. 1500" />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>Odometer (KM)</label>
+                  <input className="form-input" type="number" step="0.1" value={maintenanceForm.odometer} onChange={(e) => setMaintenanceForm({...maintenanceForm, odometer: e.target.value})} placeholder="e.g. 15240" />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 700 }}>Vendor / Mechanic</label>
+                  <input className="form-input" value={maintenanceForm.vendor} onChange={(e) => setMaintenanceForm({...maintenanceForm, vendor: e.target.value})} placeholder="e.g. Ali Auto Workshop" />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label className="form-label" style={{ fontWeight: 700 }}>Description</label>
+                  <textarea className="form-input" rows="2" value={maintenanceForm.description} onChange={(e) => setMaintenanceForm({...maintenanceForm, description: e.target.value})} placeholder="What work was done?" />
+                </div>
+
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label className="form-label" style={{ fontWeight: 700 }}>Notes</label>
+                  <textarea className="form-input" rows="2" value={maintenanceForm.notes} onChange={(e) => setMaintenanceForm({...maintenanceForm, notes: e.target.value})} placeholder="Any additional notes..." />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary btn-lg"
+                disabled={submittingMaintenance || !assignment}
+                style={{ width: '100%', padding: '16px', fontWeight: 800, background: '#0F2B5B', borderRadius: 12, marginTop: 12 }}
+              >
+                {submittingMaintenance ? 'Submitting...' : 'Submit Maintenance Record'}
+              </button>
+            </form>
+          )}
+
+          {maintenanceTab === 'history' && (
+            <>
+              {/* Desktop Table */}
+              <div className="table-container hide-on-mobile">
+                <table className="table">
+                  <thead>
+                    <tr><th>Date</th><th>Vehicle</th><th>Service Type</th><th>Vendor</th><th>Cost</th><th>Odometer</th><th>Next Service</th></tr>
+                  </thead>
+                  <tbody>
+                    {maintenanceRecords.map(s => (
+                      <tr key={s.id}>
+                        <td>{new Date(s.service_date).toLocaleDateString()}</td>
+                        <td>{s.vehicle_name} ({s.number_plate})</td>
+                        <td><span className="badge badge-orange">{(s.service_type || '').replace(/_/g, ' ')}</span></td>
+                        <td>{s.vendor || '-'}</td>
+                        <td>{s.cost ? `Rs ${parseFloat(s.cost).toLocaleString()}` : '-'}</td>
+                        <td>{s.odometer ? `${parseFloat(s.odometer).toLocaleString()} km` : '-'}</td>
+                        <td>{s.next_service_date ? new Date(s.next_service_date).toLocaleDateString() : '-'}</td>
+                      </tr>
+                    ))}
+                    {maintenanceRecords.length === 0 && (
+                      <tr><td colSpan="7" style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--text-tertiary)' }}>No maintenance records found for your vehicle</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="show-on-mobile">
+                <div className="mobile-card-list">
+                  {maintenanceRecords.map(s => (
+                    <div key={`mmaint_${s.id}`} className="mobile-record-card" style={{ borderLeft: '4px solid #F59E0B' }}>
+                      <div className="mobile-card-header">
+                        <div>
+                          <div className="mobile-card-title">{s.vehicle_name} ({s.number_plate})</div>
+                          <div className="mobile-card-subtitle">
+                            {new Date(s.service_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </div>
+                        </div>
+                        <span className="badge badge-orange">{(s.service_type || '').replace(/_/g, ' ')}</span>
+                      </div>
+                      <div className="mobile-card-grid">
+                        <div className="mobile-card-cell">
+                          <span className="mobile-card-label">Cost</span>
+                          <span className="mobile-card-value">{s.cost ? `Rs ${parseFloat(s.cost).toLocaleString()}` : '-'}</span>
+                        </div>
+                        <div className="mobile-card-cell">
+                          <span className="mobile-card-label">Vendor</span>
+                          <span className="mobile-card-value">{s.vendor || '-'}</span>
+                        </div>
+                        <div className="mobile-card-cell">
+                          <span className="mobile-card-label">Odometer</span>
+                          <span className="mobile-card-value">{s.odometer ? `${parseFloat(s.odometer).toLocaleString()} km` : '-'}</span>
+                        </div>
+                        <div className="mobile-card-cell">
+                          <span className="mobile-card-label">Next Service</span>
+                          <span className="mobile-card-value">{s.next_service_date ? new Date(s.next_service_date).toLocaleDateString() : '-'}</span>
+                        </div>
+                      </div>
+                      {(s.description || s.notes) && (
+                        <div style={{ padding: '8px 0 0', fontSize: 12, color: '#64748b' }}>
+                          {s.description && <div><strong>Description:</strong> {s.description}</div>}
+                          {s.notes && <div><strong>Notes:</strong> {s.notes}</div>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {maintenanceRecords.length === 0 && (
+                    <div className="card-elevated" style={{ textAlign: 'center', padding: 24, color: 'var(--text-tertiary)' }}>
+                      No maintenance records found for your vehicle
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       )}
 
       {tab === 'approvals' && isManagerOrController && (
