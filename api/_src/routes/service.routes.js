@@ -76,4 +76,77 @@ router.get('/due', authenticate, authorize('manager', 'controller', 'boss', 'adm
   }
 });
 
+// GET /api/vehicle-services/my - Employee: maintenance records for their assigned vehicle only
+router.get('/my', authenticate, async (req, res, next) => {
+  try {
+    const { rows: assignment } = await query(
+      `SELECT va.vehicle_id FROM vehicle_assignments va
+       WHERE va.employee_id = $1 AND va.is_current = true`,
+      [req.user.id]
+    );
+
+    if (assignment.length === 0) {
+      return res.json({ services: [] });
+    }
+
+    const { rows } = await query(
+      `SELECT vs.*, v.name as vehicle_name, v.number_plate, v.vehicle_id as v_id,
+              e.name as created_by_name
+       FROM vehicle_services vs
+       JOIN vehicles v ON v.id = vs.vehicle_id
+       LEFT JOIN employees e ON e.id = vs.created_by
+       WHERE vs.vehicle_id = $1
+       ORDER BY vs.service_date DESC`,
+      [assignment[0].vehicle_id]
+    );
+
+    res.json({ services: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/vehicle-services/employee - Employee adds maintenance for their assigned vehicle ONLY
+// vehicle_id is server-enforced from vehicle_assignments, NOT accepted from frontend
+router.post('/employee', authenticate, async (req, res, next) => {
+  try {
+    const { rows: assignment } = await query(
+      `SELECT va.vehicle_id FROM vehicle_assignments va
+       WHERE va.employee_id = $1 AND va.is_current = true`,
+      [req.user.id]
+    );
+
+    if (assignment.length === 0) {
+      return res.status(403).json({ error: 'You do not have a currently assigned vehicle. Cannot add maintenance.' });
+    }
+
+    const vehicle_id = assignment[0].vehicle_id;
+
+    const {
+      service_type, description, service_date,
+      next_service_date, next_service_km, cost, odometer, vendor, notes
+    } = req.body;
+
+    if (!service_type || !service_date) {
+      return res.status(400).json({ error: 'service_type and service_date are required' });
+    }
+
+    const { rows } = await query(
+      `INSERT INTO vehicle_services
+       (vehicle_id, service_type, description, service_date, next_service_date,
+        next_service_km, cost, odometer, vendor, notes, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       RETURNING *`,
+      [vehicle_id, service_type, description || null, service_date,
+       next_service_date || null, next_service_km || null,
+       cost ? parseFloat(cost) : null, odometer ? parseFloat(odometer) : null,
+       vendor || null, notes || null, req.user.id]
+    );
+
+    res.status(201).json({ service: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
