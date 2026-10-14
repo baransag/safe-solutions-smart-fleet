@@ -1,13 +1,36 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { Camera, RefreshCw, X, AlertCircle } from 'lucide-react';
+import { Camera, RefreshCw, X, AlertCircle, Zap } from 'lucide-react';
+import { toggleCameraTorch } from '../../utils/torchHelper';
 
 export default function EmployeeQRScanner({ isOpen, onClose, onScanSuccess, title = 'Scan Attendance QR Code' }) {
   const [cameras, setCameras] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState('');
   const [scanError, setScanError] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
   const html5QrcodeRef = useRef(null);
+
+  const toggleTorch = async () => {
+    const nextTorch = !torchOn;
+    try {
+      if (html5QrcodeRef.current && typeof html5QrcodeRef.current.applyVideoConstraints === 'function') {
+        await html5QrcodeRef.current.applyVideoConstraints({
+          advanced: [{ torch: nextTorch }]
+        });
+      }
+    } catch (e) {
+      console.debug('Html5Qrcode torch notice:', e?.message || e);
+    }
+
+    try {
+      await toggleCameraTorch('employee-qr-reader', nextTorch);
+    } catch (e) {
+      console.debug('DOM torch toggle notice:', e?.message || e);
+    }
+
+    setTorchOn(nextTorch);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -138,9 +161,32 @@ export default function EmployeeQRScanner({ isOpen, onClose, onScanSuccess, titl
           </button>
         </div>
 
-        <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 16px' }}>
-          Align the Office or Site QR Code within the camera box below. Back camera is open by default.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
+            Align the QR Code within the box below.
+          </p>
+          <button
+            type="button"
+            onClick={toggleTorch}
+            style={{
+              background: torchOn ? '#F59E0B' : '#f1f5f9',
+              color: torchOn ? '#000' : '#475569',
+              border: torchOn ? '2px solid #fff' : '1px solid #cbd5e1',
+              borderRadius: 20,
+              fontWeight: 800,
+              fontSize: 12,
+              padding: '5px 12px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              cursor: 'pointer',
+              boxShadow: torchOn ? '0 0 12px rgba(245, 158, 11, 0.6)' : 'none',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {torchOn ? '⚡ Flash ON' : '💡 Flash'}
+          </button>
+        </div>
 
         {/* Multi-Camera Selector */}
         {cameras.length > 1 && (
@@ -171,8 +217,10 @@ export default function EmployeeQRScanner({ isOpen, onClose, onScanSuccess, titl
             borderRadius: 12,
             overflow: 'hidden',
             background: '#0f172a',
-            border: '2px solid #0F2B5B',
-            position: 'relative'
+            border: torchOn ? '3px solid #F59E0B' : '2px solid #0F2B5B',
+            position: 'relative',
+            boxShadow: torchOn ? '0 0 45px 15px rgba(255, 255, 255, 0.95), inset 0 0 35px 10px rgba(255, 255, 255, 0.9)' : 'none',
+            transition: 'all 0.3s ease'
           }}
         />
 

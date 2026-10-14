@@ -8,6 +8,7 @@ import {
   ShieldCheck, RefreshCw, ChevronRight, Car
 } from 'lucide-react';
 import gpsTracker from '../../services/gpsTracker';
+import { toggleCameraTorch } from '../../utils/torchHelper';
 import './CheckInPage.css';
 
 const STEPS = ['Scan QR', 'Verification', 'Meter Photo', 'Confirm'];
@@ -453,6 +454,7 @@ function QRScanner({ onScan, assignment }) {
   const scannerRef = useRef(null);
   const html5QrRef = useRef(null);
   const [cameraError, setCameraError] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
 
   useEffect(() => {
     let scanner = null;
@@ -479,6 +481,25 @@ function QRScanner({ onScan, assignment }) {
     };
   }, []);
 
+  const toggleTorch = async () => {
+    const nextTorch = !torchOn;
+    try {
+      if (html5QrRef.current && typeof html5QrRef.current.applyVideoConstraints === 'function') {
+        await html5QrRef.current.applyVideoConstraints({
+          advanced: [{ torch: nextTorch }]
+        });
+      }
+    } catch (e) {
+      console.debug('html5-qrcode torch notice:', e?.message || e);
+    }
+    try {
+      await toggleCameraTorch('qr-reader-checkout', nextTorch);
+    } catch (e) {
+      console.debug('DOM torch toggle notice:', e?.message || e);
+    }
+    setTorchOn(nextTorch);
+  };
+
   const handleQuickVerify = () => {
     if (!assignment) return;
     const payload = JSON.stringify({
@@ -492,7 +513,44 @@ function QRScanner({ onScan, assignment }) {
 
   return (
     <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
-      <div id="qr-reader-checkout" ref={scannerRef} style={{ width: '100%', maxWidth: 400, margin: '0 auto', borderRadius: 'var(--radius-md)', overflow: 'hidden' }} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', maxWidth: 400, margin: '0 auto 8px' }}>
+        <button
+          type="button"
+          onClick={toggleTorch}
+          style={{
+            background: torchOn ? '#F59E0B' : '#f1f5f9',
+            color: torchOn ? '#000' : '#475569',
+            border: torchOn ? '2px solid #fff' : '1px solid #cbd5e1',
+            borderRadius: 20,
+            fontWeight: 800,
+            fontSize: 12,
+            padding: '5px 12px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            cursor: 'pointer',
+            boxShadow: torchOn ? '0 0 12px rgba(245, 158, 11, 0.6)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {torchOn ? '⚡ Flash ON' : '💡 Flash'}
+        </button>
+      </div>
+
+      <div
+        id="qr-reader-checkout"
+        ref={scannerRef}
+        style={{
+          width: '100%',
+          maxWidth: 400,
+          margin: '0 auto',
+          borderRadius: 'var(--radius-md)',
+          overflow: 'hidden',
+          border: torchOn ? '3px solid #F59E0B' : 'none',
+          boxShadow: torchOn ? '0 0 45px 15px rgba(255, 255, 255, 0.95), inset 0 0 35px 10px rgba(255, 255, 255, 0.9)' : 'none',
+          transition: 'all 0.3s ease'
+        }}
+      />
 
       {cameraError && (
         <div style={{

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Camera, RefreshCw, X, Sparkles, AlertTriangle, CheckCircle2, Eye, Upload, FileText } from 'lucide-react';
+import { Camera, RefreshCw, X, Sparkles, AlertTriangle, CheckCircle2, Eye, Upload, FileText, Zap } from 'lucide-react';
+import { compressImage } from '../../utils/imageCompressor';
+import { toggleCameraTorch } from '../../utils/torchHelper';
 
 /**
  * Clean Slip Scanner with Dual Upload Mode (Camera + Device File Upload) & Side-by-Side Slip Checker
@@ -15,28 +17,20 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
   const [rawImageBlob, setRawImageBlob] = useState(null);
   const [rawImagePreview, setRawImagePreview] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
-  const [hasTorch, setHasTorch] = useState(false);
+  const [compressing, setCompressing] = useState(false);
 
   // Camera handling
   async function startCamera() {
     setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
       }).catch(async () => {
         return await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
       });
 
       streamRef.current = stream;
       setActive(true);
-
-      const track = stream.getVideoTracks()[0];
-      if (track && typeof track.getCapabilities === 'function') {
-        const capabilities = track.getCapabilities();
-        setHasTorch(Boolean(capabilities.torch));
-      } else {
-        setHasTorch(false);
-      }
     } catch (err) {
       console.warn('Camera stream notice:', err.message);
       if (fileInputRef.current) {
@@ -64,16 +58,13 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
 
   async function toggleTorch() {
     if (!streamRef.current) return;
-    const track = streamRef.current.getVideoTracks()[0];
-    if (!track) return;
     try {
       const nextTorch = !torchOn;
-      await track.applyConstraints({
-        advanced: [{ torch: nextTorch }]
-      });
+      await toggleCameraTorch(streamRef.current, nextTorch);
       setTorchOn(nextTorch);
     } catch (err) {
-      console.warn('Torch toggle error:', err.message);
+      console.warn('Torch toggle notice:', err.message);
+      setTorchOn(!torchOn);
     }
   }
 
@@ -81,21 +72,37 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
     return () => stopCamera();
   }, []);
 
-  function handleFileSelect(e) {
+  async function handleFileSelect(e) {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        setRawImageBlob(file);
-        setRawImagePreview(evt.target.result);
+      setCompressing(true);
+      try {
+        const { blob, preview } = await compressImage(file, 1280, 1280, 0.75);
+        setRawImageBlob(blob);
+        setRawImagePreview(preview);
         onCaptureComplete({
-          rawBlob: file,
-          processedBlob: file,
-          rawPreview: evt.target.result,
-          processedPreview: evt.target.result
+          rawBlob: blob,
+          processedBlob: blob,
+          rawPreview: preview,
+          processedPreview: preview
         });
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        console.warn('File compression fallback:', err);
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          setRawImageBlob(file);
+          setRawImagePreview(evt.target.result);
+          onCaptureComplete({
+            rawBlob: file,
+            processedBlob: file,
+            rawPreview: evt.target.result,
+            processedPreview: evt.target.result
+          });
+        };
+        reader.readAsDataURL(file);
+      } finally {
+        setCompressing(false);
+      }
     }
   }
 
@@ -103,14 +110,26 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
     const video = videoRef.current;
     if (!video) return;
 
+    let w = video.videoWidth || 1280;
+    let h = video.videoHeight || 720;
+    if (w > 1280 || h > 1280) {
+      if (w > h) {
+        h = Math.round((h * 1280) / w);
+        w = 1280;
+      } else {
+        w = Math.round((w * 1280) / h);
+        h = 1280;
+      }
+    }
+
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, w, h);
 
     canvas.toBlob(blob => {
-      const preview = canvas.toDataURL('image/jpeg', 0.92);
+      const preview = canvas.toDataURL('image/jpeg', 0.8);
       stopCamera();
       setRawImageBlob(blob);
       setRawImagePreview(preview);
@@ -120,7 +139,7 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
         rawPreview: preview,
         processedPreview: preview
       });
-    }, 'image/jpeg', 0.92);
+    }, 'image/jpeg', 0.8);
   }
 
   function resetScanner() {
@@ -186,37 +205,62 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
 
       {/* STEP 2: ACTIVE LIVE CAMERA STREAM */}
       {active && (
-        <div style={{ borderRadius: 16, overflow: 'hidden', background: '#000', position: 'relative' }}>
+        <div style={{
+          borderRadius: 16,
+          overflow: 'hidden',
+          background: '#000',
+          position: 'relative',
+          boxShadow: torchOn ? '0 0 45px 15px rgba(255, 255, 255, 0.95), inset 0 0 35px 10px rgba(255, 255, 255, 0.9)' : 'none',
+          transition: 'box-shadow 0.3s ease'
+        }}>
           <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', maxHeight: 380, objectFit: 'cover' }} />
 
-          {hasTorch && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={toggleTorch}
-              style={{
-                position: 'absolute',
-                top: 15,
-                right: 15,
-                background: torchOn ? '#F59E0B' : 'rgba(0,0,0,0.6)',
-                color: torchOn ? '#000' : '#fff',
-                border: '1px solid rgba(255,255,255,0.4)',
-                borderRadius: 20,
-                fontWeight: 700,
-                fontSize: 12,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                zIndex: 10
-              }}
-            >
-              {torchOn ? '⚡ Flash ON' : '💡 Flash OFF'}
-            </button>
-          )}
+          {/* Flashlight / Torch Button (Always Available) */}
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={toggleTorch}
+            style={{
+              position: 'absolute',
+              top: 15,
+              right: 15,
+              background: torchOn ? '#F59E0B' : 'rgba(0,0,0,0.7)',
+              color: torchOn ? '#000' : '#fff',
+              border: torchOn ? '2px solid #fff' : '1px solid rgba(255,255,255,0.4)',
+              borderRadius: 20,
+              fontWeight: 800,
+              fontSize: 12,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              zIndex: 10,
+              boxShadow: torchOn ? '0 0 15px #F59E0B' : 'none'
+            }}
+          >
+            {torchOn ? '⚡ Flash ON' : '💡 Flash'}
+          </button>
 
-          <div style={{ position: 'absolute', inset: 0, border: '2px dashed rgba(255,255,255,0.7)', margin: 20, borderRadius: 12, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-              Align Slip Inside Frame
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            border: torchOn ? '3px solid #F59E0B' : '2px dashed rgba(255,255,255,0.7)',
+            margin: 20,
+            borderRadius: 12,
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'border 0.3s ease'
+          }}>
+            <span style={{
+              background: torchOn ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.6)',
+              color: torchOn ? '#FDE047' : '#fff',
+              padding: '6px 14px',
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 700
+            }}>
+              {torchOn ? '⚡ Light Active • Align Slip' : 'Align Slip Inside Frame'}
             </span>
           </div>
 

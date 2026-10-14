@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '../../services/api';
 import ReceiptScanner from '../../components/fuel/ReceiptScanner';
+import { compressImage } from '../../utils/imageCompressor';
 import { Fuel, CheckCircle2, AlertTriangle, Eye, X, Image as ImageIcon, FileText, Check, Wrench } from 'lucide-react';
 
 export default function FuelPage() {
@@ -126,8 +127,21 @@ export default function FuelPage() {
         formData.append('gps_lng', pos.coords.longitude);
       }
 
-      if (rawBlob) formData.append('receipt_photo', rawBlob, 'raw_receipt.jpg');
-      if (processedBlob) formData.append('processed_receipt_photo', processedBlob, 'processed_receipt.jpg');
+      // Pre-upload compression check to guarantee payload remains well under Vercel's 4.5MB limit
+      let finalRaw = rawBlob;
+      let finalProc = processedBlob;
+
+      if (finalRaw && finalRaw.size > 700 * 1024) {
+        const compressed = await compressImage(finalRaw, 1280, 1280, 0.75);
+        if (compressed.blob) finalRaw = compressed.blob;
+      }
+      if (finalProc && finalProc.size > 700 * 1024) {
+        const compressed = await compressImage(finalProc, 1280, 1280, 0.75);
+        if (compressed.blob) finalProc = compressed.blob;
+      }
+
+      if (finalRaw) formData.append('receipt_photo', finalRaw, 'raw_receipt.jpg');
+      if (finalProc) formData.append('processed_receipt_photo', finalProc, 'processed_receipt.jpg');
 
       await api.upload('/fuel', formData);
       toast.success('Fuel receipt submitted for controller approval!');
