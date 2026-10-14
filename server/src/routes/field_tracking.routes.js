@@ -198,10 +198,10 @@ router.post('/location', authenticate, async (req, res, next) => {
   }
 });
 
-// GET /api/field-tracking/live - Real-time/latest positions of active field employees
+// GET /api/field-tracking/live - Real-time/latest positions and card status of all employees
 router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'manager'), async (req, res, next) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = req.query.date || new Date().toISOString().split('T')[0];
 
     const { rows } = await query(`
       WITH latest_loc AS (
@@ -211,6 +211,20 @@ router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'mana
         FROM field_location_logs
         WHERE session_date = $1
         ORDER BY employee_id, id DESC
+      ),
+      latest_attendance AS (
+        SELECT DISTINCT ON (employee_id)
+          id, employee_id, check_in_time, check_out_time, attendance_type, status, approval_status, work_hours
+        FROM attendance_records
+        WHERE check_in_time::date = $1
+        ORDER BY employee_id, id DESC
+      ),
+      latest_checkin AS (
+        SELECT DISTINCT ON (employee_id)
+          id, employee_id, vehicle_id, checkin_time, meter_reading
+        FROM vehicle_checkins
+        WHERE checkin_date = $1
+        ORDER BY employee_id, id DESC
       )
       SELECT
         e.id AS employee_id,
@@ -219,15 +233,32 @@ router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'mana
         e.phone,
         e.department,
         e.role,
+        e.designation,
+        -- Attendance Details
+        la.id AS attendance_id,
+        la.check_in_time AS attendance_checkin_time,
+        la.check_out_time AS attendance_checkout_time,
+        la.status AS attendance_status,
+        la.attendance_type,
+        la.work_hours AS attendance_work_hours,
+        -- Vehicle Details
         v.id AS vehicle_id,
         v.name AS vehicle_name,
         v.number_plate,
-        vc.checkin_time,
-        vco.checkout_time,
+        vc.id AS checkin_id,
+        vc.checkin_time AS vehicle_checkin_time,
+        vco.checkout_time AS vehicle_checkout_time,
+        vc.meter_reading AS opening_meter,
+        vco.meter_reading AS closing_meter,
+        -- Tracking Session
+        fts.id AS session_id,
         fts.total_points,
         COALESCE(fts.total_distance_meters, 0) AS total_distance_meters,
+        ROUND((COALESCE(fts.total_distance_meters, 0) / 1000.0)::numeric, 2) AS total_distance_km,
         fts.status AS session_status,
         fts.started_at AS session_started_at,
+        fts.ended_at AS session_ended_at,
+        -- Latest Location
         ll.latitude,
         ll.longitude,
         ll.accuracy_meters,
@@ -236,18 +267,36 @@ router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'mana
         ll.battery_level,
         ll.is_moving,
         ll.recorded_at AS last_location_at,
-        EXTRACT(EPOCH FROM (NOW() - ll.recorded_at)) / 60 AS minutes_since_last_ping
+        ROUND(EXTRACT(EPOCH FROM (NOW() - ll.recorded_at)) / 60.0, 1) AS minutes_since_last_ping,
+        -- Computed Tracking Status: 'Active', 'Stopped', 'Offline', or 'Not Started'
+        CASE
+          WHEN vco.checkout_time IS NOT NULL OR fts.status = 'completed' THEN 'Stopped'
+          WHEN vc.checkin_time IS NOT NULL THEN
+            CASE
+              WHEN ll.recorded_at IS NOT NULL AND EXTRACT(EPOCH FROM (NOW() - ll.recorded_at)) <= 900 THEN 'Active'
+              ELSE 'Offline'
+            END
+          ELSE 'Not Started'
+        END AS tracking_status
       FROM employees e
-      INNER JOIN vehicle_checkins vc ON vc.employee_id = e.id AND vc.checkin_date = $1
+      LEFT JOIN latest_attendance la ON la.employee_id = e.id
+      LEFT JOIN latest_checkin vc ON vc.employee_id = e.id
       LEFT JOIN vehicles v ON vc.vehicle_id = v.id
       LEFT JOIN vehicle_checkouts vco ON vco.checkin_id = vc.id
       LEFT JOIN field_tracking_sessions fts ON fts.employee_id = e.id AND fts.session_date = $1
       LEFT JOIN latest_loc ll ON ll.employee_id = e.id
       WHERE e.is_active = true
-      ORDER BY vc.checkin_time DESC
+      ORDER BY
+        CASE
+          WHEN vco.checkout_time IS NULL AND vc.checkin_time IS NOT NULL AND ll.recorded_at IS NOT NULL AND EXTRACT(EPOCH FROM (NOW() - ll.recorded_at)) <= 900 THEN 1
+          WHEN vc.checkin_time IS NOT NULL AND vco.checkout_time IS NULL THEN 2
+          WHEN la.check_in_time IS NOT NULL THEN 3
+          ELSE 4
+        END,
+        e.name ASC
     `, [today]);
 
-    res.json({ success: true, tracking: rows });
+    res.json({ success: true, tracking: rows, targetDate: today });
   } catch (err) {
     next(err);
   }
@@ -295,13 +344,246 @@ router.get('/route/:employeeId', authenticate, async (req, res, next) => {
   }
 });
 
+// GET /api/field-tracking/employee-report/:employeeId - Detailed daily, weekly, monthly report for a specific employee
+router.get('/employee-report/:employeeId', authenticate, async (req, res, next) => {
+  try {
+    const employeeId = parseInt(req.params.employeeId);
+    const { period, date, startDate, endDate, month, year } = req.query;
+
+    const isSelf = req.user.id === employeeId;
+    const isManagement = ['boss', 'admin', 'controller', 'manager'].includes(req.user.role);
+    if (!isSelf && !isManagement) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Determine Start and End date
+    const today = new Date().toISOString().split('T')[0];
+    let fromDate = today;
+    let toDate = today;
+
+    if (period === 'daily') {
+      fromDate = date || today;
+      toDate = date || today;
+    } else if (period === 'weekly') {
+      if (startDate && endDate) {
+        fromDate = startDate;
+        toDate = endDate;
+      } else {
+        const base = date ? new Date(date) : new Date();
+        const d = new Date(base);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+        const monday = new Date(d.setDate(diff));
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        fromDate = monday.toISOString().split('T')[0];
+        toDate = sunday.toISOString().split('T')[0];
+      }
+    } else if (period === 'monthly') {
+      const now = new Date();
+      const m = parseInt(month || now.getMonth() + 1);
+      const y = parseInt(year || now.getFullYear());
+      const firstDay = new Date(Date.UTC(y, m - 1, 1));
+      const lastDay = new Date(Date.UTC(y, m, 0));
+      fromDate = firstDay.toISOString().split('T')[0];
+      toDate = lastDay.toISOString().split('T')[0];
+    } else if (period === 'custom') {
+      fromDate = startDate || today;
+      toDate = endDate || today;
+    } else if (startDate && endDate) {
+      fromDate = startDate;
+      toDate = endDate;
+    }
+
+    // Fetch employee details
+    const { rows: empRows } = await query(
+      `SELECT id, employee_id AS employee_code, name, department, role, designation, phone, email
+       FROM employees WHERE id = $1`,
+      [employeeId]
+    );
+    if (empRows.length === 0) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+    const employee = empRows[0];
+
+    // Query combined daily records for the selected employee in the date range
+    const { rows: attendanceList } = await query(`
+      SELECT
+        ar.id AS attendance_id,
+        ar.check_in_time::date AS date_key,
+        ar.check_in_time,
+        ar.check_out_time,
+        ar.status AS attendance_status,
+        ar.attendance_type,
+        ar.location_name,
+        ar.project_name,
+        ar.work_hours,
+        ar.approval_status,
+        ar.notes
+      FROM attendance_records ar
+      WHERE ar.employee_id = $1 AND ar.check_in_time::date BETWEEN $2 AND $3
+      ORDER BY ar.check_in_time ASC
+    `, [employeeId, fromDate, toDate]);
+
+    const { rows: vehicleCheckinList } = await query(`
+      SELECT
+        vc.id AS checkin_id,
+        vc.checkin_date AS date_key,
+        vc.checkin_time,
+        vco.checkout_time,
+        vc.meter_reading AS opening_meter,
+        vco.meter_reading AS closing_meter,
+        vco.distance_km,
+        v.id AS vehicle_id,
+        v.name AS vehicle_name,
+        v.number_plate
+      FROM vehicle_checkins vc
+      LEFT JOIN vehicle_checkouts vco ON vco.checkin_id = vc.id
+      LEFT JOIN vehicles v ON vc.vehicle_id = v.id
+      WHERE vc.employee_id = $1 AND vc.checkin_date BETWEEN $2 AND $3
+      ORDER BY vc.checkin_time ASC
+    `, [employeeId, fromDate, toDate]);
+
+    const { rows: trackingSessionList } = await query(`
+      SELECT
+        fts.id AS session_id,
+        fts.session_date AS date_key,
+        fts.started_at,
+        fts.ended_at,
+        fts.total_points,
+        ROUND((COALESCE(fts.total_distance_meters, 0) / 1000.0)::numeric, 2) AS total_distance_km,
+        fts.status AS session_status,
+        fts.last_point_at
+      FROM field_tracking_sessions fts
+      WHERE fts.employee_id = $1 AND fts.session_date BETWEEN $2 AND $3
+      ORDER BY fts.session_date ASC
+    `, [employeeId, fromDate, toDate]);
+
+    // Aggregate into daily chronological entries
+    const datesMap = new Map();
+
+    attendanceList.forEach(a => {
+      const k = String(a.date_key).slice(0, 10);
+      if (!datesMap.has(k)) datesMap.set(k, { date: k });
+      const entry = datesMap.get(k);
+      entry.attendance = a;
+    });
+
+    vehicleCheckinList.forEach(v => {
+      const k = String(v.date_key).slice(0, 10);
+      if (!datesMap.has(k)) datesMap.set(k, { date: k });
+      const entry = datesMap.get(k);
+      entry.vehicle = v;
+    });
+
+    trackingSessionList.forEach(t => {
+      const k = String(t.date_key).slice(0, 10);
+      if (!datesMap.has(k)) datesMap.set(k, { date: k });
+      const entry = datesMap.get(k);
+      entry.tracking = t;
+    });
+
+    // Build ordered list
+    const sortedDates = Array.from(datesMap.keys()).sort().reverse();
+    const records = sortedDates.map(dateKey => {
+      const entry = datesMap.get(dateKey);
+      const a = entry.attendance;
+      const v = entry.vehicle;
+      const t = entry.tracking;
+
+      // Calculate working duration only when both timestamps are valid
+      let workDurationFormatted = 'N/A';
+      let workDurationHours = null;
+      let missingCheckout = false;
+
+      if (a && a.check_in_time) {
+        if (a.check_out_time) {
+          const inD = new Date(a.check_in_time);
+          const outD = new Date(a.check_out_time);
+          if (outD >= inD) {
+            const diffMs = outD - inD;
+            const totalMinutes = Math.floor(diffMs / 60000);
+            const hrs = Math.floor(totalMinutes / 60);
+            const mins = totalMinutes % 60;
+            workDurationFormatted = `${hrs}h ${mins}m`;
+            workDurationHours = +(diffMs / (1000 * 60 * 60)).toFixed(2);
+          }
+        } else {
+          missingCheckout = true;
+          workDurationFormatted = 'Missing Check-Out';
+        }
+      }
+
+      return {
+        date: dateKey,
+        employee_id: employee.id,
+        employee_code: employee.employee_code,
+        employee_name: employee.name,
+        department: employee.department,
+        // Attendance
+        attendance_id: a ? a.attendance_id : null,
+        attendance_status: a ? a.attendance_status : 'absent',
+        attendance_type: a ? a.attendance_type : null,
+        check_in_time: a ? a.check_in_time : null,
+        check_out_time: a ? a.check_out_time : null,
+        work_duration_formatted: workDurationFormatted,
+        work_duration_hours: workDurationHours,
+        missing_checkout: missingCheckout,
+        location_name: a ? a.location_name : null,
+        project_name: a ? a.project_name : null,
+        // Vehicle
+        vehicle_id: v ? v.vehicle_id : null,
+        vehicle_name: v ? v.vehicle_name : null,
+        number_plate: v ? v.number_plate : null,
+        vehicle_checkin_time: v ? v.checkin_time : null,
+        vehicle_checkout_time: v ? v.checkout_time : null,
+        opening_meter: v ? v.opening_meter : null,
+        closing_meter: v ? v.closing_meter : null,
+        vehicle_distance_km: v ? (v.distance_km || (v.closing_meter && v.opening_meter ? v.closing_meter - v.opening_meter : 0)) : 0,
+        // GPS Tracking
+        tracking_session_id: t ? t.session_id : null,
+        tracking_started_at: t ? t.started_at : null,
+        tracking_ended_at: t ? t.ended_at : null,
+        total_gps_points: t ? t.total_points : 0,
+        gps_distance_km: t ? t.total_distance_km : 0,
+        tracking_status: t ? t.session_status : 'no_data'
+      };
+    });
+
+    // Summary statistics
+    const totalDays = records.length;
+    const totalWorkHours = records.reduce((acc, r) => acc + (r.work_duration_hours || 0), 0);
+    const totalGpsKm = records.reduce((acc, r) => acc + Number(r.gps_distance_km || 0), 0);
+    const totalVehicleKm = records.reduce((acc, r) => acc + Number(r.vehicle_distance_km || 0), 0);
+    const missingCheckoutsCount = records.filter(r => r.missing_checkout).length;
+
+    res.json({
+      success: true,
+      employee,
+      period: period || 'custom',
+      fromDate,
+      toDate,
+      records,
+      summary: {
+        totalDays,
+        totalWorkHours: +totalWorkHours.toFixed(2),
+        totalGpsKm: +totalGpsKm.toFixed(2),
+        totalVehicleKm: +totalVehicleKm.toFixed(2),
+        missingCheckoutsCount
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/field-tracking/reports - Aggregated daily, weekly, and monthly reports
 router.get('/reports', authenticate, authorize('boss', 'admin', 'controller', 'manager'), async (req, res, next) => {
   try {
     const { startDate, endDate, employeeId } = req.query;
     const today = new Date().toISOString().split('T')[0];
 
-    let whereClause = `WHERE fts.session_date BETWEEN $1 AND $2`;
+    let whereClause = `WHERE (fts.session_date BETWEEN $1 AND $2 OR ar.check_in_time::date BETWEEN $1 AND $2)`;
     const params = [
       startDate || today,
       endDate || today
@@ -309,36 +591,47 @@ router.get('/reports', authenticate, authorize('boss', 'admin', 'controller', 'm
 
     if (employeeId) {
       params.push(employeeId);
-      whereClause += ` AND fts.employee_id = $${params.length}`;
+      whereClause += ` AND e.id = $${params.length}`;
     }
 
     const { rows } = await query(`
       SELECT
-        fts.id,
-        fts.session_date,
-        fts.employee_id,
+        COALESCE(fts.session_date, ar.check_in_time::date, vc.checkin_date) AS session_date,
+        e.id AS employee_id,
         e.employee_id AS employee_code,
         e.name AS employee_name,
         e.department,
         v.id AS vehicle_id,
         v.name AS vehicle_name,
         v.number_plate,
-        vc.checkin_time,
-        vco.checkout_time,
+        -- Attendance
+        ar.check_in_time AS attendance_checkin_time,
+        ar.check_out_time AS attendance_checkout_time,
+        ar.status AS attendance_status,
+        CASE
+          WHEN ar.check_in_time IS NOT NULL AND ar.check_out_time IS NOT NULL AND ar.check_out_time >= ar.check_in_time THEN
+            ROUND(EXTRACT(EPOCH FROM (ar.check_out_time - ar.check_in_time)) / 3600.0::numeric, 2)
+          ELSE NULL
+        END AS attendance_duty_hours,
+        -- Vehicle Check-in / Checkout
+        vc.checkin_time AS vehicle_checkin_time,
+        vco.checkout_time AS vehicle_checkout_time,
+        -- GPS Tracking
+        fts.id AS tracking_id,
         fts.started_at,
         fts.ended_at,
-        fts.total_points,
+        COALESCE(fts.total_points, 0) AS total_points,
         ROUND((COALESCE(fts.total_distance_meters, 0) / 1000.0)::numeric, 2) AS total_distance_km,
-        fts.status,
-        fts.last_point_at,
-        ROUND(EXTRACT(EPOCH FROM (COALESCE(vco.checkout_time, fts.last_point_at, NOW()) - vc.checkin_time)) / 3600.0::numeric, 2) AS duty_hours
-      FROM field_tracking_sessions fts
-      JOIN employees e ON fts.employee_id = e.id
-      LEFT JOIN vehicle_checkins vc ON fts.checkin_id = vc.id
+        COALESCE(fts.status, 'no_data') AS status,
+        fts.last_point_at
+      FROM employees e
+      LEFT JOIN field_tracking_sessions fts ON fts.employee_id = e.id AND fts.session_date BETWEEN $1 AND $2
+      LEFT JOIN attendance_records ar ON ar.employee_id = e.id AND ar.check_in_time::date BETWEEN $1 AND $2
+      LEFT JOIN vehicle_checkins vc ON (vc.id = fts.checkin_id OR (vc.employee_id = e.id AND vc.checkin_date BETWEEN $1 AND $2))
       LEFT JOIN vehicle_checkouts vco ON vco.checkin_id = vc.id
-      LEFT JOIN vehicles v ON fts.vehicle_id = v.id
+      LEFT JOIN vehicles v ON (v.id = fts.vehicle_id OR v.id = vc.vehicle_id)
       ${whereClause}
-      ORDER BY fts.session_date DESC, vc.checkin_time DESC
+      ORDER BY session_date DESC, e.name ASC
     `, params);
 
     res.json({ success: true, reports: rows });

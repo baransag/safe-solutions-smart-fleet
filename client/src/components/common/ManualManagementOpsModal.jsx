@@ -15,9 +15,13 @@ export default function ManualManagementOpsModal({ isOpen, onClose }) {
   const [attType, setAttType] = useState('office');
   const [attDate, setAttDate] = useState(new Date().toISOString().split('T')[0]);
   const [attTime, setAttTime] = useState('08:30');
+  const [includeCheckOut, setIncludeCheckOut] = useState(true);
+  const [attOutTime, setAttOutTime] = useState('17:30');
   const [attLocation, setAttLocation] = useState('Head Office Faisalabad');
   const [attStatus, setAttStatus] = useState('present');
   const [attNotes, setAttNotes] = useState('');
+  const [openAttendanceRecords, setOpenAttendanceRecords] = useState([]);
+  const [selectedOpenRecordId, setSelectedOpenRecordId] = useState(null);
 
   // Manual Vehicle Check-in Form
   const [chkVehicleId, setChkVehicleId] = useState('');
@@ -42,14 +46,16 @@ export default function ManualManagementOpsModal({ isOpen, onClose }) {
 
   async function loadData() {
     try {
-      const [empRes, vehRes] = await Promise.all([
+      const [empRes, vehRes, openAttRes] = await Promise.all([
         api.get('/employees').catch(() => ({ employees: [] })),
-        api.get('/vehicles').catch(() => ({ vehicles: [] }))
+        api.get('/vehicles').catch(() => ({ vehicles: [] })),
+        api.get('/attendance/open-records').catch(() => ({ records: [] }))
       ]);
       const activeEmps = (empRes.employees || []).filter(e => e.is_active && e.role !== 'admin');
       const activeVehs = (vehRes.vehicles || []).filter(v => v.is_active);
       setEmployees(activeEmps);
       setVehicles(activeVehs);
+      setOpenAttendanceRecords(openAttRes?.records || []);
 
       if (activeEmps.length > 0) {
         setAttEmployeeId(activeEmps[0].id);
@@ -66,25 +72,76 @@ export default function ManualManagementOpsModal({ isOpen, onClose }) {
     }
   }
 
+  // Active open record for currently selected employee
+  const employeeOpenRecord = openAttendanceRecords.find(
+    r => String(r.employee_id) === String(attEmployeeId)
+  );
+
+  // Calculate duration preview
+  const getDurationPreview = () => {
+    if (!includeCheckOut || !attTime || !attOutTime) return null;
+    const [inH, inM] = attTime.split(':').map(Number);
+    const [outH, outM] = attOutTime.split(':').map(Number);
+    const totalMins = (outH * 60 + outM) - (inH * 60 + inM);
+    if (totalMins < 0) return { error: 'Check-out cannot be earlier than check-in time' };
+    const hrs = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    const decimalHours = (totalMins / 60).toFixed(2);
+    return {
+      text: `${hrs} hrs ${mins} mins (${decimalHours} hrs)`,
+      decimal: decimalHours,
+      isValid: true
+    };
+  };
+
+  const durationPreview = getDurationPreview();
+
   if (!isOpen) return null;
 
   // Handle Manual Attendance
   const handleAttendanceSubmit = async (e) => {
     e.preventDefault();
     if (!attEmployeeId) return toast.warning('Select an employee');
+
+    if (includeCheckOut && attOutTime) {
+      const [inH, inM] = attTime.split(':').map(Number);
+      const [outH, outM] = attOutTime.split(':').map(Number);
+      if (outH * 60 + outM < inH * 60 + inM) {
+        return toast.error('Check-out time cannot be earlier than check-in time.');
+      }
+    }
+
     setLoading(true);
     try {
       const checkInTimestamp = `${attDate}T${attTime}:00+05:00`;
-      await api.post('/attendance/manual', {
-        employee_id: parseInt(attEmployeeId, 10),
-        attendance_type: attType,
-        check_in_time: checkInTimestamp,
-        location_name: attLocation,
-        project_name: attType === 'office' ? 'SAFE SOLUTIONS HQ' : 'Field Operations Site',
-        status: attStatus,
-        notes: attNotes
-      });
-      toast.success('Manual Attendance logged successfully!');
+      const checkOutTimestamp = includeCheckOut && attOutTime ? `${attDate}T${attOutTime}:00+05:00` : null;
+
+      if (selectedOpenRecordId) {
+        // Specifically updating an existing open record
+        await api.patch(`/attendance/manual/${selectedOpenRecordId}`, {
+          check_in_time: checkInTimestamp,
+          check_out_time: checkOutTimestamp,
+          location_name: attLocation,
+          notes: attNotes
+        });
+        toast.success('Open attendance record updated with check-out successfully!');
+      } else {
+        await api.post('/attendance/manual', {
+          employee_id: parseInt(attEmployeeId, 10),
+          attendance_type: attType,
+          check_in_time: checkInTimestamp,
+          check_out_time: checkOutTimestamp,
+          location_name: attLocation,
+          project_name: attType === 'office' ? 'SAFE SOLUTIONS HQ' : 'Field Operations Site',
+          status: attStatus,
+          notes: attNotes
+        });
+        toast.success(
+          checkOutTimestamp
+            ? 'Manual Attendance (Check-In & Check-Out) logged successfully!'
+            : 'Manual Check-In logged successfully!'
+        );
+      }
       window.dispatchEvent(new CustomEvent('app:data-sync'));
       onClose();
     } catch (err) {
@@ -289,6 +346,49 @@ export default function ManualManagementOpsModal({ isOpen, onClose }) {
               </select>
             </div>
 
+            {/* Open record alert */}
+            {employeeOpenRecord && (
+              <div style={{
+                marginBottom: 14,
+                padding: '10px 12px',
+                background: '#FEF3C7',
+                border: '1px solid #F59E0B',
+                borderRadius: 8,
+                fontSize: 12,
+                color: '#92400E'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                  <div>
+                    <strong>⚠️ Open Check-in Found:</strong> Checked in at {new Date(employeeOpenRecord.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })} without check-out.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedOpenRecordId(employeeOpenRecord.id);
+                      const inD = new Date(employeeOpenRecord.check_in_time);
+                      setAttDate(inD.toISOString().split('T')[0]);
+                      setAttTime(inD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+                      setIncludeCheckOut(true);
+                      toast.info(`Completing check-out for open record #${employeeOpenRecord.id}`);
+                    }}
+                    style={{
+                      background: selectedOpenRecordId === employeeOpenRecord.id ? '#059669' : '#D97706',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {selectedOpenRecordId === employeeOpenRecord.id ? '✓ Targeting Open Record' : '⚡ Complete Open Check-Out'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
               <div>
                 <label className="form-label" style={{ fontSize: 12, fontWeight: 700 }}>Attendance Type</label>
@@ -317,19 +417,20 @@ export default function ManualManagementOpsModal({ isOpen, onClose }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-              <div>
-                <label className="form-label" style={{ fontSize: 12, fontWeight: 700 }}>Date *</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={attDate}
-                  onChange={e => setAttDate(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', fontSize: 13 }}
-                  required
-                />
-              </div>
+            {/* Date & Check-in / Check-out Grid */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="form-label" style={{ fontSize: 12, fontWeight: 700 }}>Date *</label>
+              <input
+                type="date"
+                className="form-input"
+                value={attDate}
+                onChange={e => setAttDate(e.target.value)}
+                style={{ width: '100%', padding: '8px 10px', fontSize: 13 }}
+                required
+              />
+            </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
               <div>
                 <label className="form-label" style={{ fontSize: 12, fontWeight: 700 }}>Check-In Time *</label>
                 <input
@@ -341,7 +442,57 @@ export default function ManualManagementOpsModal({ isOpen, onClose }) {
                   required
                 />
               </div>
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <label className="form-label" style={{ fontSize: 12, fontWeight: 700, margin: 0 }}>Check-Out Time</label>
+                  <label style={{ fontSize: 11, color: '#0F2B5B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={includeCheckOut}
+                      onChange={e => setIncludeCheckOut(e.target.checked)}
+                    />
+                    Include
+                  </label>
+                </div>
+                <input
+                  type="time"
+                  className="form-input"
+                  value={attOutTime}
+                  onChange={e => setAttOutTime(e.target.value)}
+                  disabled={!includeCheckOut}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    fontSize: 13,
+                    background: includeCheckOut ? '#fff' : '#f1f5f9'
+                  }}
+                />
+              </div>
             </div>
+
+            {/* Live Duration Preview */}
+            {durationPreview && (
+              <div style={{
+                marginBottom: 14,
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: durationPreview.isValid ? '#ECFDF5' : '#FEF2F2',
+                border: `1px solid ${durationPreview.isValid ? '#A7F3D0' : '#FECACA'}`,
+                color: durationPreview.isValid ? '#065F46' : '#991B1B',
+                fontSize: 12,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}>
+                {durationPreview.isValid ? (
+                  <>⏱️ Work Duration: {durationPreview.text}</>
+                ) : (
+                  <>⚠️ {durationPreview.error}</>
+                )}
+              </div>
+            )}
 
             <div style={{ marginBottom: 14 }}>
               <label className="form-label" style={{ fontSize: 12, fontWeight: 700 }}>Location Name</label>
@@ -359,7 +510,7 @@ export default function ManualManagementOpsModal({ isOpen, onClose }) {
               <input
                 type="text"
                 className="form-input"
-                placeholder="Reason for manual entry..."
+                placeholder="Reason for manual entry or checkout completion..."
                 value={attNotes}
                 onChange={e => setAttNotes(e.target.value)}
                 style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}

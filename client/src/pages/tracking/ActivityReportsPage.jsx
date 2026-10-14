@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   FileText, Download, Printer, Filter, Calendar, Users,
-  Car, Clock, Route, CheckCircle2, AlertCircle, RefreshCw
+  Car, Clock, Route, CheckCircle2, AlertCircle, RefreshCw, Eye
 } from 'lucide-react';
 import api from '../../services/api';
+import { formatPKTDate, formatPKTTime, getPKTTodayString, calculateWorkingDuration } from '../../utils/pakistanTime';
+import EmployeeTrackingDetailModal from '../../components/tracking/EmployeeTrackingDetailModal';
 
 export default function ActivityReportsPage() {
   const [reports, setReports] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEmployeeForModal, setSelectedEmployeeForModal] = useState(null);
 
   // Filters
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getPKTTodayString();
   const [period, setPeriod] = useState('today'); // 'today' | 'yesterday' | 'week' | 'month' | 'custom'
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
@@ -91,8 +94,8 @@ export default function ActivityReportsPage() {
       `"${(r.department || '').replace(/"/g, '""')}"`,
       `"${(r.vehicle_name || '').replace(/"/g, '""')}"`,
       `"${(r.number_plate || '').replace(/"/g, '""')}"`,
-      r.checkin_time ? new Date(r.checkin_time).toLocaleTimeString() : '',
-      r.checkout_time ? new Date(r.checkout_time).toLocaleTimeString() : 'In Progress',
+      r.checkin_time ? formatPKTTime(r.checkin_time) : '',
+      r.checkout_time ? formatPKTTime(r.checkout_time) : 'In Progress',
       r.total_distance_km || 0,
       r.duty_hours || 0,
       r.total_points || 0,
@@ -252,18 +255,19 @@ export default function ActivityReportsPage() {
                 <th style={{ textAlign: 'right' }}>Hours</th>
                 <th style={{ textAlign: 'right' }}>Points</th>
                 <th>Status</th>
+                <th style={{ textAlign: 'center' }}>Details</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: 30 }}>
+                  <td colSpan="10" style={{ textAlign: 'center', padding: 30 }}>
                     <div className="loader loader-md" style={{ margin: '0 auto' }} />
                   </td>
                 </tr>
               ) : reports.length === 0 ? (
                 <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: 40, color: 'var(--text-tertiary)' }}>
+                  <td colSpan="10" style={{ textAlign: 'center', padding: 40, color: 'var(--text-tertiary)' }}>
                     No activity reports found for the selected date range and filter criteria.
                   </td>
                 </tr>
@@ -279,8 +283,8 @@ export default function ActivityReportsPage() {
                       <div>{row.vehicle_name || 'Vehicle'}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{row.number_plate || 'Assigned'}</div>
                     </td>
-                    <td>{row.checkin_time ? new Date(row.checkin_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
-                    <td>{row.checkout_time ? new Date(row.checkout_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : <span style={{ color: '#10B981', fontWeight: 600 }}>Active</span>}</td>
+                    <td>{row.checkin_time ? formatPKTTime(row.checkin_time) : '—'}</td>
+                    <td>{row.checkout_time ? formatPKTTime(row.checkout_time) : <span style={{ color: '#10B981', fontWeight: 600 }}>Active</span>}</td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: '#0F2B5B' }}>
                       {row.total_distance_km ? `${row.total_distance_km} KM` : '0.0 KM'}
                     </td>
@@ -302,6 +306,23 @@ export default function ActivityReportsPage() {
                         {row.checkout_time ? 'Completed' : 'On Duty'}
                       </span>
                     </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setSelectedEmployeeForModal({
+                          id: row.employee_id,
+                          name: row.employee_name,
+                          employee_id: row.employee_code,
+                          designation: row.department,
+                          department: row.department
+                        })}
+                        style={{ fontSize: 11, padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                        title="View Detailed Reports & Route"
+                      >
+                        <Eye size={13} /> View
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -309,6 +330,16 @@ export default function ActivityReportsPage() {
           </table>
         </div>
       </div>
+
+      {/* Employee Isolated Detail Modal */}
+      {selectedEmployeeForModal && (
+        <EmployeeTrackingDetailModal
+          employee={selectedEmployeeForModal}
+          isOpen={!!selectedEmployeeForModal}
+          onClose={() => setSelectedEmployeeForModal(null)}
+          dateFilter={startDate}
+        />
+      )}
     </div>
   );
 }

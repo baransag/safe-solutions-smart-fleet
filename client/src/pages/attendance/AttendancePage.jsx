@@ -50,6 +50,43 @@ export default function AttendancePage() {
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [attendanceSuccessModal, setAttendanceSuccessModal] = useState(null);
 
+  // Missing Checkout Quick Modal State
+  const [checkoutModalRecord, setCheckoutModalRecord] = useState(null);
+  const [manualCheckoutTime, setManualCheckoutTime] = useState('17:30');
+  const [manualCheckoutNotes, setManualCheckoutNotes] = useState('');
+  const [manualSubmitting, setManualSubmitting] = useState(false);
+
+  const handleQuickCompleteCheckout = async (e) => {
+    e.preventDefault();
+    if (!checkoutModalRecord) return;
+    setManualSubmitting(true);
+    try {
+      const inDate = new Date(checkoutModalRecord.check_in_time);
+      const dateStr = inDate.toISOString().split('T')[0];
+      const checkOutTimestamp = `${dateStr}T${manualCheckoutTime}:00+05:00`;
+
+      const inTimeMs = inDate.getTime();
+      const outTimeMs = new Date(checkOutTimestamp).getTime();
+      if (outTimeMs < inTimeMs) {
+        toast.error('Check-out time cannot be earlier than check-in time.');
+        setManualSubmitting(false);
+        return;
+      }
+
+      await api.patch(`/attendance/manual/${checkoutModalRecord.id}`, {
+        check_out_time: checkOutTimestamp,
+        notes: manualCheckoutNotes || 'Check-out completed by management'
+      });
+      toast.success(`Check-out recorded for ${checkoutModalRecord.employee_name || 'employee'}!`);
+      setCheckoutModalRecord(null);
+      fetchData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to complete check-out');
+    } finally {
+      setManualSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     getCurrentGps();
@@ -989,14 +1026,56 @@ export default function AttendancePage() {
                         </td>
                         <td>
                           {r.check_out_time ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#D42D56', fontWeight: 600 }}>
-                              <Clock size={13} color="#D42D56" />
-                              {new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#D42D56', fontWeight: 600 }}>
+                                <Clock size={13} color="#D42D56" />
+                                {new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                              </div>
+                              {r.work_hours && (
+                                <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600, marginTop: 2 }}>
+                                  ⏱️ {r.work_hours} hrs
+                                </div>
+                              )}
                             </div>
                           ) : (
-                            <span style={{ fontSize: 11, color: '#D97706', fontWeight: 700, background: '#fef3c7', padding: '2px 8px', borderRadius: 6 }}>
-                              In Progress
-                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                              <span style={{
+                                fontSize: 11,
+                                color: '#B45309',
+                                fontWeight: 700,
+                                background: '#FEF3C7',
+                                border: '1px solid #FCD34D',
+                                padding: '2px 8px',
+                                borderRadius: 6,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 3
+                              }}>
+                                ⚠️ Missing Checkout
+                              </span>
+                              {(isController || isAdmin) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCheckoutModalRecord(r);
+                                    setManualCheckoutTime('17:30');
+                                    setManualCheckoutNotes('');
+                                  }}
+                                  style={{
+                                    background: '#0F2B5B',
+                                    color: '#fff',
+                                    border: 'none',
+                                    padding: '2px 8px',
+                                    borderRadius: 4,
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  + Complete Checkout
+                                </button>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td>
@@ -1070,10 +1149,33 @@ export default function AttendancePage() {
 
                         <div className="mobile-card-cell">
                           <span className="mobile-card-label">Check-Out</span>
-                          <span className="mobile-card-value" style={{ color: r.check_out_time ? '#D42D56' : '#D97706', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Clock size={12} color={r.check_out_time ? '#D42D56' : '#D97706'} />
-                            {r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : 'In Progress'}
+                          <span className="mobile-card-value" style={{ color: r.check_out_time ? '#D42D56' : '#B45309', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Clock size={12} color={r.check_out_time ? '#D42D56' : '#B45309'} />
+                            {r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '⚠️ Missing Checkout'}
                           </span>
+                          {!r.check_out_time && (isController || isAdmin) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCheckoutModalRecord(r);
+                                setManualCheckoutTime('17:30');
+                                setManualCheckoutNotes('');
+                              }}
+                              style={{
+                                marginTop: 4,
+                                background: '#0F2B5B',
+                                color: '#fff',
+                                border: 'none',
+                                padding: '3px 8px',
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              + Add Checkout
+                            </button>
+                          )}
                         </div>
 
                         <div className="mobile-card-cell">
@@ -1178,6 +1280,126 @@ export default function AttendancePage() {
             >
               Done & Continue
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Complete Missing Checkout Modal */}
+      {checkoutModalRecord && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 43, 91, 0.75)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000, padding: 16
+        }}>
+          <div className="card-elevated animate-scale-in" style={{
+            background: '#ffffff', width: '100%', maxWidth: 460, borderRadius: 20,
+            overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', border: '1px solid #e2e8f0'
+          }}>
+            <div style={{
+              padding: '16px 20px', background: 'linear-gradient(135deg, #0F2B5B 0%, #1e3a8a 100%)',
+              color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#fff' }}>
+                  ⚡ Complete Missing Check-Out
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>
+                  Record official checkout time without creating duplicate attendance rows
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCheckoutModalRecord(null)}
+                style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 20 }}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickCompleteCheckout} style={{ padding: 20 }}>
+              <div style={{ background: '#f8fafc', padding: 12, borderRadius: 10, marginBottom: 14, border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#0F2B5B' }}>
+                  {checkoutModalRecord.employee_name || 'Employee'}
+                </div>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                  Check-In: <strong>{new Date(checkoutModalRecord.check_in_time).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}</strong>
+                </div>
+                <div style={{ fontSize: 11, color: '#64748b' }}>
+                  Location: {checkoutModalRecord.location_name || checkoutModalRecord.project_name || 'Head Office'}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label className="form-label" style={{ fontSize: 12, fontWeight: 700 }}>Check-Out Time (Pakistan Standard Time) *</label>
+                <input
+                  type="time"
+                  className="form-input"
+                  value={manualCheckoutTime}
+                  onChange={(e) => setManualCheckoutTime(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', fontSize: 14 }}
+                  required
+                />
+              </div>
+
+              {/* Working Duration Preview */}
+              {(() => {
+                if (!manualCheckoutTime || !checkoutModalRecord?.check_in_time) return null;
+                const inD = new Date(checkoutModalRecord.check_in_time);
+                const [outH, outM] = manualCheckoutTime.split(':').map(Number);
+                const outDate = new Date(inD);
+                outDate.setHours(outH, outM, 0, 0);
+                const diffMs = outDate.getTime() - inD.getTime();
+                if (diffMs < 0) {
+                  return (
+                    <div style={{ padding: '8px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, color: '#991B1B', fontSize: 12, fontWeight: 700, marginBottom: 14 }}>
+                      ⚠️ Check-out time cannot be earlier than check-in time.
+                    </div>
+                  );
+                }
+                const totalMins = Math.floor(diffMs / 60000);
+                const hrs = Math.floor(totalMins / 60);
+                const mins = totalMins % 60;
+                const decHrs = (totalMins / 60).toFixed(2);
+                return (
+                  <div style={{ padding: '8px 12px', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 8, color: '#065F46', fontSize: 12, fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    ⏱️ Validated Work Duration: {hrs}h {mins}m ({decHrs} hrs)
+                  </div>
+                );
+              })()}
+
+              <div style={{ marginBottom: 16 }}>
+                <label className="form-label" style={{ fontSize: 12, fontWeight: 700 }}>Management Remarks / Correction Reason</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Employee forgot to scan on exit"
+                  value={manualCheckoutNotes}
+                  onChange={(e) => setManualCheckoutNotes(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 13 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setCheckoutModalRecord(null)}
+                  style={{ flex: 1, padding: 10, fontWeight: 600 }}
+                  disabled={manualSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 2, background: '#0F2B5B', padding: 10, fontWeight: 700 }}
+                  disabled={manualSubmitting}
+                >
+                  {manualSubmitting ? 'Saving...' : 'Confirm & Save Check-Out'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

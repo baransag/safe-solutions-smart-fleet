@@ -850,10 +850,37 @@ router.patch('/leave-requests/:id/action', authenticate, authorize('manager', 'c
   }
 });
 
-// POST /api/attendance/manual - Manual Attendance Entry by Controller/Manager
+// GET /api/attendance/open-records - Records missing checkout
+router.get('/open-records', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
+  try {
+    const { rows } = await query(`
+       SELECT ar.*, e.name as employee_name, e.employee_id as emp_id, e.department, e.designation
+       FROM attendance_records ar
+       JOIN employees e ON e.id = ar.employee_id
+       WHERE ar.check_out_time IS NULL
+       ORDER BY ar.check_in_time DESC
+       LIMIT 100
+     `);
+    res.json({ success: true, records: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/attendance/manual - Manual Attendance Entry by Controller/Manager (Supports Check-in AND Checkout)
 router.post('/manual', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
   try {
-    const { employee_id, attendance_type, check_in_time, check_out_time, location_name, project_name, status, notes } = req.body;
+    const {
+      employee_id,
+      attendance_type,
+      check_in_time,
+      check_out_time,
+      location_name,
+      project_name,
+      status,
+      notes,
+      existing_record_id
+    } = req.body;
 
     if (!employee_id) {
       return res.status(400).json({ error: 'employee_id is required' });
@@ -862,19 +889,77 @@ router.post('/manual', authenticate, authorize('manager', 'controller', 'boss', 
     const inTime = check_in_time ? new Date(check_in_time).toISOString() : new Date().toISOString();
     const outTime = check_out_time ? new Date(check_out_time).toISOString() : null;
 
+    if (outTime && new Date(outTime).getTime() < new Date(inTime).getTime()) {
+      return res.status(400).json({ error: 'Check-out time cannot be earlier than check-in time.' });
+    }
+
     let workHours = null;
     if (outTime) {
       const diffMs = new Date(outTime) - new Date(inTime);
       workHours = Math.max(0, +(diffMs / (1000 * 60 * 60)).toFixed(2));
     }
 
+    // If an existing open record is specified or already open for this employee today, update instead of duplicating
+    let recordIdToUpdate = existing_record_id;
+    if (!recordIdToUpdate) {
+      const inDate = inTime.split('T')[0];
+      const { rows: existingOpen } = await query(
+        `SELECT id FROM attendance_records
+          WHERE employee_id = $1 AND check_in_time::date = $2 AND check_out_time IS NULL
+          ORDER BY id DESC LIMIT 1`,
+        [employee_id, inDate]
+      );
+      if (existingOpen.length > 0 && outTime) {
+        recordIdToUpdate = existingOpen[0].id;
+      }
+    }
+
+    if (recordIdToUpdate) {
+      const { rows } = await query(
+        `UPDATE attendance_records SET
+           check_in_time = COALESCE($1, check_in_time),
+           check_out_time = COALESCE($2, check_out_time),
+           attendance_type = COALESCE($3, attendance_type),
+           location_name = COALESCE($4, location_name),
+           project_name = COALESCE($5, project_name),
+           status = COALESCE($6, status),
+           notes = CASE WHEN $7::text IS NOT NULL AND $7::text <> '' THEN $7 ELSE notes END,
+           work_hours = $8,
+           approval_status = 'approved',
+           approved_by = $9,
+           approved_at = NOW()
+         WHERE id = $10
+         RETURNING *`,
+        [
+          inTime,
+          outTime,
+          attendance_type || null,
+          location_name || null,
+          project_name || null,
+          status || null,
+          notes ? `Updated: ${notes}` : null,
+          workHours,
+          req.user.id,
+          recordIdToUpdate
+        ]
+      );
+
+      if (rows.length > 0) {
+        return res.json({
+          message: 'Existing attendance record updated with checkout successfully!',
+          attendance: rows[0],
+          updated: true
+        });
+      }
+    }
+
     const { rows } = await query(
       `INSERT INTO attendance_records (
-        employee_id, check_in_time, check_out_time, attendance_type,
-        location_name, project_name, status, approval_status,
-        approved_by, approved_at, notes, work_hours, gps_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved', $8, NOW(), $9, $10, 'Manual Entry by Management')
-      RETURNING *`,
+         employee_id, check_in_time, check_out_time, attendance_type,
+         location_name, project_name, status, approval_status,
+         approved_by, approved_at, notes, work_hours, gps_status
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved', $8, NOW(), $9, $10, 'Manual Entry by Management')
+       RETURNING *`,
       [
         employee_id,
         inTime,
@@ -890,6 +975,73 @@ router.post('/manual', authenticate, authorize('manager', 'controller', 'boss', 
     );
 
     res.status(201).json({ message: 'Manual attendance recorded successfully!', attendance: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/attendance/manual/:id - Update/Complete existing attendance record
+router.patch('/manual/:id', authenticate, authorize('manager', 'controller', 'boss', 'admin'), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { check_in_time, check_out_time, status, notes, location_name, project_name } = req.body;
+
+    const { rows: existing } = await query(`SELECT * FROM attendance_records WHERE id = $1`, [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'Attendance record not found.' });
+    }
+
+    const record = existing[0];
+    const finalIn = check_in_time ? new Date(check_in_time).toISOString() : new Date(record.check_in_time).toISOString();
+    const finalOut = check_out_time !== undefined
+      ? (check_out_time ? new Date(check_out_time).toISOString() : null)
+      : (record.check_out_time ? new Date(record.check_out_time).toISOString() : null);
+
+    if (finalOut && new Date(finalOut).getTime() < new Date(finalIn).getTime()) {
+      return res.status(400).json({ error: 'Check-out time cannot be earlier than check-in time.' });
+    }
+
+    let workHours = null;
+    if (finalOut) {
+      const diffMs = new Date(finalOut) - new Date(finalIn);
+      workHours = Math.max(0, +(diffMs / (1000 * 60 * 60)).toFixed(2));
+    }
+
+    const updatedNotes = notes
+      ? (record.notes ? `${record.notes} | Checkout manual override: ${notes}` : notes)
+      : record.notes;
+
+    const { rows: updated } = await query(
+      `UPDATE attendance_records SET
+         check_in_time = $1,
+         check_out_time = $2,
+         work_hours = $3,
+         status = COALESCE($4, status),
+         notes = $5,
+         location_name = COALESCE($6, location_name),
+         project_name = COALESCE($7, project_name),
+         approval_status = 'approved',
+         approved_by = $8,
+         approved_at = NOW()
+       WHERE id = $9
+       RETURNING *`,
+      [
+        finalIn,
+        finalOut,
+        workHours,
+        status || null,
+        updatedNotes,
+        location_name || null,
+        project_name || null,
+        req.user.id,
+        id
+      ]
+    );
+
+    res.json({
+      message: 'Attendance record updated successfully!',
+      attendance: updated[0]
+    });
   } catch (err) {
     next(err);
   }
