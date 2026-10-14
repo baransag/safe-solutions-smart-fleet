@@ -32,6 +32,9 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
 
   // Fetch report data for this specific employee
   async function fetchEmployeeReport() {
+    const targetEmpId = employee?.id || employee?.employee_id;
+    if (!targetEmpId) return;
+
     setLoadingReport(true);
     try {
       let queryParams = `period=${period}`;
@@ -45,7 +48,7 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
         queryParams += `&startDate=${startDate}&endDate=${endDate}`;
       }
 
-      const res = await api.get(`/field-tracking/employee-report/${employee.employee_id}?${queryParams}`);
+      const res = await api.get(`/field-tracking/employee-report/${targetEmpId}?${queryParams}`);
       if (res.success) {
         setReportData(res);
       }
@@ -58,9 +61,12 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
 
   // Fetch today's route
   async function fetchRoute() {
+    const targetEmpId = employee?.id || employee?.employee_id;
+    if (!targetEmpId) return;
+
     setLoadingRoute(true);
     try {
-      const res = await api.get(`/field-tracking/route/${employee.employee_id}?date=${selectedDate}`);
+      const res = await api.get(`/field-tracking/route/${targetEmpId}?date=${selectedDate}`);
       if (res.success) {
         setRoutePoints(res.points || []);
       }
@@ -76,7 +82,7 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
     if (activeTab === 'route') {
       fetchRoute();
     }
-  }, [employee.employee_id, period, selectedDate, startDate, endDate, selectedMonth, selectedYear, activeTab]);
+  }, [employee?.id, employee?.employee_id, period, selectedDate, startDate, endDate, selectedMonth, selectedYear, activeTab]);
 
   // Handle Preset Ranges
   function handlePresetChange(preset) {
