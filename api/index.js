@@ -34,6 +34,7 @@ const qrRoutes = require('./_src/routes/qr_management.routes');
 const settingsRoutes = require('./_src/routes/settings.routes');
 const logsRoutes = require('./_src/routes/system_logs.routes');
 const visitReportsRoutes = require('./_src/routes/visit_report.routes');
+const fieldTrackingRoutes = require('./_src/routes/field_tracking.routes');
 
 const registerRoute = (pathName, router) => {
   app.use(`/api/${pathName}`, router);
@@ -56,6 +57,7 @@ registerRoute('employee-qr-codes', qrRoutes);
 registerRoute('settings', settingsRoutes);
 registerRoute('system-logs', logsRoutes);
 registerRoute('visit-reports', visitReportsRoutes);
+registerRoute('field-tracking', fieldTrackingRoutes);
 
 app.get(['/api/health', '/health', '/api', '/'], (req, res) => {
   res.json({ status: 'ok', service: 'SAFE SOLUTIONS FleetOps API on Vercel', timestamp: new Date().toISOString() });

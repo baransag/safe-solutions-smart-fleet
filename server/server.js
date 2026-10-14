@@ -45,6 +45,7 @@ const qrRoutes = require('./src/routes/qr_management.routes');
 const settingsRoutes = require('./src/routes/settings.routes');
 const logsRoutes = require('./src/routes/system_logs.routes');
 const visitReportsRoutes = require('./src/routes/visit_report.routes');
+const fieldTrackingRoutes = require('./src/routes/field_tracking.routes');
 
 // Helper to mount on both /api/* and root /* (for Vercel serverless compatibility)
 const registerRoute = (pathName, router) => {
@@ -68,6 +69,7 @@ registerRoute('employee-qr-codes', qrRoutes);
 registerRoute('settings', settingsRoutes);
 registerRoute('system-logs', logsRoutes);
 registerRoute('visit-reports', visitReportsRoutes);
+registerRoute('field-tracking', fieldTrackingRoutes);
 
 // Health check
 app.get(['/api/health', '/health', '/api', '/'], (req, res) => {

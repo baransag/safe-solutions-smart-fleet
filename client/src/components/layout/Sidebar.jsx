@@ -3,7 +3,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard, Car, Users, ClipboardCheck, Fuel, QrCode,
   BarChart3, AlertTriangle, Bell, Settings, LogOut, Wrench,
-  Route, CalendarCheck, FileText, Shield, ShieldCheck, Megaphone, X
+  Route, CalendarCheck, FileText, Shield, ShieldCheck, Megaphone, X,
+  Navigation, MapPin
 } from 'lucide-react';
 
 import { getEmployeeAvatar } from '../../utils/avatarHelper';
@@ -15,6 +16,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const navItems = [
     { section: 'Overview' },
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/live-tracking', icon: Navigation, label: 'Live GPS Tracking', adminOnly: true, badge: 'LIVE' },
     { to: '/hero-management', icon: Megaphone, label: 'Hero Banners', controllerOnly: true },
 
     { section: 'Fleet Management', adminOnly: false },
@@ -35,6 +37,7 @@ export default function Sidebar({ isOpen, onClose }) {
     { to: '/approvals', icon: ShieldCheck, label: 'Approval Center', badge: 'PENDING' },
 
     { section: 'Reports & Settings', adminOnly: true },
+    { to: '/activity-reports', icon: MapPin, label: 'GPS Activity Reports', adminOnly: true },
     { to: '/analytics', icon: BarChart3, label: 'Analytics', adminOnly: true },
     { to: '/alerts', icon: AlertTriangle, label: 'Alerts', adminOnly: true },
     { to: '/services', icon: Wrench, label: 'Vehicle Services', adminOnly: true },

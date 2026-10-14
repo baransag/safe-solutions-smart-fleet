@@ -14,6 +14,8 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
 
   const [rawImageBlob, setRawImageBlob] = useState(null);
   const [rawImagePreview, setRawImagePreview] = useState(null);
+  const [torchOn, setTorchOn] = useState(false);
+  const [hasTorch, setHasTorch] = useState(false);
 
   // Camera handling
   async function startCamera() {
@@ -27,6 +29,14 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
 
       streamRef.current = stream;
       setActive(true);
+
+      const track = stream.getVideoTracks()[0];
+      if (track && typeof track.getCapabilities === 'function') {
+        const capabilities = track.getCapabilities();
+        setHasTorch(Boolean(capabilities.torch));
+      } else {
+        setHasTorch(false);
+      }
     } catch (err) {
       console.warn('Camera stream notice:', err.message);
       if (fileInputRef.current) {
@@ -48,7 +58,23 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     }
+    setTorchOn(false);
     setActive(false);
+  }
+
+  async function toggleTorch() {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const nextTorch = !torchOn;
+      await track.applyConstraints({
+        advanced: [{ torch: nextTorch }]
+      });
+      setTorchOn(nextTorch);
+    } catch (err) {
+      console.warn('Torch toggle error:', err.message);
+    }
   }
 
   useEffect(() => {
@@ -162,6 +188,31 @@ export default function ReceiptScanner({ onCaptureComplete, assignedVehicleName 
       {active && (
         <div style={{ borderRadius: 16, overflow: 'hidden', background: '#000', position: 'relative' }}>
           <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', maxHeight: 380, objectFit: 'cover' }} />
+
+          {hasTorch && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={toggleTorch}
+              style={{
+                position: 'absolute',
+                top: 15,
+                right: 15,
+                background: torchOn ? '#F59E0B' : 'rgba(0,0,0,0.6)',
+                color: torchOn ? '#000' : '#fff',
+                border: '1px solid rgba(255,255,255,0.4)',
+                borderRadius: 20,
+                fontWeight: 700,
+                fontSize: 12,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                zIndex: 10
+              }}
+            >
+              {torchOn ? '⚡ Flash ON' : '💡 Flash OFF'}
+            </button>
+          )}
 
           <div style={{ position: 'absolute', inset: 0, border: '2px dashed rgba(255,255,255,0.7)', margin: 20, borderRadius: 12, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>

@@ -19,6 +19,8 @@ const pageNames = {
   '/alerts': 'Vehicle Alerts',
   '/services': 'Vehicle Services',
   '/reports': 'Fleet Reports',
+  '/live-tracking': 'Live GPS Tracking',
+  '/activity-reports': 'GPS Activity Reports',
   '/employees': 'Employee Directory',
   '/hero-management': 'Hero Banners',
   '/system-logs': 'System Audit Logs',

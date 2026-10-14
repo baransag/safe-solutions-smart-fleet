@@ -24,6 +24,8 @@ import ProfilePage from './pages/profile/ProfilePage';
 import SystemLogsPage from './pages/logs/SystemLogsPage';
 import VisitReportsPage from './pages/reports/VisitReportsPage';
 import VehicleReportsPage from './pages/reports/VehicleReportsPage';
+import LiveTrackingPage from './pages/tracking/LiveTrackingPage';
+import ActivityReportsPage from './pages/tracking/ActivityReportsPage';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -93,6 +95,10 @@ export default function AppRouter() {
           <Route path="/attendance" element={<AttendancePage />} />
           <Route path="/employee-qr-codes" element={<AdminRoute><EmployeeQRCodesPage /></AdminRoute>} />
           <Route path="/approvals" element={<ApprovalCenterPage />} />
+
+          {/* Live GPS Tracking & Activity Reports (Boss, Admin, Controller, Manager) */}
+          <Route path="/live-tracking" element={<AdminRoute><LiveTrackingPage /></AdminRoute>} />
+          <Route path="/activity-reports" element={<AdminRoute><ActivityReportsPage /></AdminRoute>} />
 
           {/* Reports & Analytics (admin) */}
           <Route path="/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />

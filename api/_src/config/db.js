@@ -7,7 +7,18 @@ let poolInstance = null;
 
 function getPool() {
   if (!poolInstance) {
-    const rawUrl = process.env.DATABASE_URL || NEON_FALLBACK;
+    let rawUrl = process.env.DATABASE_URL;
+    if (!rawUrl) {
+      if (isProduction) {
+        rawUrl = NEON_FALLBACK;
+      } else {
+        throw new Error(
+          'CRITICAL: DATABASE_URL is not set in non-production environment. ' +
+          'Silently connecting to the production database fallback is strictly blocked. ' +
+          'Please specify an isolated staging or test DATABASE_URL.'
+        );
+      }
+    }
     const cleanUrl = rawUrl.split('?')[0];
     const isLocal = cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1');
 

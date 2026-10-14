@@ -6,6 +6,7 @@ import {
   QrCode, MapPin, Camera, ScanLine, CheckCircle2,
   ChevronRight, AlertTriangle, Loader2
 } from 'lucide-react';
+import gpsTracker from '../../services/gpsTracker';
 import './CheckInPage.css';
 
 const STEPS = ['Scan QR', 'GPS', 'Meter Photo', 'Confirm'];
@@ -157,6 +158,8 @@ export default function CheckInPage() {
       await api.upload('/checkins/vehicle-checkin', formData);
       toast.success('Check-in submitted successfully!');
       window.dispatchEvent(new CustomEvent('app:data-sync'));
+      // Start field GPS live tracking session
+      gpsTracker.startTracking();
       // Reset
       setStep(4);
     } catch (err) {
@@ -181,22 +184,40 @@ export default function CheckInPage() {
             Vehicle: {todayStatus.checkin?.vehicle_name} ({todayStatus.checkin?.number_plate})
           </p>
           {!todayStatus?.hasCheckedOut ? (
-            <a
-              href="/check-out"
-              className="btn btn-primary"
-              style={{
-                marginTop: 'var(--space-4)',
-                background: '#0F2B5B',
-                fontWeight: 800,
-                padding: '12px 24px',
+            <>
+              <div style={{
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                borderRadius: 10,
+                padding: '10px 14px',
+                marginTop: 'var(--space-3)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
-                borderRadius: 12
-              }}
-            >
-              🌅 Proceed to Evening Check-Out
-            </a>
+                fontSize: 13,
+                color: '#065F46'
+              }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
+                <span>Field GPS Live Tracking Active</span>
+              </div>
+              <br />
+              <a
+                href="/check-out"
+                className="btn btn-primary"
+                style={{
+                  marginTop: 'var(--space-4)',
+                  background: '#0F2B5B',
+                  fontWeight: 800,
+                  padding: '12px 24px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  borderRadius: 12
+                }}
+              >
+                🌅 Proceed to Evening Check-Out
+              </a>
+            </>
           ) : (
             <p style={{ marginTop: 12, color: '#059669', fontWeight: 700 }}>
               ✅ You have completed both Check-In and Check-Out for today.
@@ -457,9 +478,12 @@ function CameraCapture({ onCapture, defaultFacing = 'environment' }) {
   const [active, setActive] = useState(false);
   const [captured, setCaptured] = useState(null);
   const [facingMode, setFacingMode] = useState(defaultFacing);
+  const [torchOn, setTorchOn] = useState(false);
+  const [hasTorch, setHasTorch] = useState(false);
 
   async function startCamera(mode) {
     stopCamera();
+    setTorchOn(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } }
@@ -469,8 +493,32 @@ function CameraCapture({ onCapture, defaultFacing = 'environment' }) {
         videoRef.current.srcObject = stream;
       }
       setActive(true);
+
+      // Check if torch/flashlight is supported on active video track
+      const track = stream.getVideoTracks()[0];
+      if (track && typeof track.getCapabilities === 'function') {
+        const capabilities = track.getCapabilities();
+        setHasTorch(Boolean(capabilities.torch));
+      } else {
+        setHasTorch(false);
+      }
     } catch (err) {
       console.error('Camera error:', err);
+    }
+  }
+
+  async function toggleTorch() {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      const nextTorch = !torchOn;
+      await track.applyConstraints({
+        advanced: [{ torch: nextTorch }]
+      });
+      setTorchOn(nextTorch);
+    } catch (err) {
+      console.warn('Torch toggle error:', err.message);
     }
   }
 
@@ -503,6 +551,7 @@ function CameraCapture({ onCapture, defaultFacing = 'environment' }) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     }
+    setTorchOn(false);
     setActive(false);
   }
 
@@ -527,6 +576,30 @@ function CameraCapture({ onCapture, defaultFacing = 'environment' }) {
     <div style={{ marginTop: 'var(--space-4)' }}>
       <div style={{ position: 'relative', borderRadius: 'var(--radius-md)', overflow: 'hidden', maxWidth: 400, margin: '0 auto', background: '#000' }}>
         <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', display: 'block' }} />
+        {/* Flashlight Torch Toggle (Only displayed when device/browser supports torch) */}
+        {hasTorch && facingMode === 'environment' && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={toggleTorch}
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: 10,
+              background: torchOn ? '#F59E0B' : 'rgba(0,0,0,0.6)',
+              color: torchOn ? '#000' : '#fff',
+              border: '1px solid rgba(255,255,255,0.4)',
+              borderRadius: 20,
+              fontWeight: 700,
+              fontSize: 12,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4
+            }}
+          >
+            {torchOn ? '⚡ Flash ON' : '💡 Flash OFF'}
+          </button>
+        )}
         <button
           type="button"
           className="btn btn-ghost btn-sm"
