@@ -37,6 +37,32 @@ export default function LiveTrackingPage() {
   const [detailModalEmployee, setDetailModalEmployee] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
+  // Close Session Modal State
+  const [closeSessionModal, setCloseSessionModal] = useState(null);
+  const [sessionCloseTime, setSessionCloseTime] = useState('17:30');
+  const [sessionCloseReason, setSessionCloseReason] = useState('Missing checkout - closed by controller');
+  const [closingSession, setClosingSession] = useState(false);
+
+  const handleManualCloseSession = async (e) => {
+    e.preventDefault();
+    if (!closeSessionModal) return;
+    setClosingSession(true);
+    try {
+      const today = selectedDate || getPKTTodayString();
+      const closeTimestamp = `${today}T${sessionCloseTime}:00+05:00`;
+      await api.post(`/field-tracking/close-session/${closeSessionModal.session_id}`, {
+        close_time: closeTimestamp,
+        reason: sessionCloseReason
+      });
+      setCloseSessionModal(null);
+      fetchLiveTracking();
+    } catch (err) {
+      console.warn('Failed to close session:', err.message);
+    } finally {
+      setClosingSession(false);
+    }
+  };
+
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef({});
@@ -656,7 +682,7 @@ export default function LiveTrackingPage() {
                   </div>
 
                   {/* Vehicle Info Block (if linked) */}
-                  <div style={{ background: '#F8FAFC', padding: '6px 8px', borderRadius: 8, border: '1px solid #E2E8F0', marginBottom: 12, fontSize: 11 }}>
+                  <div style={{ background: '#F8FAFC', padding: '6px 8px', borderRadius: 8, border: '1px solid #E2E8F0', marginBottom: 10, fontSize: 11 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
                         <Car size={12} color="#0F2B5B" /> Assigned Vehicle
@@ -670,6 +696,53 @@ export default function LiveTrackingPage() {
                         {emp.vehicle_name} &bull; Check-In: {emp.vehicle_checkin_time ? formatPKTTime(emp.vehicle_checkin_time) : 'N/A'}
                         {emp.vehicle_checkout_time && ` &bull; Out: ${formatPKTTime(emp.vehicle_checkout_time)}`}
                       </div>
+                    )}
+                  </div>
+
+                  {/* GPS Tracking Session Info & Missing Checkout Warning */}
+                  <div style={{
+                    background: emp.checkin_id && !emp.vehicle_checkout_time ? '#FEF3C7' : '#F1F5F9',
+                    border: `1px solid ${emp.checkin_id && !emp.vehicle_checkout_time ? '#FCD34D' : '#E2E8F0'}`,
+                    padding: '6px 8px',
+                    borderRadius: 8,
+                    marginBottom: 12,
+                    fontSize: 11
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, color: emp.checkin_id && !emp.vehicle_checkout_time ? '#92400E' : '#334155' }}>
+                        {emp.checkin_id && !emp.vehicle_checkout_time ? '⚠️ Missing Checkout / Open Session' : '📍 Field Tracking Session'}
+                      </span>
+                      <span style={{ fontWeight: 700, color: '#0F2B5B' }}>
+                        {emp.total_distance_km ? `${emp.total_distance_km} KM` : '0.0 KM'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: 10, marginTop: 2 }}>
+                      <span>Started: {emp.session_started_at ? formatPKTTime(emp.session_started_at) : (emp.vehicle_checkin_time ? formatPKTTime(emp.vehicle_checkin_time) : 'Not Started')}</span>
+                      <span>Points: {emp.total_points || 0}</span>
+                    </div>
+                    {emp.checkin_id && !emp.vehicle_checkout_time && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCloseSessionModal(emp);
+                          setSessionCloseTime('17:30');
+                        }}
+                        style={{
+                          marginTop: 6,
+                          width: '100%',
+                          background: '#B45309',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '4px',
+                          borderRadius: 6,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ⚡ Close Open Session
+                      </button>
                     )}
                   </div>
                 </div>
@@ -711,6 +784,93 @@ export default function LiveTrackingPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Manual Session Closure Modal */}
+      {closeSessionModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 43, 91, 0.75)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000, padding: 16
+        }}>
+          <div className="card-elevated animate-scale-in" style={{
+            background: '#ffffff', width: '100%', maxWidth: 440, borderRadius: 20,
+            overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', border: '1px solid #e2e8f0'
+          }}>
+            <div style={{
+              padding: '16px 20px', background: 'linear-gradient(135deg, #0F2B5B 0%, #1e3a8a 100%)',
+              color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#fff' }}>
+                  ⚡ Close Open Field Session
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>
+                  Manually close tracking for {closeSessionModal.employee_name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCloseSessionModal(null)}
+                style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 20 }}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleManualCloseSession} style={{ padding: 20 }}>
+              <div style={{ background: '#f8fafc', padding: 10, borderRadius: 8, marginBottom: 14, fontSize: 12 }}>
+                <div><strong>Vehicle:</strong> {closeSessionModal.vehicle_name || 'Assigned'} ({closeSessionModal.number_plate})</div>
+                <div><strong>Check-In:</strong> {closeSessionModal.vehicle_checkin_time ? formatPKTTime(closeSessionModal.vehicle_checkin_time) : 'N/A'}</div>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label className="form-label" style={{ fontSize: 12, fontWeight: 700 }}>Actual End / Checkout Time *</label>
+                <input
+                  type="time"
+                  className="form-input"
+                  value={sessionCloseTime}
+                  onChange={(e) => setSessionCloseTime(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', fontSize: 13 }}
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label className="form-label" style={{ fontSize: 12, fontWeight: 700 }}>Closure Reason *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={sessionCloseReason}
+                  onChange={(e) => setSessionCloseReason(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', fontSize: 13 }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setCloseSessionModal(null)}
+                  style={{ flex: 1, padding: 8 }}
+                  disabled={closingSession}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 2, background: '#0F2B5B', padding: 8 }}
+                  disabled={closingSession}
+                >
+                  {closingSession ? 'Closing...' : 'Confirm Closure'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

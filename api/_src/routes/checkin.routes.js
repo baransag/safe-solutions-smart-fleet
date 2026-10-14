@@ -193,6 +193,48 @@ router.post('/vehicle-checkin', authenticate, checkinUpload, async (req, res, ne
         );
       }
 
+      // 8b. Auto-activate GPS Tracking Session & log initial check-in GPS coordinate
+      const hasValidGps = gps_lat && gps_lng && !isNaN(parseFloat(gps_lat)) && !isNaN(parseFloat(gps_lng));
+      const initLat = hasValidGps ? parseFloat(gps_lat) : null;
+      const initLng = hasValidGps ? parseFloat(gps_lng) : null;
+
+      try {
+        await client.query(
+          `INSERT INTO field_tracking_sessions (
+             employee_id, vehicle_id, checkin_id, session_date,
+             started_at, total_points, total_distance_meters,
+             status, last_point_at, permission_status
+           ) VALUES ($1, $2, $3, $4, NOW(), $5, 0, 'active', NOW(), $6)
+           ON CONFLICT (employee_id, session_date) DO UPDATE SET
+             vehicle_id = EXCLUDED.vehicle_id,
+             checkin_id = EXCLUDED.checkin_id,
+             started_at = NOW(),
+             ended_at = NULL,
+             status = 'active',
+             permission_status = EXCLUDED.permission_status`,
+          [
+            employeeId,
+            cleanVehicleId,
+            checkin[0].id,
+            today,
+            hasValidGps ? 1 : 0,
+            hasValidGps ? 'granted' : 'prompt'
+          ]
+        );
+
+        if (hasValidGps) {
+          await client.query(
+            `INSERT INTO field_location_logs (
+               employee_id, vehicle_id, checkin_id, latitude, longitude,
+               accuracy_meters, source, recorded_at, session_date
+             ) VALUES ($1, $2, $3, $4, $5, 10, 'checkin_gps', NOW(), $6)`,
+            [employeeId, cleanVehicleId, checkin[0].id, initLat, initLng, today]
+          );
+        }
+      } catch (sessErr) {
+        console.warn('Auto-start tracking session warning (non-fatal):', sessErr.message);
+      }
+
       return checkin[0];
     });
 
@@ -369,6 +411,36 @@ router.post('/vehicle-checkout', authenticate, checkinUpload, async (req, res, n
           [gps_lat || null, gps_lng || null, attHours, attRec.id]
         );
         attCheckoutResult = updatedAtt[0];
+      }
+
+      // 10. Auto-stop linked field tracking session & record checkout location point
+      try {
+        const hasValidGps = gps_lat && gps_lng && !isNaN(parseFloat(gps_lat)) && !isNaN(parseFloat(gps_lng));
+        const outLat = hasValidGps ? parseFloat(gps_lat) : null;
+        const outLng = hasValidGps ? parseFloat(gps_lng) : null;
+
+        if (hasValidGps) {
+          await client.query(
+            `INSERT INTO field_location_logs (
+               employee_id, vehicle_id, checkin_id, latitude, longitude,
+               accuracy_meters, source, recorded_at, session_date
+             ) VALUES ($1, $2, $3, $4, $5, 10, 'checkout_gps', NOW(), $6)`,
+            [employeeId, cleanVehicleId, checkin.id, outLat, outLng, today]
+          );
+        }
+
+        await client.query(
+          `UPDATE field_tracking_sessions
+           SET status = 'completed',
+               ended_at = NOW(),
+               total_points = total_points + $1,
+               last_point_at = NOW()
+           WHERE (checkin_id = $2 OR (employee_id = $3 AND session_date = $4))
+             AND status = 'active'`,
+          [hasValidGps ? 1 : 0, checkin.id, employeeId, today]
+        );
+      } catch (sessErr) {
+        console.warn('Auto-stop tracking session warning (non-fatal):', sessErr.message);
       }
 
       return {

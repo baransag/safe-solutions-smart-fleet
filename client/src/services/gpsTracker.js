@@ -10,7 +10,7 @@ class GPSTrackerService {
   constructor() {
     this.watchId = null;
     this.isTracking = false;
-    this.buffer = [];
+    this.buffer = this.loadQueue();
     this.flushInterval = null;
     this.lastPosition = null;
     this.activeSession = null;
@@ -117,10 +117,11 @@ class GPSTrackerService {
     this.lastPosition = point;
     this.buffer.push(point);
 
-    // Keep buffer capped at 50 to prevent unbounded memory growth if offline
-    if (this.buffer.length > 50) {
+    // Keep buffer capped at 100 to prevent unbounded memory growth if offline
+    if (this.buffer.length > 100) {
       this.buffer.shift();
     }
+    this.saveQueue();
 
     // Flush immediately if buffer reaches 5 points
     if (this.buffer.length >= 5) {
@@ -134,11 +135,37 @@ class GPSTrackerService {
     }
   }
 
+  saveQueue() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('fleetops_gps_queue', JSON.stringify(this.buffer));
+      }
+    } catch {
+      // quota or private mode
+    }
+  }
+
+  loadQueue() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem('fleetops_gps_queue');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      }
+    } catch {
+    }
+    return [];
+  }
+
   handlePositionError(err) {
     console.warn('Geolocation warning/error:', err.code, err.message);
     if (err.code === 1) { // PERMISSION_DENIED
       this.permissionState = 'denied';
       this.stopTracking();
+    } else if (err.code === 2 || err.code === 3) {
+      this.permissionState = 'unavailable';
     }
     this.notifyStatus();
   }
@@ -152,11 +179,15 @@ class GPSTrackerService {
 
     try {
       await api.post('/field-tracking/location', { points: pointsToSend });
-      // Remove sent points from buffer
+      // Remove sent points from buffer upon server acknowledgement
       this.buffer = this.buffer.filter(p => !pointsToSend.includes(p));
+      this.saveQueue();
     } catch (err) {
       console.warn('Failed to send GPS points to server (will retry):', err.message);
-      // Keep points in buffer for next flush attempt
+      // Auto-stop tracking if server reports duty ended / checkout occurred
+      if (err.status === 403 || (err.message && err.message.toLowerCase().includes('checked out'))) {
+        this.stopTracking();
+      }
     } finally {
       this.isFlushing = false;
       this.notifyStatus();

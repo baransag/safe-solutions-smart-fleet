@@ -29,6 +29,9 @@ export default function CheckInPage() {
   const [ocrReading, setOcrReading] = useState(null);
   const [ocrConfidence, setOcrConfidence] = useState(null);
 
+  const [gpsStatusMessage, setGpsStatusMessage] = useState('');
+  const [gpsStatusType, setGpsStatusType] = useState('idle'); // 'idle' | 'fetching' | 'success' | 'denied' | 'no_updates'
+
   const [vehicleAttendanceEnabled, setVehicleAttendanceEnabled] = useState(true);
 
   useEffect(() => {
@@ -75,28 +78,51 @@ export default function CheckInPage() {
     }
   }
 
-  // Step 2: GPS
+  // Step 2: Smart GPS Readiness & Location Capture
   function captureGPS() {
     if (!scannedVehicle) {
       toast.error('🚫 QR Code Verification Required first!');
       return;
     }
     setLoading(true);
+    setGpsStatusType('fetching');
+    setGpsStatusMessage('Getting your location… Please wait.');
+
+    if (!('geolocation' in navigator)) {
+      setGpsStatusType('denied');
+      setGpsStatusMessage('Please turn on your device location and allow location permission to continue field tracking.');
+      setLoading(false);
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        toast.success('GPS location captured');
-        setStep(2);
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setGps(coords);
+        setGpsStatusType('success');
+        setGpsStatusMessage('Location enabled. Field tracking has started successfully.');
+        toast.success('Location enabled. Field tracking has started successfully.');
         setLoading(false);
+        setTimeout(() => setStep(2), 600);
       },
       (err) => {
-        // Fallback default GPS if browser denies
-        setGps({ lat: 31.5204, lng: 74.3587 });
-        toast.success('GPS location verified');
-        setStep(2);
         setLoading(false);
+        if (err.code === 1) {
+          // PERMISSION_DENIED
+          setGpsStatusType('denied');
+          setGpsStatusMessage('Please turn on your device location and allow location permission to continue field tracking.');
+          toast.error('Please turn on your device location and allow location permission to continue field tracking.');
+        } else if (err.code === 2 || err.code === 3) {
+          // POSITION_UNAVAILABLE or TIMEOUT
+          setGpsStatusType('no_updates');
+          setGpsStatusMessage('Location permission is enabled, but GPS updates are not being received. Please check your device location and internet connection.');
+          toast.warning('Location permission is enabled, but GPS updates are not being received. Please check your device location and internet connection.');
+        } else {
+          setGpsStatusType('denied');
+          setGpsStatusMessage('Please turn on your device location and allow location permission to continue field tracking.');
+        }
       },
-      { enableHighAccuracy: true, timeout: 15000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
   }
 
@@ -318,9 +344,37 @@ export default function CheckInPage() {
         {step === 1 && (
           <div className="step-card card-elevated">
             <h3><MapPin size={20} /> Capture GPS Location</h3>
-            <p>We'll record your current location for verification</p>
-            <button className="btn btn-primary btn-lg" onClick={captureGPS} disabled={loading} style={{ width: '100%', marginTop: 'var(--space-4)' }}>
-              {loading ? <><div className="loader" style={{ width: 18, height: 18, borderWidth: 2, borderTopColor: 'white' }} /> Capturing...</> : <><MapPin size={18} /> Capture Location</>}
+            <p>We'll record your current location for verification and automatic field tracking</p>
+
+            {/* Smart Readiness Status Alert Box */}
+            {gpsStatusMessage && (
+              <div style={{
+                marginTop: 12,
+                padding: '12px 14px',
+                borderRadius: 10,
+                fontSize: 12.5,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: gpsStatusType === 'success' ? '#DEF7EC' : gpsStatusType === 'denied' ? '#FDE8E8' : gpsStatusType === 'no_updates' ? '#FEF08A' : '#EFF6FF',
+                color: gpsStatusType === 'success' ? '#03543F' : gpsStatusType === 'denied' ? '#9B1C1C' : gpsStatusType === 'no_updates' ? '#854D0E' : '#1E40AF',
+                border: `1px solid ${gpsStatusType === 'success' ? '#31C48D' : gpsStatusType === 'denied' ? '#F98080' : gpsStatusType === 'no_updates' ? '#FACC15' : '#93C5FD'}`
+              }}>
+                <span style={{ fontSize: 16 }}>
+                  {gpsStatusType === 'success' ? '✅' : gpsStatusType === 'denied' ? '🚫' : gpsStatusType === 'no_updates' ? '⚠️' : '⏳'}
+                </span>
+                <span>{gpsStatusMessage}</span>
+              </div>
+            )}
+
+            <button
+              className="btn btn-primary btn-lg"
+              onClick={captureGPS}
+              disabled={loading}
+              style={{ width: '100%', marginTop: 'var(--space-4)' }}
+            >
+              {loading ? <><div className="loader" style={{ width: 18, height: 18, borderWidth: 2, borderTopColor: 'white' }} /> Capturing GPS Location...</> : <><MapPin size={18} /> {gps ? 'Recapture GPS Location' : 'Capture Location'}</>}
             </button>
           </div>
         )}

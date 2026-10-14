@@ -640,4 +640,78 @@ router.get('/reports', authenticate, authorize('boss', 'admin', 'controller', 'm
   }
 });
 
+// POST /api/field-tracking/close-session/:id - Authorized manual closure for missing checkout
+router.post('/close-session/:id', authenticate, authorize('boss', 'admin', 'controller', 'manager'), async (req, res, next) => {
+  try {
+    const sessionId = parseInt(req.params.id, 10);
+    const { close_time, reason, notes } = req.body;
+
+    const { rows: sessionRows } = await query(
+      `SELECT * FROM field_tracking_sessions WHERE id = $1`,
+      [sessionId]
+    );
+
+    if (sessionRows.length === 0) {
+      return res.status(404).json({ error: 'Tracking session not found' });
+    }
+
+    const session = sessionRows[0];
+    const endedAt = close_time ? new Date(close_time) : new Date();
+
+    // 1. Mark tracking session completed
+    const { rows: updatedSession } = await query(
+      `UPDATE field_tracking_sessions
+       SET status = 'completed',
+           ended_at = $1
+       WHERE id = $2
+       RETURNING *`,
+      [endedAt, sessionId]
+    );
+
+    // 2. If linked to vehicle check-in and check-out is missing, complete check-in
+    if (session.checkin_id) {
+      const { rows: chkRows } = await query(
+        `SELECT id FROM vehicle_checkouts WHERE checkin_id = $1`,
+        [session.checkin_id]
+      );
+      if (chkRows.length === 0) {
+        const { rows: parentChk } = await query(
+          `SELECT vehicle_id, meter_reading FROM vehicle_checkins WHERE id = $1`,
+          [session.checkin_id]
+        );
+        if (parentChk.length > 0) {
+          const closingKm = parseFloat(parentChk[0].meter_reading) + Math.round((session.total_distance_meters || 0) / 1000.0);
+          await query(
+            `INSERT INTO vehicle_checkouts (
+               checkin_id, vehicle_id, employee_id, checkout_time,
+               meter_reading, distance_km, notes, is_confirmed
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7, true)`,
+            [
+              session.checkin_id,
+              parentChk[0].vehicle_id,
+              session.employee_id,
+              endedAt,
+              closingKm,
+              Math.round((session.total_distance_meters || 0) / 1000.0),
+              `Manual session closure by ${req.user.name}: ${reason || notes || 'Missing checkout resolved'}`
+            ]
+          );
+        }
+        await query(
+          `UPDATE vehicle_checkins SET status = 'completed' WHERE id = $1`,
+          [session.checkin_id]
+        );
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Session closed successfully',
+      session: updatedSession[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
