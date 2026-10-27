@@ -2,6 +2,30 @@ const express = require('express');
 const router = express.Router();
 const { query } = require('../config/db');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
+const geocodingService = require('../services/geocoding.service');
+
+// GET /api/field-tracking/reverse-geocode - Reverse geocode latitude & longitude into readable address
+router.get('/reverse-geocode', authenticate, async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) {
+      return res.status(400).json({ error: 'lat and lng parameters are required' });
+    }
+    const result = await geocodingService.reverseGeocode(lat, lng);
+    res.json({
+      success: true,
+      data: result,
+      formatted: result.formatted || 'Address unavailable',
+      provider: 'OpenStreetMap Nominatim'
+    });
+  } catch (err) {
+    res.json({
+      success: false,
+      formatted: 'Address unavailable',
+      error: err.message
+    });
+  }
+});
 
 // NOTE: vehicle_checkins has NO checkin_date column (only checkin_time TIMESTAMP).
 // Naive TIMESTAMP columns are written in UTC (Vercel + Neon run in UTC), so the
@@ -319,6 +343,27 @@ router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'mana
         e.name ASC
     `, [today]);
 
+    // Attach readable reverse-geocoded addresses
+    for (const item of rows) {
+      if (item.latitude && item.longitude) {
+        const cached = geocodingService.getCachedGeocode(item.latitude, item.longitude);
+        if (cached) {
+          item.location_address = cached.formatted;
+          item.location_details = cached;
+        } else {
+          try {
+            const resAddr = await geocodingService.reverseGeocode(item.latitude, item.longitude);
+            item.location_address = resAddr.formatted;
+            item.location_details = resAddr;
+          } catch {
+            item.location_address = 'Address unavailable';
+          }
+        }
+      } else {
+        item.location_address = null;
+      }
+    }
+
     res.json({ success: true, tracking: rows, targetDate: today });
   } catch (err) {
     next(err);
@@ -360,6 +405,17 @@ router.get('/route/:employeeId', authenticate, async (req, res, next) => {
       `, [employeeId, date]);
       if (chkGps.length > 0) {
         points.push(chkGps[0]);
+      }
+    }
+
+    // Attach any already-cached addresses to points
+    for (const pt of points) {
+      if (pt.latitude && pt.longitude) {
+        const cached = geocodingService.getCachedGeocode(pt.latitude, pt.longitude);
+        if (cached) {
+          pt.location_address = cached.formatted;
+          pt.location_details = cached;
+        }
       }
     }
 

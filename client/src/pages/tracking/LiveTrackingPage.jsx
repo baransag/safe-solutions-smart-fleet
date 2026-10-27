@@ -11,8 +11,10 @@ import EmployeeTrackingDetailModal from '../../components/tracking/EmployeeTrack
 import {
   formatPKTDate,
   formatPKTTime,
+  formatPKTDateTime,
   getPKTTodayString
 } from '../../utils/pakistanTime';
+import { getReadableAddress, getCachedAddress, getCoordKey } from '../../services/geocodingService';
 
 export default function LiveTrackingPage() {
   const { user } = useAuth();
@@ -21,6 +23,7 @@ export default function LiveTrackingPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const [error, setError] = useState(null);
+  const [addressMap, setAddressMap] = useState({});
 
   // Filters
   const todayStr = getPKTTodayString();
@@ -120,13 +123,38 @@ export default function LiveTrackingPage() {
     };
   }, [autoRefresh, selectedDate]);
 
+  // Resolve readable addresses for all visible tracking coordinates
+  useEffect(() => {
+    let isMounted = true;
+    trackingList.forEach(item => {
+      if (item.latitude && item.longitude) {
+        const key = getCoordKey(item.latitude, item.longitude);
+        if (item.location_address && !addressMap[key]) {
+          setAddressMap(prev => ({ ...prev, [key]: item.location_address }));
+        } else if (!addressMap[key]) {
+          const cached = getCachedAddress(item.latitude, item.longitude);
+          if (cached) {
+            setAddressMap(prev => ({ ...prev, [key]: cached.formatted }));
+          } else {
+            getReadableAddress(item.latitude, item.longitude).then(addr => {
+              if (isMounted && addr && addr.formatted) {
+                setAddressMap(prev => ({ ...prev, [key]: addr.formatted }));
+              }
+            });
+          }
+        }
+      }
+    });
+    return () => { isMounted = false; };
+  }, [trackingList]);
+
   // Initialize or update Map
   useEffect(() => {
     if (!leafletLoaded || !mapContainerRef.current || !window.L) return;
 
     if (!mapInstanceRef.current) {
       // Default center: Lahore / Faisalabad region, Pakistan
-      const map = window.L.map(mapContainerRef.current).setView([31.5204, 74.3587], 11);
+      const map = window.L.map(mapContainerRef.current).setView([31.4468, 73.0959], 12);
       window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
@@ -148,12 +176,14 @@ export default function LiveTrackingPage() {
         const lng = parseFloat(item.longitude);
         bounds.push([lat, lng]);
 
-        const isRecent = item.minutes_since_last_ping !== null && item.minutes_since_last_ping <= 15;
         const markerColor = item.tracking_status === 'Active'
           ? '#10B981'
           : item.tracking_status === 'Offline'
           ? '#F59E0B'
           : '#6B7280';
+
+        const coordKey = getCoordKey(lat, lng);
+        const displayAddr = item.location_address || addressMap[coordKey] || getCachedAddress(lat, lng)?.formatted || 'Resolving address...';
 
         const customIcon = window.L.divIcon({
           className: 'custom-fleet-pin',
@@ -173,20 +203,29 @@ export default function LiveTrackingPage() {
             cursor: pointer;
           ">
             <span>🚗 ${item.employee_name?.split(' ')[0]}</span>
+            ${item.location_source === 'checkin' ? '<span style="font-size:9px;opacity:0.85;">(Check-in)</span>' : ''}
           </div>`,
-          iconSize: [85, 26],
-          iconAnchor: [42, 13]
+          iconSize: [item.location_source === 'checkin' ? 120 : 85, 26],
+          iconAnchor: [item.location_source === 'checkin' ? 60 : 42, 13]
         });
 
         const marker = window.L.marker([lat, lng], { icon: customIcon }).addTo(map);
         marker.bindPopup(`
-          <div style="font-family: inherit; font-size: 12px; line-height: 1.4;">
+          <div style="font-family: inherit; font-size: 12px; line-height: 1.45; min-width: 220px;">
             <strong style="font-size: 14px; color: #0F2B5B;">${item.employee_name}</strong><br/>
-            <span>Code: <strong>${item.employee_code || item.employee_id}</strong></span><br/>
+            <span style="color: #64748b;">Code: <strong>${item.employee_code || item.employee_id}</strong></span><br/>
+            <div style="margin: 5px 0; padding: 6px 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+              <span style="color: #64748b; font-size: 10px; display: block; font-weight: 700; text-transform: uppercase;">📍 Area / Location:</span>
+              <strong style="color: #0F2B5B; font-size: 11px;">${displayAddr}</strong>
+            </div>
+            <span>Coords: <strong>${lat.toFixed(6)}, ${lng.toFixed(6)}</strong></span><br/>
             <span>Vehicle: <strong>${item.vehicle_name || 'Assigned'} (${item.number_plate || 'N/A'})</strong></span><br/>
             <span>Tracking: <strong>${item.tracking_status}</strong></span><br/>
             <span>Speed: <strong>${(item.speed_mps ? item.speed_mps * 3.6 : 0).toFixed(1)} km/h</strong></span><br/>
-            <span>Last Seen: ${item.last_location_at ? formatPKTTime(item.last_location_at) : 'N/A'}</span>
+            <span>Last Seen: <strong>${item.last_location_at ? formatPKTDateTime(item.last_location_at) : 'N/A'}</strong></span><br/>
+            <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noreferrer" style="color: #0F2B5B; font-weight: 800; text-decoration: underline; margin-top: 6px; display: inline-flex; align-items: center; gap: 4px;">
+              🗺️ Open in Google Maps &nearr;
+            </a>
           </div>
         `);
 
@@ -201,7 +240,7 @@ export default function LiveTrackingPage() {
     if (bounds.length > 0 && !selectedRoute) {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
     }
-  }, [leafletLoaded, trackingList]);
+  }, [leafletLoaded, trackingList, addressMap]);
 
   // Load employee route on map
   async function loadEmployeeRoute(employee) {
@@ -687,47 +726,87 @@ export default function LiveTrackingPage() {
                   {/* GPS & Location Section */}
                   <div
                     style={{
-                      background: hasGps ? '#F8FAFC' : '#F8FAFC',
+                      background: '#F8FAFC',
                       border: '1px solid #E2E8F0',
                       borderRadius: 10,
-                      padding: '8px 10px',
+                      padding: '10px 12px',
                       marginBottom: 10,
                       fontSize: 11
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-                        <Navigation size={12} color="#0F2B5B" /> GPS Telemetry
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <span style={{ color: '#0F2B5B', display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700, fontSize: 12 }}>
+                        <Navigation size={13} color="#0F2B5B" /> GPS Telemetry
                       </span>
-                      {hasGps && emp.battery_level !== null && (
-                        <span style={{ color: '#059669', fontWeight: 700 }}>
-                          🔋 {Math.round(emp.battery_level * 100)}%
-                        </span>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {emp.location_source === 'checkin' && (
+                          <span style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>
+                            Check-In Coords
+                          </span>
+                        )}
+                        {hasGps && emp.battery_level !== null && (
+                          <span style={{ color: '#059669', fontWeight: 700, fontSize: 10 }}>
+                            🔋 {Math.round(emp.battery_level * 100)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {hasGps ? (
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontWeight: 700, color: '#0F2B5B', fontSize: 11 }}>
-                            {parseFloat(emp.latitude).toFixed(4)}, {parseFloat(emp.longitude).toFixed(4)}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        {/* Last Known Location */}
+                        <div style={{ background: '#ffffff', padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                          <span style={{ color: '#64748b', fontSize: 10, fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>
+                            Last Known Location:
                           </span>
-                          {emp.location_source === 'checkin' && (
-                            <span style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>
-                              Check-In Coords
-                            </span>
-                          )}
+                          <div style={{ color: '#0F2B5B', fontWeight: 800, fontSize: 12, lineHeight: 1.35, marginTop: 2 }}>
+                            📍 {emp.location_address || addressMap[getCoordKey(emp.latitude, emp.longitude)] || getCachedAddress(emp.latitude, emp.longitude)?.formatted || 'Resolving address...'}
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: 10, marginTop: 2 }}>
-                          <span>{emp.location_source === 'checkin' ? 'Check-In Dispatch' : `Speed: ${(emp.speed_mps ? emp.speed_mps * 3.6 : 0).toFixed(0)} km/h`}</span>
-                          <span>
-                            Updated {emp.last_location_at ? formatPKTTime(emp.last_location_at) : 'N/A'}
+
+                        {/* Last GPS Update (PKT date and time) */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
+                          <span style={{ color: '#64748b', fontSize: 10, fontWeight: 600 }}>Last GPS Update:</span>
+                          <span style={{ color: '#0F2B5B', fontWeight: 700, fontSize: 11 }}>
+                            {emp.last_location_at ? formatPKTDateTime(emp.last_location_at) : 'N/A'}
+                          </span>
+                        </div>
+
+                        {/* Coordinates */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: '#64748b', fontSize: 10, fontWeight: 600 }}>Coordinates:</span>
+                          <span style={{ color: '#334155', fontWeight: 700, fontSize: 11, fontFamily: 'monospace' }}>
+                            {parseFloat(emp.latitude).toFixed(6)}, {parseFloat(emp.longitude).toFixed(6)}
+                          </span>
+                        </div>
+
+                        {/* Speed & Open in Google Maps */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, paddingTop: 4, borderTop: '1px dashed #e2e8f0' }}>
+                          <span style={{ color: '#64748b', fontSize: 10 }}>
+                            {emp.location_source === 'checkin' ? 'Check-In Dispatch' : `Speed: ${(emp.speed_mps ? emp.speed_mps * 3.6 : 0).toFixed(0)} km/h`}
                             {emp.minutes_since_last_ping !== null && ` (${Math.round(emp.minutes_since_last_ping)}m ago)`}
                           </span>
+                          <a
+                            href={`https://www.google.com/maps?q=${emp.latitude},${emp.longitude}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              color: '#0F2B5B',
+                              fontWeight: 800,
+                              fontSize: 11,
+                              textDecoration: 'underline',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3
+                            }}
+                          >
+                            🗺️ Open in Google Maps &nearr;
+                          </a>
                         </div>
                       </div>
                     ) : (
-                      <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                      <div style={{ color: '#94a3b8', fontStyle: 'italic', padding: '4px 0' }}>
                         No GPS points recorded
                       </div>
                     )}

@@ -12,6 +12,7 @@ import {
   calculateWorkingDuration,
   getPKTTodayString
 } from '../../utils/pakistanTime';
+import { getReadableAddress, getCachedAddress, getCoordKey } from '../../services/geocodingService';
 
 export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose }) {
   if (!isOpen || !employee) return null;
@@ -29,6 +30,7 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
   const [loadingReport, setLoadingReport] = useState(false);
   const [routePoints, setRoutePoints] = useState([]);
   const [loadingRoute, setLoadingRoute] = useState(false);
+  const [routeAddressMap, setRouteAddressMap] = useState({});
 
   // Fetch report data for this specific employee
   async function fetchEmployeeReport() {
@@ -83,6 +85,51 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
       fetchRoute();
     }
   }, [employee?.id, employee?.employee_id, period, selectedDate, startDate, endDate, selectedMonth, selectedYear, activeTab]);
+
+  // Batch resolve readable addresses for route points and employee
+  useEffect(() => {
+    let isMounted = true;
+    if (employee?.latitude && employee?.longitude) {
+      const key = getCoordKey(employee.latitude, employee.longitude);
+      if (employee.location_address && !routeAddressMap[key]) {
+        setRouteAddressMap(prev => ({ ...prev, [key]: employee.location_address }));
+      } else if (!routeAddressMap[key]) {
+        const cached = getCachedAddress(employee.latitude, employee.longitude);
+        if (cached) {
+          setRouteAddressMap(prev => ({ ...prev, [key]: cached.formatted }));
+        } else {
+          getReadableAddress(employee.latitude, employee.longitude).then(res => {
+            if (isMounted && res && res.formatted) {
+              setRouteAddressMap(prev => ({ ...prev, [key]: res.formatted }));
+            }
+          });
+        }
+      }
+    }
+
+    if (activeTab === 'route' && routePoints.length > 0) {
+      routePoints.forEach(p => {
+        if (p.latitude && p.longitude) {
+          const key = getCoordKey(p.latitude, p.longitude);
+          if (p.location_address && !routeAddressMap[key]) {
+            setRouteAddressMap(prev => ({ ...prev, [key]: p.location_address }));
+          } else if (!routeAddressMap[key]) {
+            const cached = getCachedAddress(p.latitude, p.longitude);
+            if (cached) {
+              setRouteAddressMap(prev => ({ ...prev, [key]: cached.formatted }));
+            } else {
+              getReadableAddress(p.latitude, p.longitude).then(res => {
+                if (isMounted && res && res.formatted) {
+                  setRouteAddressMap(prev => ({ ...prev, [key]: res.formatted }));
+                }
+              });
+            }
+          }
+        }
+      });
+    }
+    return () => { isMounted = false; };
+  }, [routePoints, employee?.latitude, employee?.longitude, activeTab]);
 
   // Handle Preset Ranges
   function handlePresetChange(preset) {
@@ -828,6 +875,7 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
                       <tr style={{ background: '#f8fafc' }}>
                         <th>#</th>
                         <th>Time (PKT)</th>
+                        <th>Area / Address</th>
                         <th>Coordinates (Lat, Lng)</th>
                         <th>Speed</th>
                         <th>Accuracy</th>
@@ -837,31 +885,42 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
                       </tr>
                     </thead>
                     <tbody>
-                      {routePoints.map((p, idx) => (
-                        <tr key={p.id}>
-                          <td>{idx + 1}</td>
-                          <td><strong>{formatPKTTime(p.recorded_at)}</strong></td>
-                          <td>{parseFloat(p.latitude).toFixed(6)}, {parseFloat(p.longitude).toFixed(6)}</td>
-                          <td>{(p.speed_mps ? p.speed_mps * 3.6 : 0).toFixed(1)} km/h</td>
-                          <td>&plusmn;{Math.round(p.accuracy_meters || 0)}m</td>
-                          <td>{p.battery_level !== null ? `${Math.round(p.battery_level * 100)}%` : 'N/A'}</td>
-                          <td>
-                            <span style={{ color: p.is_moving ? '#059669' : '#D97706', fontWeight: 700 }}>
-                              {p.is_moving ? '🚗 Moving' : '🅿️ Stopped'}
-                            </span>
-                          </td>
-                          <td>
-                            <a
-                              href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ color: '#0F2B5B', fontWeight: 700, textDecoration: 'underline' }}
-                            >
-                              Pinpoint
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
+                      {routePoints.map((p, idx) => {
+                        const coordKey = getCoordKey(p.latitude, p.longitude);
+                        const addr = p.location_address || routeAddressMap[coordKey] || getCachedAddress(p.latitude, p.longitude)?.formatted || 'Resolving...';
+                        return (
+                          <tr key={p.id || idx}>
+                            <td>{idx + 1}</td>
+                            <td><strong>{formatPKTTime(p.recorded_at)}</strong></td>
+                            <td style={{ maxWidth: 220 }}>
+                              <div style={{ fontWeight: 700, color: '#0F2B5B', lineHeight: 1.35 }}>
+                                📍 {addr}
+                              </div>
+                            </td>
+                            <td style={{ fontFamily: 'monospace' }}>
+                              {parseFloat(p.latitude).toFixed(6)}, {parseFloat(p.longitude).toFixed(6)}
+                            </td>
+                            <td>{(p.speed_mps ? p.speed_mps * 3.6 : 0).toFixed(1)} km/h</td>
+                            <td>&plusmn;{Math.round(p.accuracy_meters || 0)}m</td>
+                            <td>{p.battery_level !== null ? `${Math.round(p.battery_level * 100)}%` : 'N/A'}</td>
+                            <td>
+                              <span style={{ color: p.is_moving ? '#059669' : '#D97706', fontWeight: 700 }}>
+                                {p.is_moving ? '🚗 Moving' : '🅿️ Stopped'}
+                              </span>
+                            </td>
+                            <td>
+                              <a
+                                href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ color: '#0F2B5B', fontWeight: 700, textDecoration: 'underline' }}
+                              >
+                                Pinpoint
+                              </a>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -878,22 +937,38 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
                   <Navigation size={16} /> Latest GPS Signal
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>Coordinates:</span>
-                    <strong>
-                      {employee.latitude && employee.longitude
-                        ? `${parseFloat(employee.latitude).toFixed(5)}, ${parseFloat(employee.longitude).toFixed(5)}`
+                  {/* Last Known Location */}
+                  <div style={{ background: '#ffffff', padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <span style={{ color: '#64748b', fontSize: 10, fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>
+                      Last Known Location:
+                    </span>
+                    <strong style={{ color: '#0F2B5B', fontSize: 12, lineHeight: 1.35, display: 'block', marginTop: 2 }}>
+                      📍 {employee.latitude && employee.longitude
+                        ? (employee.location_address || routeAddressMap[getCoordKey(employee.latitude, employee.longitude)] || getCachedAddress(employee.latitude, employee.longitude)?.formatted || 'Resolving address...')
                         : 'No GPS Signal'}
                     </strong>
                   </div>
+
+                  {/* Last GPS Update (PKT date and time) */}
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>Last Ping:</span>
-                    <strong>
+                    <span style={{ color: '#64748b' }}>Last GPS Update:</span>
+                    <strong style={{ color: '#0F2B5B' }}>
                       {employee.last_location_at
-                        ? `${formatPKTTime(employee.last_location_at)} (${Math.round(employee.minutes_since_last_ping || 0)}m ago)`
+                        ? `${formatPKTDateTime(employee.last_location_at)} (${Math.round(employee.minutes_since_last_ping || 0)}m ago)`
                         : 'N/A'}
                     </strong>
                   </div>
+
+                  {/* Coordinates */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Coordinates:</span>
+                    <strong style={{ fontFamily: 'monospace' }}>
+                      {employee.latitude && employee.longitude
+                        ? `${parseFloat(employee.latitude).toFixed(6)}, ${parseFloat(employee.longitude).toFixed(6)}`
+                        : 'No GPS Signal'}
+                    </strong>
+                  </div>
+
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Current Speed:</span>
                     <strong>{(employee.speed_mps ? employee.speed_mps * 3.6 : 0).toFixed(1)} km/h</strong>
@@ -908,9 +983,9 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
                       target="_blank"
                       rel="noreferrer"
                       className="btn btn-outline btn-sm"
-                      style={{ marginTop: 8, textAlign: 'center', justifyContent: 'center' }}
+                      style={{ marginTop: 8, textAlign: 'center', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
                     >
-                      📍 Open in Google Maps
+                      🗺️ Open in Google Maps &nearr;
                     </a>
                   )}
                 </div>
