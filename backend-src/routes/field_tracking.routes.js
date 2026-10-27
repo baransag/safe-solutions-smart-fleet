@@ -3,6 +3,18 @@ const router = express.Router();
 const { query } = require('../config/db');
 const { authenticate, authorize } = require('../middleware/auth.middleware');
 
+// NOTE: vehicle_checkins has NO checkin_date column (only checkin_time TIMESTAMP).
+// Naive TIMESTAMP columns are written in UTC (Vercel + Neon run in UTC), so the
+// Pakistan (Asia/Karachi) calendar date is derived explicitly from the timestamp.
+const pktDateSql = (col) => `((${col}) AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Karachi')::date`;
+
+// Today's calendar date in Asia/Karachi as YYYY-MM-DD
+function pktToday() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Karachi', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+}
+
 // Helper: Haversine distance in meters
 function haversineDistanceMeters(lat1, lon1, lat2, lon2) {
   const R = 6371000; // Earth radius in meters
@@ -21,14 +33,14 @@ function haversineDistanceMeters(lat1, lon1, lat2, lon2) {
 router.get('/status', authenticate, async (req, res, next) => {
   try {
     const employeeId = req.user.id;
-    const today = new Date().toISOString().split('T')[0];
+    const today = pktToday();
 
     // Check if employee checked in today for vehicle duty
     const { rows: checkinRows } = await query(`
       SELECT vc.id, vc.vehicle_id, vc.checkin_time, v.name AS vehicle_name, v.number_plate
       FROM vehicle_checkins vc
       LEFT JOIN vehicles v ON vc.vehicle_id = v.id
-      WHERE vc.employee_id = $1 AND vc.checkin_date = $2
+      WHERE vc.employee_id = $1 AND ${pktDateSql('vc.checkin_time')} = $2
       ORDER BY vc.id DESC LIMIT 1
     `, [employeeId, today]);
 
@@ -69,7 +81,7 @@ router.get('/status', authenticate, async (req, res, next) => {
 router.post('/location', authenticate, async (req, res, next) => {
   try {
     const employeeId = req.user.id;
-    const today = new Date().toISOString().split('T')[0];
+    const today = pktToday();
     const rawPoints = Array.isArray(req.body.points) ? req.body.points : (req.body.latitude ? [req.body] : []);
 
     if (rawPoints.length === 0) {
@@ -80,7 +92,7 @@ router.post('/location', authenticate, async (req, res, next) => {
     const { rows: checkinRows } = await query(`
       SELECT vc.id, vc.vehicle_id
       FROM vehicle_checkins vc
-      WHERE vc.employee_id = $1 AND vc.checkin_date = $2
+      WHERE vc.employee_id = $1 AND ${pktDateSql('vc.checkin_time')} = $2
       ORDER BY vc.id DESC LIMIT 1
     `, [employeeId, today]);
 
@@ -201,7 +213,7 @@ router.post('/location', authenticate, async (req, res, next) => {
 // GET /api/field-tracking/live - Real-time/latest positions and card status of all employees
 router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'manager'), async (req, res, next) => {
   try {
-    const today = req.query.date || new Date().toISOString().split('T')[0];
+    const today = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : pktToday();
 
     const { rows } = await query(`
       WITH latest_loc AS (
@@ -216,14 +228,14 @@ router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'mana
         SELECT DISTINCT ON (employee_id)
           id, employee_id, check_in_time, check_out_time, attendance_type, status, approval_status, work_hours
         FROM attendance_records
-        WHERE check_in_time::date = $1
+        WHERE ${pktDateSql('check_in_time')} = $1
         ORDER BY employee_id, id DESC
       ),
       latest_checkin AS (
         SELECT DISTINCT ON (employee_id)
-          id, employee_id, vehicle_id, checkin_time, meter_reading
+          id, employee_id, vehicle_id, checkin_time, meter_reading, gps_lat, gps_lng
         FROM vehicle_checkins
-        WHERE checkin_date = $1
+        WHERE ${pktDateSql('checkin_time')} = $1
         ORDER BY employee_id, id DESC
       )
       SELECT
@@ -250,6 +262,8 @@ router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'mana
         vco.checkout_time AS vehicle_checkout_time,
         vc.meter_reading AS opening_meter,
         vco.meter_reading AS closing_meter,
+        vc.gps_lat AS checkin_lat,
+        vc.gps_lng AS checkin_lng,
         -- Tracking Session
         fts.id AS session_id,
         fts.total_points,
@@ -258,22 +272,29 @@ router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'mana
         fts.status AS session_status,
         fts.started_at AS session_started_at,
         fts.ended_at AS session_ended_at,
-        -- Latest Location
-        ll.latitude,
-        ll.longitude,
+        fts.last_point_at AS session_last_point_at,
+        -- Latest Location: latest stored GPS point, else the real check-in coordinates
+        COALESCE(ll.latitude, vc.gps_lat) AS latitude,
+        COALESCE(ll.longitude, vc.gps_lng) AS longitude,
+        CASE
+          WHEN ll.latitude IS NOT NULL THEN 'gps'
+          WHEN vc.gps_lat IS NOT NULL AND vc.gps_lng IS NOT NULL THEN 'checkin'
+          ELSE NULL
+        END AS location_source,
         ll.accuracy_meters,
         ll.speed_mps,
         ll.heading,
         ll.battery_level,
         ll.is_moving,
-        ll.recorded_at AS last_location_at,
-        ROUND(EXTRACT(EPOCH FROM (NOW() - ll.recorded_at)) / 60.0, 1) AS minutes_since_last_ping,
+        COALESCE(ll.recorded_at, CASE WHEN vc.gps_lat IS NOT NULL THEN vc.checkin_time ELSE NULL END) AS last_location_at,
+        ROUND(EXTRACT(EPOCH FROM (NOW() - COALESCE(ll.recorded_at, CASE WHEN vc.gps_lat IS NOT NULL THEN vc.checkin_time ELSE NULL END))) / 60.0, 1) AS minutes_since_last_ping,
         -- Computed Tracking Status: 'Active', 'Stopped', 'Offline', or 'Not Started'
         CASE
           WHEN vco.checkout_time IS NOT NULL OR fts.status = 'completed' THEN 'Stopped'
           WHEN vc.checkin_time IS NOT NULL THEN
             CASE
-              WHEN ll.recorded_at IS NOT NULL AND EXTRACT(EPOCH FROM (NOW() - ll.recorded_at)) <= 900 THEN 'Active'
+              WHEN COALESCE(ll.recorded_at, CASE WHEN vc.gps_lat IS NOT NULL THEN vc.checkin_time ELSE NULL END) IS NOT NULL
+                   AND EXTRACT(EPOCH FROM (NOW() - COALESCE(ll.recorded_at, CASE WHEN vc.gps_lat IS NOT NULL THEN vc.checkin_time ELSE NULL END))) <= 900 THEN 'Active'
               ELSE 'Offline'
             END
           ELSE 'Not Started'
@@ -285,10 +306,12 @@ router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'mana
       LEFT JOIN vehicle_checkouts vco ON vco.checkin_id = vc.id
       LEFT JOIN field_tracking_sessions fts ON fts.employee_id = e.id AND fts.session_date = $1
       LEFT JOIN latest_loc ll ON ll.employee_id = e.id
-      WHERE e.is_active = true
+      WHERE (e.is_active = true OR e.is_active IS NULL)
       ORDER BY
         CASE
-          WHEN vco.checkout_time IS NULL AND vc.checkin_time IS NOT NULL AND ll.recorded_at IS NOT NULL AND EXTRACT(EPOCH FROM (NOW() - ll.recorded_at)) <= 900 THEN 1
+          WHEN vco.checkout_time IS NULL AND vc.checkin_time IS NOT NULL
+               AND COALESCE(ll.recorded_at, CASE WHEN vc.gps_lat IS NOT NULL THEN vc.checkin_time ELSE NULL END) IS NOT NULL
+               AND EXTRACT(EPOCH FROM (NOW() - COALESCE(ll.recorded_at, CASE WHEN vc.gps_lat IS NOT NULL THEN vc.checkin_time ELSE NULL END))) <= 900 THEN 1
           WHEN vc.checkin_time IS NOT NULL AND vco.checkout_time IS NULL THEN 2
           WHEN la.check_in_time IS NOT NULL THEN 3
           ELSE 4
@@ -306,7 +329,7 @@ router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'mana
 router.get('/route/:employeeId', authenticate, async (req, res, next) => {
   try {
     const employeeId = parseInt(req.params.employeeId);
-    const date = req.query.date || new Date().toISOString().split('T')[0];
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : pktToday();
 
     // Access check: only self or management
     const isSelf = req.user.id === employeeId;
@@ -323,6 +346,22 @@ router.get('/route/:employeeId', authenticate, async (req, res, next) => {
       WHERE employee_id = $1 AND session_date = $2
       ORDER BY id ASC
     `, [employeeId, date]);
+
+    // Fallback: If no continuous GPS logs yet, show the vehicle check-in GPS coordinate if present
+    if (points.length === 0) {
+      const { rows: chkGps } = await query(`
+        SELECT id, gps_lat AS latitude, gps_lng AS longitude, 10 AS accuracy_meters,
+               0 AS speed_mps, NULL AS heading, NULL AS battery_level, false AS is_moving,
+               checkin_time AS recorded_at
+        FROM vehicle_checkins
+        WHERE employee_id = $1 AND ${pktDateSql('checkin_time')} = $2
+          AND gps_lat IS NOT NULL AND gps_lng IS NOT NULL
+        ORDER BY id DESC LIMIT 1
+      `, [employeeId, date]);
+      if (chkGps.length > 0) {
+        points.push(chkGps[0]);
+      }
+    }
 
     const { rows: sessionRows } = await query(`
       SELECT fts.*, e.name AS employee_name, e.employee_id AS employee_code,
@@ -357,7 +396,7 @@ router.get('/employee-report/:employeeId', authenticate, async (req, res, next) 
     }
 
     // Determine Start and End date
-    const today = new Date().toISOString().split('T')[0];
+    const today = pktToday();
     let fromDate = today;
     let toDate = today;
 
@@ -410,7 +449,7 @@ router.get('/employee-report/:employeeId', authenticate, async (req, res, next) 
     const { rows: attendanceList } = await query(`
       SELECT
         ar.id AS attendance_id,
-        ar.check_in_time::date AS date_key,
+        ${pktDateSql('ar.check_in_time')} AS date_key,
         ar.check_in_time,
         ar.check_out_time,
         ar.status AS attendance_status,
@@ -421,14 +460,14 @@ router.get('/employee-report/:employeeId', authenticate, async (req, res, next) 
         ar.approval_status,
         ar.notes
       FROM attendance_records ar
-      WHERE ar.employee_id = $1 AND ar.check_in_time::date BETWEEN $2 AND $3
+      WHERE ar.employee_id = $1 AND ${pktDateSql('ar.check_in_time')} BETWEEN $2 AND $3
       ORDER BY ar.check_in_time ASC
     `, [employeeId, fromDate, toDate]);
 
     const { rows: vehicleCheckinList } = await query(`
       SELECT
         vc.id AS checkin_id,
-        vc.checkin_date AS date_key,
+        ${pktDateSql('vc.checkin_time')} AS date_key,
         vc.checkin_time,
         vco.checkout_time,
         vc.meter_reading AS opening_meter,
@@ -440,7 +479,7 @@ router.get('/employee-report/:employeeId', authenticate, async (req, res, next) 
       FROM vehicle_checkins vc
       LEFT JOIN vehicle_checkouts vco ON vco.checkin_id = vc.id
       LEFT JOIN vehicles v ON vc.vehicle_id = v.id
-      WHERE vc.employee_id = $1 AND vc.checkin_date BETWEEN $2 AND $3
+      WHERE vc.employee_id = $1 AND ${pktDateSql('vc.checkin_time')} BETWEEN $2 AND $3
       ORDER BY vc.checkin_time ASC
     `, [employeeId, fromDate, toDate]);
 
@@ -581,9 +620,9 @@ router.get('/employee-report/:employeeId', authenticate, async (req, res, next) 
 router.get('/reports', authenticate, authorize('boss', 'admin', 'controller', 'manager'), async (req, res, next) => {
   try {
     const { startDate, endDate, employeeId } = req.query;
-    const today = new Date().toISOString().split('T')[0];
+    const today = pktToday();
 
-    let whereClause = `WHERE (fts.session_date BETWEEN $1 AND $2 OR ar.check_in_time::date BETWEEN $1 AND $2)`;
+    let whereClause = `WHERE (fts.session_date BETWEEN $1 AND $2 OR ${pktDateSql('ar.check_in_time')} BETWEEN $1 AND $2)`;
     const params = [
       startDate || today,
       endDate || today
@@ -596,7 +635,7 @@ router.get('/reports', authenticate, authorize('boss', 'admin', 'controller', 'm
 
     const { rows } = await query(`
       SELECT
-        COALESCE(fts.session_date, ar.check_in_time::date, vc.checkin_date) AS session_date,
+        COALESCE(fts.session_date, ${pktDateSql('ar.check_in_time')}, ${pktDateSql('vc.checkin_time')}) AS session_date,
         e.id AS employee_id,
         e.employee_id AS employee_code,
         e.name AS employee_name,
@@ -626,8 +665,8 @@ router.get('/reports', authenticate, authorize('boss', 'admin', 'controller', 'm
         fts.last_point_at
       FROM employees e
       LEFT JOIN field_tracking_sessions fts ON fts.employee_id = e.id AND fts.session_date BETWEEN $1 AND $2
-      LEFT JOIN attendance_records ar ON ar.employee_id = e.id AND ar.check_in_time::date BETWEEN $1 AND $2
-      LEFT JOIN vehicle_checkins vc ON (vc.id = fts.checkin_id OR (vc.employee_id = e.id AND vc.checkin_date BETWEEN $1 AND $2))
+      LEFT JOIN attendance_records ar ON ar.employee_id = e.id AND ${pktDateSql('ar.check_in_time')} BETWEEN $1 AND $2
+      LEFT JOIN vehicle_checkins vc ON (vc.id = fts.checkin_id OR (vc.employee_id = e.id AND ${pktDateSql('vc.checkin_time')} BETWEEN $1 AND $2))
       LEFT JOIN vehicle_checkouts vco ON vco.checkin_id = vc.id
       LEFT JOIN vehicles v ON (v.id = fts.vehicle_id OR v.id = vc.vehicle_id)
       ${whereClause}

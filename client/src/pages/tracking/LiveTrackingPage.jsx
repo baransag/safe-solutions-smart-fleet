@@ -20,6 +20,8 @@ export default function LiveTrackingPage() {
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
+  const [error, setError] = useState(null);
+
   // Filters
   const todayStr = getPKTTodayString();
   const [selectedDate, setSelectedDate] = useState(todayStr);
@@ -90,13 +92,18 @@ export default function LiveTrackingPage() {
 
   // Fetch live tracking data for selected date
   async function fetchLiveTracking() {
+    setLoading(true);
     try {
       const res = await api.get(`/field-tracking/live?date=${selectedDate}`);
-      if (res.success) {
+      if (res && res.success) {
         setTrackingList(res.tracking || []);
+        setError(null);
+      } else {
+        setError(res?.error || 'Failed to load tracking data from server');
       }
     } catch (err) {
       console.warn('Live tracking fetch failed:', err.message);
+      setError(err.message || 'Unable to load live tracking telemetry. Please check connection and permissions.');
     } finally {
       setLoading(false);
     }
@@ -540,7 +547,62 @@ export default function LiveTrackingPage() {
         </span>
       </div>
 
-      {filteredList.length === 0 ? (
+      {/* Error Banner */}
+      {error && (
+        <div
+          className="card"
+          style={{
+            padding: '14px 18px',
+            marginBottom: 16,
+            background: '#FEF2F2',
+            border: '1px solid #FCA5A5',
+            borderRadius: 12,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+            <div>
+              <strong style={{ fontSize: 13, color: '#991B1B', display: 'block' }}>Failed to load live tracking telemetry</strong>
+              <span style={{ fontSize: 12, color: '#B91C1C' }}>{error}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={fetchLiveTracking}
+            disabled={loading}
+            style={{
+              background: '#DC2626',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '6px 14px',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+            Retry
+          </button>
+        </div>
+      )}
+
+      {loading && trackingList.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '50px 20px', color: '#64748b' }}>
+          <RefreshCw size={36} className="animate-spin" style={{ margin: '0 auto 12px', color: '#0F2B5B' }} />
+          <h3 style={{ margin: 0, fontSize: 16, color: '#0F2B5B', fontWeight: 800 }}>Loading live fleet telemetry...</h3>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>Fetching employees, attendance records, vehicle check-ins and GPS pins.</p>
+        </div>
+      ) : filteredList.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
           <Search size={36} style={{ opacity: 0.4, margin: '0 auto 8px' }} />
           <h3 style={{ margin: 0, fontSize: 16, color: '#475569' }}>No employees matched your criteria</h3>
@@ -646,11 +708,18 @@ export default function LiveTrackingPage() {
 
                     {hasGps ? (
                       <div>
-                        <div style={{ fontWeight: 700, color: '#0F2B5B', fontSize: 11 }}>
-                          {parseFloat(emp.latitude).toFixed(4)}, {parseFloat(emp.longitude).toFixed(4)}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontWeight: 700, color: '#0F2B5B', fontSize: 11 }}>
+                            {parseFloat(emp.latitude).toFixed(4)}, {parseFloat(emp.longitude).toFixed(4)}
+                          </span>
+                          {emp.location_source === 'checkin' && (
+                            <span style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>
+                              Check-In Coords
+                            </span>
+                          )}
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: 10, marginTop: 2 }}>
-                          <span>Speed: {(emp.speed_mps ? emp.speed_mps * 3.6 : 0).toFixed(0)} km/h</span>
+                          <span>{emp.location_source === 'checkin' ? 'Check-In Dispatch' : `Speed: ${(emp.speed_mps ? emp.speed_mps * 3.6 : 0).toFixed(0)} km/h`}</span>
                           <span>
                             Updated {emp.last_location_at ? formatPKTTime(emp.last_location_at) : 'N/A'}
                             {emp.minutes_since_last_ping !== null && ` (${Math.round(emp.minutes_since_last_ping)}m ago)`}
@@ -659,7 +728,7 @@ export default function LiveTrackingPage() {
                       </div>
                     ) : (
                       <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>
-                        No GPS signal recorded today
+                        No GPS points recorded
                       </div>
                     )}
                   </div>
