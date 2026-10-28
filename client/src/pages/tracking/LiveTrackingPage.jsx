@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  Navigation, RefreshCw, Car, Battery, Clock, MapPin,
+  Navigation, RefreshCw, Car, Clock, MapPin,
   Search, Shield, AlertCircle, Play, CheckCircle2, ChevronRight,
   ExternalLink, Eye, ArrowUpRight, Calendar, Filter, Users, User,
   FileText, Activity, AlertTriangle, Layers
@@ -742,11 +742,6 @@ export default function LiveTrackingPage() {
                         {emp.location_source === 'checkin' && (
                           <span style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>
                             Check-In Coords
-                          </span>
-                        )}
-                        {hasGps && emp.battery_level !== null && (
-                          <span style={{ color: '#059669', fontWeight: 700, fontSize: 10 }}>
-                            🔋 {Math.round(emp.battery_level * 100)}%
                           </span>
                         )}
                       </div>

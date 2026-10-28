@@ -356,7 +356,7 @@ router.get('/live', authenticate, authorize('boss', 'admin', 'controller', 'mana
             item.location_address = resAddr.formatted;
             item.location_details = resAddr;
           } catch {
-            item.location_address = 'Address unavailable';
+            item.location_address = 'Area unavailable';
           }
         }
       } else {

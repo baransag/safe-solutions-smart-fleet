@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   X, User, MapPin, Calendar, Clock, Car, Navigation,
-  Download, Printer, AlertTriangle, CheckCircle2, Battery,
+  Download, Printer, AlertTriangle, CheckCircle2,
   FileText, Shield, ArrowRight, RefreshCw, ChevronRight, Filter
 } from 'lucide-react';
 import api from '../../services/api';
@@ -879,7 +879,6 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
                         <th>Coordinates (Lat, Lng)</th>
                         <th>Speed</th>
                         <th>Accuracy</th>
-                        <th>Battery</th>
                         <th>Status</th>
                         <th>Map</th>
                       </tr>
@@ -902,7 +901,6 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
                             </td>
                             <td>{(p.speed_mps ? p.speed_mps * 3.6 : 0).toFixed(1)} km/h</td>
                             <td>&plusmn;{Math.round(p.accuracy_meters || 0)}m</td>
-                            <td>{p.battery_level !== null ? `${Math.round(p.battery_level * 100)}%` : 'N/A'}</td>
                             <td>
                               <span style={{ color: p.is_moving ? '#059669' : '#D97706', fontWeight: 700 }}>
                                 {p.is_moving ? '🚗 Moving' : '🅿️ Stopped'}
@@ -972,10 +970,6 @@ export default function EmployeeTrackingDetailModal({ employee, isOpen, onClose 
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#64748b' }}>Current Speed:</span>
                     <strong>{(employee.speed_mps ? employee.speed_mps * 3.6 : 0).toFixed(1)} km/h</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>Battery:</span>
-                    <strong>{employee.battery_level !== null ? `${Math.round(employee.battery_level * 100)}%` : 'N/A'}</strong>
                   </div>
                   {employee.latitude && employee.longitude && (
                     <a

@@ -11,40 +11,6 @@ function getCoordKey(lat, lng) {
 // In-memory cache for resolved locations
 const geocodeCache = new Map();
 
-// Seed initial known location for headquarters / depot in Faisalabad
-geocodeCache.set('31.4468,73.0959', {
-  road: '',
-  society: '',
-  locality: 'Madina Town',
-  city: 'Faisalabad',
-  formatted: 'Madina Town, Faisalabad',
-  full_display: 'Madina Town, Faisalabad City Tehsil, Faisalabad District, Punjab, Pakistan'
-});
-geocodeCache.set('31.4468,73.0955', {
-  road: '',
-  society: '',
-  locality: 'Madina Town',
-  city: 'Faisalabad',
-  formatted: 'Madina Town, Faisalabad',
-  full_display: 'Madina Town, Faisalabad City Tehsil, Faisalabad District, Punjab, Pakistan'
-});
-geocodeCache.set('31.4467,73.0959', {
-  road: '',
-  society: '',
-  locality: 'Madina Town',
-  city: 'Faisalabad',
-  formatted: 'Madina Town, Faisalabad',
-  full_display: 'Madina Town, Faisalabad City Tehsil, Faisalabad District, Punjab, Pakistan'
-});
-geocodeCache.set('31.4467,73.0957', {
-  road: '',
-  society: '',
-  locality: 'Madina Town',
-  city: 'Faisalabad',
-  formatted: 'Madina Town, Faisalabad',
-  full_display: 'Madina Town, Faisalabad City Tehsil, Faisalabad District, Punjab, Pakistan'
-});
-
 // Rate limiting queue: Nominatim allows max 1 request/second
 let lastRequestTime = 0;
 const MIN_REQUEST_INTERVAL_MS = 1000;
@@ -70,12 +36,13 @@ function formatOsmAddress(json) {
       society: '',
       locality: '',
       city: '',
-      formatted: json?.display_name ? json.display_name.split(',').slice(0, 3).join(', ').trim() : 'Address unavailable',
-      full_display: json?.display_name || 'Address unavailable'
+      formatted: json?.display_name ? json.display_name.split(',').slice(0, 3).join(', ').trim() : 'Area unavailable',
+      full_display: json?.display_name || 'Area unavailable'
     };
   }
 
   const a = json.address;
+  const poi = a.industrial || a.amenity || a.building || a.office || a.shop || a.retail || '';
   const road = a.road || a.street || a.residential || a.pedestrian || a.footway || a.path || '';
   const society = a.suburb || a.neighbourhood || a.subdivision || a.housing_estate || a.residential_area || a.quarter || '';
   const locality = a.town || a.village || a.city_district || a.hamlet || a.commercial || '';
@@ -83,8 +50,9 @@ function formatOsmAddress(json) {
   const cleanCity = rawCity.replace(/\s*(City\s*Tehsil|Tehsil|District)/gi, '').trim() || rawCity;
 
   const parts = [];
-  if (road) parts.push(road);
-  if (society && society !== road) parts.push(society);
+  if (poi) parts.push(poi);
+  if (road && road !== poi) parts.push(road);
+  if (society && society !== road && society !== poi) parts.push(society);
   if (locality && locality !== society && locality !== cleanCity) parts.push(locality);
   if (cleanCity && cleanCity !== locality) parts.push(cleanCity);
 
@@ -98,14 +66,15 @@ function formatOsmAddress(json) {
     society,
     locality,
     city: cleanCity,
-    formatted: formatted || 'Address unavailable',
-    full_display: json.display_name || formatted || 'Address unavailable'
+    formatted: formatted || 'Area unavailable',
+    full_display: json.display_name || formatted || 'Area unavailable'
   };
 }
 
 function fetchNominatim(lat, lng) {
   return new Promise((resolve) => {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=en`;
+    // zoom=17 accurately captures streets, roads, neighborhoods, and towns in Pakistan
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1&accept-language=en`;
     const options = {
       headers: {
         'User-Agent': 'SafeSolutionsSmartFleet/1.0 (operations@safesolutions.com)',
@@ -124,21 +93,21 @@ function fetchNominatim(lat, lng) {
             const formatted = formatOsmAddress(parsed);
             resolve(formatted);
           } else {
-            resolve({ formatted: 'Address unavailable' });
+            resolve({ formatted: 'Area unavailable' });
           }
         } catch {
-          resolve({ formatted: 'Address unavailable' });
+          resolve({ formatted: 'Area unavailable' });
         }
       });
     });
 
     req.on('error', () => {
-      resolve({ formatted: 'Address unavailable' });
+      resolve({ formatted: 'Area unavailable' });
     });
 
     req.on('timeout', () => {
       req.destroy();
-      resolve({ formatted: 'Address unavailable' });
+      resolve({ formatted: 'Area unavailable' });
     });
   });
 }
@@ -146,7 +115,7 @@ function fetchNominatim(lat, lng) {
 async function reverseGeocode(lat, lng) {
   const key = getCoordKey(lat, lng);
   if (!key) {
-    return { formatted: 'Address unavailable' };
+    return { formatted: 'Area unavailable' };
   }
 
   // Check cache
@@ -157,12 +126,12 @@ async function reverseGeocode(lat, lng) {
   try {
     await throttleRequest();
     const result = await fetchNominatim(parseFloat(lat), parseFloat(lng));
-    if (result && result.formatted && result.formatted !== 'Address unavailable') {
+    if (result && result.formatted && result.formatted !== 'Area unavailable') {
       geocodeCache.set(key, result);
     }
     return result;
   } catch {
-    return { formatted: 'Address unavailable' };
+    return { formatted: 'Area unavailable' };
   }
 }
 

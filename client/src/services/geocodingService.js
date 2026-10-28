@@ -1,6 +1,6 @@
 import api from './api';
 
-const CACHE_STORAGE_KEY = 'sf_geocoded_locations_v1';
+const CACHE_STORAGE_KEY = 'sf_geocoded_locations_v2';
 const memoryCache = new Map();
 
 // Helper: Normalize coordinates into a 4-decimal place key (~11m granularity)
@@ -17,25 +17,15 @@ export function getCoordKey(lat, lng) {
     const stored = localStorage.getItem(CACHE_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      Object.entries(parsed).forEach(([k, v]) => memoryCache.set(k, v));
+      Object.entries(parsed).forEach(([k, v]) => {
+        if (v && v.formatted && v.formatted !== 'Address unavailable' && v.formatted !== 'Area unavailable') {
+          memoryCache.set(k, v);
+        }
+      });
     }
   } catch (err) {
     console.warn('Geocoding cache load warning:', err.message);
   }
-
-  // Seed known Safe Solutions operations base in Madina Town, Faisalabad
-  const defaultBase = {
-    road: '',
-    society: '',
-    locality: 'Madina Town',
-    city: 'Faisalabad',
-    formatted: 'Madina Town, Faisalabad',
-    full_display: 'Madina Town, Faisalabad City Tehsil, Faisalabad District, Punjab, Pakistan'
-  };
-
-  ['31.4468,73.0959', '31.4468,73.0955', '31.4467,73.0959', '31.4467,73.0957', '31.4467,73.0960'].forEach(k => {
-    if (!memoryCache.has(k)) memoryCache.set(k, defaultBase);
-  });
 })();
 
 // Save updated memory cache to localStorage (debounced)
@@ -61,12 +51,13 @@ export function formatOsmAddress(json) {
       society: '',
       locality: '',
       city: '',
-      formatted: json?.display_name ? json.display_name.split(',').slice(0, 3).join(', ').trim() : 'Address unavailable',
-      full_display: json?.display_name || 'Address unavailable'
+      formatted: json?.display_name ? json.display_name.split(',').slice(0, 3).join(', ').trim() : 'Area unavailable',
+      full_display: json?.display_name || 'Area unavailable'
     };
   }
 
   const a = json.address;
+  const poi = a.industrial || a.amenity || a.building || a.office || a.shop || a.retail || '';
   const road = a.road || a.street || a.residential || a.pedestrian || a.footway || a.path || '';
   const society = a.suburb || a.neighbourhood || a.subdivision || a.housing_estate || a.residential_area || a.quarter || '';
   const locality = a.town || a.village || a.city_district || a.hamlet || a.commercial || '';
@@ -74,8 +65,9 @@ export function formatOsmAddress(json) {
   const cleanCity = rawCity.replace(/\s*(City\s*Tehsil|Tehsil|District)/gi, '').trim() || rawCity;
 
   const parts = [];
-  if (road) parts.push(road);
-  if (society && society !== road) parts.push(society);
+  if (poi) parts.push(poi);
+  if (road && road !== poi) parts.push(road);
+  if (society && society !== road && society !== poi) parts.push(society);
   if (locality && locality !== society && locality !== cleanCity) parts.push(locality);
   if (cleanCity && cleanCity !== locality) parts.push(cleanCity);
 
@@ -89,8 +81,8 @@ export function formatOsmAddress(json) {
     society,
     locality,
     city: cleanCity,
-    formatted: formatted || 'Address unavailable',
-    full_display: json.display_name || formatted || 'Address unavailable'
+    formatted: formatted || 'Area unavailable',
+    full_display: json.display_name || formatted || 'Area unavailable'
   };
 }
 
@@ -103,7 +95,7 @@ const activeRequests = new Map();
  */
 export async function getReadableAddress(lat, lng) {
   const key = getCoordKey(lat, lng);
-  if (!key) return { formatted: 'Address unavailable' };
+  if (!key) return { formatted: 'Area unavailable' };
 
   if (memoryCache.has(key)) {
     return memoryCache.get(key);
@@ -115,14 +107,14 @@ export async function getReadableAddress(lat, lng) {
 
   const reqPromise = (async () => {
     try {
-      // 1. Try our backend proxy endpoint first (which has server-side caching & rate-limiting)
+      // 1. Try backend proxy endpoint first (which has server-side caching & rate-limiting)
       const res = await api.get(`/field-tracking/reverse-geocode?lat=${lat}&lng=${lng}`);
-      if (res && res.success && res.data && res.data.formatted && res.data.formatted !== 'Address unavailable') {
+      if (res && res.success && res.data && res.data.formatted && res.data.formatted !== 'Area unavailable' && res.data.formatted !== 'Address unavailable') {
         memoryCache.set(key, res.data);
         persistCache();
         return res.data;
       }
-      if (res && res.formatted && res.formatted !== 'Address unavailable') {
+      if (res && res.formatted && res.formatted !== 'Area unavailable' && res.formatted !== 'Address unavailable') {
         const item = { formatted: res.formatted, full_display: res.formatted };
         memoryCache.set(key, item);
         persistCache();
@@ -133,14 +125,14 @@ export async function getReadableAddress(lat, lng) {
     }
 
     try {
-      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=en`;
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1&accept-language=en`;
       const directRes = await fetch(url, {
         headers: { 'Accept': 'application/json' }
       });
       if (directRes.ok) {
         const json = await directRes.json();
         const formatted = formatOsmAddress(json);
-        if (formatted.formatted && formatted.formatted !== 'Address unavailable') {
+        if (formatted.formatted && formatted.formatted !== 'Area unavailable' && formatted.formatted !== 'Address unavailable') {
           memoryCache.set(key, formatted);
           persistCache();
           return formatted;
@@ -150,7 +142,7 @@ export async function getReadableAddress(lat, lng) {
       // Direct fetch also failed
     }
 
-    return { formatted: 'Address unavailable' };
+    return { formatted: 'Area unavailable' };
   })();
 
   activeRequests.set(key, reqPromise);
